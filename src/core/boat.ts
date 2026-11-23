@@ -1,6 +1,7 @@
 import { MATERIALS, type DestId, type Materials } from './data';
 import { addMaterials, netRate } from './economy';
 import { takeIslandStore } from './islands';
+import { seaView } from './seas';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
 /** Lighthouse light level that repairs the dock so a boat can be built. */
@@ -67,7 +68,7 @@ export function canSail(s: GameState, d: DestId): boolean {
 
 export function startVoyage(s: GameState, d: DestId, nowMs: number): boolean {
   if (!canSail(s, d)) return false;
-  s.boat.voyage = { dest: d, departAt: nowMs, returnAt: nowMs + voyageMs(s, d) };
+  s.boat.voyage = { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + voyageMs(s, d) };
   return true;
 }
 
@@ -75,14 +76,16 @@ export function startVoyage(s: GameState, d: DestId, nowMs: number): boolean {
 export function settleVoyage(s: GameState, nowMs: number): Cargo | null {
   const v = s.boat.voyage;
   if (!v || nowMs < v.returnAt) return null;
-  const discovery = !s.discovered.includes(v.dest);
-  const haul = voyageHaul(s, v.dest);
+  // The boat may have sailed at a sea you've since left.
+  const at = seaView(s, v.sea) ?? s;
+  const discovery = !at.discovered.includes(v.dest);
+  const haul = voyageHaul(at, v.dest);
   if (discovery) for (const [m, n] of Object.entries(DISCOVERY_FIND[v.dest] ?? {})) haul[m as keyof Materials] += n ?? 0;
   // Whatever the island's buildings made comes home too.
-  const fromIsland = takeIslandStore(s, v.dest);
+  const fromIsland = takeIslandStore(at, v.dest);
   for (const m of MATERIALS) haul[m] += fromIsland[m];
   s.boat.voyage = null;
-  s.boat.cargo = { dest: v.dest, haul, discovery, fromIsland };
+  s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland };
   return s.boat.cargo;
 }
 
@@ -91,7 +94,8 @@ export function unloadBoat(s: GameState): Cargo | null {
   const c = s.boat.cargo;
   if (!c) return null;
   addMaterials(s, c.haul);
-  if (!s.discovered.includes(c.dest)) s.discovered.push(c.dest);
+  const at = seaView(s, c.sea) ?? s;
+  if (!at.discovered.includes(c.dest)) at.discovered.push(c.dest);
   s.boat.cargo = null;
   return c;
 }

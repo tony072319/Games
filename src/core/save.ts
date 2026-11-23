@@ -1,6 +1,6 @@
-import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, UPGRADES, type BuildingId, type DestId, type Materials } from './data';
+import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type BuildingId, type DestId, type Materials, type SeaId } from './data';
 import { BUILDINGS } from './islands';
-import { newGame, type GameState, type Lang } from './state';
+import { emptyMaterials, newGame, type GameState, type Lang, type SeaState } from './state';
 
 export const SAVE_KEY = 'lightkeeper.save';
 export const CORRUPT_KEY = 'lightkeeper.save.corrupt';
@@ -27,6 +27,35 @@ function safeSet(kv: KV, key: string, value: string): boolean {
 }
 
 type Obj = Record<string, unknown>;
+const isSea = (v: unknown): v is SeaId => SEA_IDS.includes(v as SeaId);
+const isLevel = (v: unknown, max: number) => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max;
+
+function readMaterials(v: unknown): Materials {
+  const out = emptyMaterials();
+  if (!isObj(v)) return out;
+  for (const m of MATERIALS) if (isAmount(v[m])) out[m] = v[m] as number;
+  return out;
+}
+
+/** A sea you're not at. Returns null if it can't be read. */
+function readSea(v: unknown, nowMs: number): SeaState | null {
+  if (!isObj(v) || !isObj(v.levels)) return null;
+  const L = v.levels;
+  if (!isLevel(L.net, MAX_LEVEL.net) || !isLevel(L.storage, MAX_LEVEL.storage) || !isLevel(L.light, MAX_LEVEL.light)) return null;
+  const buildings: SeaState['buildings'] = {};
+  if (isObj(v.buildings)) for (const [b, n] of Object.entries(v.buildings)) if (b in BUILDINGS && typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= BUILDING_MAX) buildings[b as BuildingId] = n;
+  const islandStore: SeaState['islandStore'] = {};
+  if (isObj(v.islandStore)) for (const [d, st] of Object.entries(v.islandStore)) if (DEST_IDS.includes(d as DestId)) islandStore[d as DestId] = readMaterials(st);
+  return {
+    levels: { net: L.net as number, storage: L.storage as number, light: L.light as number },
+    chest: readMaterials(v.chest),
+    discovered: Array.isArray(v.discovered) ? (v.discovered.filter((d) => DEST_IDS.includes(d as DestId)) as DestId[]) : [],
+    buildings,
+    islandStore,
+    islandAt: typeof v.islandAt === 'number' && Number.isFinite(v.islandAt) ? v.islandAt : nowMs,
+    chestAt: typeof v.chestAt === 'number' && Number.isFinite(v.chestAt) ? v.chestAt : nowMs,
+  };
+}
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isAmount = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 
@@ -85,7 +114,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     else dropped = true;
     const v = b.voyage;
     if (isObj(v) && DEST_IDS.includes(v.dest as DestId) && Number.isFinite(v.departAt) && Number.isFinite(v.returnAt)) {
-      state.boat.voyage = { dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number };
+      state.boat.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number };
     } else if (v !== null && v !== undefined) dropped = true;
     const c = b.cargo;
     if (isObj(c) && DEST_IDS.includes(c.dest as DestId) && isObj(c.haul)) {
@@ -94,7 +123,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
       const fromIsland = {} as Materials;
       const fi = isObj(c.fromIsland) ? c.fromIsland : {};
       for (const m of MATERIALS) fromIsland[m] = isAmount(fi[m]) ? (fi[m] as number) : 0;
-      state.boat.cargo = { dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland };
+      state.boat.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland };
     } else if (c !== null && c !== undefined) dropped = true;
   } else if ('boat' in data) dropped = true;
 
@@ -122,6 +151,24 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   if (typeof data.islandAt === 'number' && Number.isFinite(data.islandAt)) state.islandAt = data.islandAt;
   else if ('islandAt' in data) dropped = true;
   else state.islandAt = state.lastActiveAt;
+
+  // Seas (added with the second sea): missing means an old save at the first sea.
+  if (isSea(data.sea)) state.sea = data.sea;
+  else if ('sea' in data) dropped = true;
+  if (Array.isArray(data.reached)) {
+    const r = data.reached.filter(isSea);
+    if (r.length !== data.reached.length) dropped = true;
+    state.reached = Array.from(new Set<SeaId>(['dusk', ...r, state.sea]));
+  } else state.reached = Array.from(new Set<SeaId>(['dusk', state.sea]));
+  if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
+  else if ('starlight' in data) dropped = true;
+  if (isObj(data.seas)) {
+    for (const [id, v] of Object.entries(data.seas)) {
+      const sea = isSea(id) && id !== state.sea ? readSea(v, nowMs) : null;
+      if (sea) state.seas[id as SeaId] = sea;
+      else dropped = true;
+    }
+  } else if ('seas' in data) dropped = true;
 
   const settings = isObj(data.settings) ? data.settings : {};
   if (settings.lang === 'zh' || settings.lang === 'en') state.settings.lang = settings.lang;

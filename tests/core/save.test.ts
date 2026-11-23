@@ -129,7 +129,7 @@ describe('saves from before the boat', () => {
   test('boat and discoveries round-trip', () => {
     const s = newGame(0, 'zh');
     s.boat.built = true;
-    s.boat.voyage = { dest: 'wreck', departAt: 10, returnAt: 20 };
+    s.boat.voyage = { sea: 'dusk', dest: 'wreck', departAt: 10, returnAt: 20 };
     s.discovered.push('gullrock');
     const kv = memKV();
     saveGame(kv, s);

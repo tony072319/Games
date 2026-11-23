@@ -1,4 +1,4 @@
-import { MATERIALS, MAX_LEVEL, type Materials, type UpgradeId } from './data';
+import { MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, SEA_DEF, STARLIGHT_BONUS, type Materials, type UpgradeId } from './data';
 import { emptyMaterials, type GameState } from './state';
 
 /** Items per second the net collects automatically. */
@@ -21,8 +21,14 @@ export function netRate(state: GameState): number {
   return (
     autoRate(state.levels.net) *
     (state.discovered.includes('gullrock') ? 1.25 : 1) *
-    (1 + 0.05 * (state.buildings.lookout ?? 0))
+    (1 + 0.05 * (state.buildings.lookout ?? 0)) *
+    seaBoost(state)
   );
+}
+
+/** The current sea's richness times the starlight bonus. */
+export function seaBoost(state: GameState): number {
+  return SEA_DEF[state.sea].rate * (1 + STARLIGHT_BONUS * state.starlight);
 }
 
 /**
@@ -49,10 +55,15 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
     if (state?.discovered.includes('oldlight')) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * 0.8);
     const desk = state?.buildings.desk ?? 0;
     if (desk) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * (1 - 0.03 * desk));
-  } else if (id === 'speed') {
+  }
+  if (state && (id === 'net' || id === 'storage' || id === 'light')) {
+    const k = SEA_DEF[state.sea].cost;
+    if (k !== 1) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * k);
+  }
+  if (id === 'speed') {
     c.wood = g(150, 1.9);
     c.metal = g(30, 1.9);
-  } else {
+  } else if (id === 'cargo') {
     c.wood = g(120, 1.9);
     c.rope = g(40, 1.9);
   }
@@ -88,4 +99,25 @@ export function chestCapacity(state: GameState): number {
 
 export function chestTotal(chest: Materials): number {
   return MATERIALS.reduce((a, m) => a + chest[m], 0);
+}
+
+/** Fractional amounts the net collects in the given time at a given rate (items/second). */
+export function expectedGain(rate: number, seconds: number): Materials {
+  const total = rate * seconds;
+  const g = emptyMaterials();
+  for (const m of MATERIALS) g[m] = total * MATERIAL_WEIGHTS[m];
+  return g;
+}
+
+/**
+ * Let the net work for `seconds`, putting its catch into the chest until it is full.
+ * `factor` slows it down (a sea you're not at works at half speed).
+ */
+export function fillChest(state: GameState, seconds: number, factor = 1): { creditedSeconds: number; gained: Materials } {
+  const room = Math.max(0, chestCapacity(state) - chestTotal(state.chest));
+  const rate = netRate(state) * factor;
+  const creditedSeconds = Math.max(0, Math.min(seconds, room / rate));
+  const gained = expectedGain(rate, creditedSeconds);
+  for (const m of MATERIALS) state.chest[m] += gained[m];
+  return { creditedSeconds, gained };
 }

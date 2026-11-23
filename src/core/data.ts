@@ -29,3 +29,14 @@ export type BuildingId =
   | 'depot' | 'workshop' | 'desk'
   | 'jars' | 'orchard' | 'path';
 export const BUILDING_MAX = 5;
+
+export type SeaId = 'dusk' | 'fog' | 'aurora';
+export const SEA_IDS: readonly SeaId[] = ['dusk', 'fog', 'aurora'];
+/** How much richer (rate) and costlier (cost) each sea is than the first. */
+export const SEA_DEF: Record<SeaId, { rate: number; cost: number }> = {
+  dusk: { rate: 1, cost: 1 },
+  fog: { rate: 4, cost: 6 },
+  aurora: { rate: 16, cost: 36 },
+};
+/** Each star of starlight adds this much to all production. */
+export const STARLIGHT_BONUS = 0.03;

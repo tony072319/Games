@@ -1,4 +1,5 @@
-import { BUILDING_MAX, MATERIALS, type BuildingId, type DestId, type MaterialId, type Materials } from './data';
+import { BUILDING_MAX, MATERIALS, SEA_DEF, type BuildingId, type DestId, type MaterialId, type Materials } from './data';
+import { seaBoost } from './economy';
 import { emptyMaterials, type GameState } from './state';
 
 export interface Building {
@@ -39,10 +40,11 @@ export const ISLAND_STORE_HOURS = 12;
 
 export const buildingLevel = (s: GameState, b: BuildingId) => s.buildings[b] ?? 0;
 
-/** Cost to go from `level` to `level + 1`. */
-export function buildCost(b: BuildingId, level: number): Materials {
+/** Cost to go from `level` to `level + 1` (farther seas cost more). */
+export function buildCost(b: BuildingId, level: number, s?: GameState): Materials {
   const c = emptyMaterials();
-  for (const m of MATERIALS) c[m] = Math.ceil((BUILDINGS[b].cost[m] ?? 0) * Math.pow(2, level));
+  const k = s ? SEA_DEF[s.sea].cost : 1;
+  for (const m of MATERIALS) c[m] = Math.ceil((BUILDINGS[b].cost[m] ?? 0) * Math.pow(2, level) * k);
   return c;
 }
 
@@ -59,6 +61,8 @@ export function islandRates(s: GameState, d: DestId): Materials {
     const def = BUILDINGS[b];
     if (def.makes) r[def.makes] += productionPerHour(b, buildingLevel(s, b));
   }
+  const boost = seaBoost(s);
+  for (const m of MATERIALS) r[m] *= boost;
   return r;
 }
 
@@ -84,7 +88,7 @@ export function accrueIslands(s: GameState, nowMs: number): void {
 export function canBuild(s: GameState, b: BuildingId): boolean {
   const lvl = buildingLevel(s, b);
   if (lvl >= BUILDING_MAX || !s.discovered.includes(BUILDINGS[b].island)) return false;
-  const cost = buildCost(b, lvl);
+  const cost = buildCost(b, lvl, s);
   return MATERIALS.every((m) => s.materials[m] >= cost[m]);
 }
 
@@ -93,7 +97,7 @@ export function construct(s: GameState, b: BuildingId, nowMs: number): boolean {
   if (!canBuild(s, b)) return false;
   accrueIslands(s, nowMs);
   const lvl = buildingLevel(s, b);
-  const cost = buildCost(b, lvl);
+  const cost = buildCost(b, lvl, s);
   for (const m of MATERIALS) s.materials[m] -= cost[m];
   s.buildings[b] = lvl + 1;
   return true;

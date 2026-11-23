@@ -1,5 +1,7 @@
-import { LIVE_DT_MAX_SECONDS, MATERIALS, MATERIAL_WEIGHTS, type Materials } from './data';
-import { addMaterials, chestCapacity, chestTotal, netRate } from './economy';
+import { LIVE_DT_MAX_SECONDS, type Materials } from './data';
+import { addMaterials, fillChest } from './economy';
+export { expectedGain } from './economy';
+import { accrueOtherSeas } from './seas';
 import { settleVoyage } from './boat';
 import { accrueIslands } from './islands';
 import { emptyMaterials, type GameState } from './state';
@@ -12,26 +14,9 @@ export interface OfflineReport {
   gained: Materials;
 }
 
-/** Fractional amounts the net collects in the given time at a given rate (items/second). */
-export function expectedGain(rate: number, seconds: number): Materials {
-  const total = rate * seconds;
-  const g = emptyMaterials();
-  for (const m of MATERIALS) g[m] = total * MATERIAL_WEIGHTS[m];
-  return g;
-}
-
-/** Let the net work for `seconds`, putting its catch into the chest until it is full. */
-function fillChest(state: GameState, seconds: number): { creditedSeconds: number; gained: Materials } {
-  const room = Math.max(0, chestCapacity(state) - chestTotal(state.chest));
-  const rate = netRate(state);
-  const creditedSeconds = Math.min(seconds, room / rate);
-  const gained = expectedGain(rate, creditedSeconds);
-  for (const m of MATERIALS) state.chest[m] += gained[m];
-  return { creditedSeconds, gained };
-}
-
 export function applyOffline(state: GameState, nowMs: number): OfflineReport {
   accrueIslands(state, nowMs);
+  accrueOtherSeas(state, nowMs);
   settleVoyage(state, nowMs);
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
   const { creditedSeconds, gained } = fillChest(state, seconds);
@@ -58,6 +43,7 @@ export function claimDouble(state: GameState, collected: Materials): void {
  */
 export function tick(state: GameState, nowMs: number): OfflineReport | null {
   accrueIslands(state, nowMs);
+  accrueOtherSeas(state, nowMs);
   settleVoyage(state, nowMs);
   const dt = (nowMs - state.lastActiveAt) / 1000;
   if (dt >= 0 && dt <= LIVE_DT_MAX_SECONDS) {

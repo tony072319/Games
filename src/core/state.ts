@@ -1,8 +1,9 @@
-import { MATERIALS, type BuildingId, type DestId, type Materials, type UpgradeId } from './data';
+import { MATERIALS, type BuildingId, type DestId, type Materials, type SeaId, type UpgradeId } from './data';
 
 export type Lang = 'zh' | 'en';
 
 export interface Voyage {
+  sea: SeaId;
   dest: DestId;
   departAt: number;
   returnAt: number;
@@ -10,12 +11,25 @@ export interface Voyage {
 
 /** What the boat brought back, waiting on the dock to be unloaded. */
 export interface Cargo {
+  sea: SeaId;
   dest: DestId;
   haul: Materials;
   /** First time reaching this island. */
   discovery: boolean;
   /** Part of the haul that the island's own buildings made. */
   fromIsland: Materials;
+}
+
+/** Everything that belongs to one sea. The sea you're at lives in the top-level fields; the others are kept here. */
+export interface SeaState {
+  levels: { net: number; storage: number; light: number };
+  chest: Materials;
+  discovered: DestId[];
+  buildings: Partial<Record<BuildingId, number>>;
+  islandStore: Partial<Record<DestId, Materials>>;
+  islandAt: number;
+  /** Last time this sea's chest was filled while you were elsewhere. */
+  chestAt: number;
 }
 
 export interface GameState {
@@ -36,6 +50,13 @@ export interface GameState {
   islandStore: Partial<Record<DestId, Materials>>;
   /** Last time island production was credited. */
   islandAt: number;
+  /** The sea you're at now; its data is in the fields above. */
+  sea: SeaId;
+  /** Seas you've reached (starlight is paid the first time you leave one for the next). */
+  reached: SeaId[];
+  /** Seas you're not at right now, still lit and still producing. */
+  seas: Partial<Record<SeaId, SeaState>>;
+  starlight: number;
 }
 
 export function emptyMaterials(): Materials {
@@ -58,5 +79,9 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     buildings: {},
     islandStore: {},
     islandAt: nowMs,
+    sea: 'dusk',
+    reached: ['dusk'],
+    seas: {},
+    starlight: 0,
   };
 }
