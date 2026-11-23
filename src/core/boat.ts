@@ -1,5 +1,6 @@
 import { MATERIALS, type DestId, type Materials } from './data';
 import { addMaterials, netRate } from './economy';
+import { takeIslandStore } from './islands';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
 /** Lighthouse light level that repairs the dock so a boat can be built. */
@@ -43,7 +44,7 @@ export function reachable(s: GameState, d: DestId): boolean {
 }
 
 export function voyageMs(s: GameState, d: DestId): number {
-  return DESTS[d].minutes * 60_000 * Math.pow(0.92, s.levels.speed - 1);
+  return DESTS[d].minutes * 60_000 * Math.pow(0.92, s.levels.speed - 1) * (1 - 0.04 * (s.buildings.boatshed ?? 0));
 }
 
 export function cargoMultiplier(s: GameState): number {
@@ -77,8 +78,11 @@ export function settleVoyage(s: GameState, nowMs: number): Cargo | null {
   const discovery = !s.discovered.includes(v.dest);
   const haul = voyageHaul(s, v.dest);
   if (discovery) for (const [m, n] of Object.entries(DISCOVERY_FIND[v.dest] ?? {})) haul[m as keyof Materials] += n ?? 0;
+  // Whatever the island's buildings made comes home too.
+  const fromIsland = takeIslandStore(s, v.dest);
+  for (const m of MATERIALS) haul[m] += fromIsland[m];
   s.boat.voyage = null;
-  s.boat.cargo = { dest: v.dest, haul, discovery };
+  s.boat.cargo = { dest: v.dest, haul, discovery, fromIsland };
   return s.boat.cargo;
 }
 

@@ -18,7 +18,11 @@ export function tapYield(netLevel: number): number {
 
 /** Items per second the net actually brings in, including perks from islands. */
 export function netRate(state: GameState): number {
-  return autoRate(state.levels.net) * (state.discovered.includes('gullrock') ? 1.25 : 1);
+  return (
+    autoRate(state.levels.net) *
+    (state.discovered.includes('gullrock') ? 1.25 : 1) *
+    (1 + 0.05 * (state.buildings.lookout ?? 0))
+  );
 }
 
 /**
@@ -43,6 +47,8 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
     if (L >= 2) c.metal = g(20, 2.2, 2);
     if (L >= 7) c.glow = g(5, 2, 7);
     if (state?.discovered.includes('oldlight')) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * 0.8);
+    const desk = state?.buildings.desk ?? 0;
+    if (desk) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * (1 - 0.03 * desk));
   } else if (id === 'speed') {
     c.wood = g(150, 1.9);
     c.metal = g(30, 1.9);
@@ -77,7 +83,7 @@ export function addMaterials(state: GameState, gained: Materials, factor = 1): v
 
 /** Items the chest can hold: enough for offlineCapSeconds of the current net. */
 export function chestCapacity(state: GameState): number {
-  return netRate(state) * offlineCapSeconds(state.levels.storage);
+  return netRate(state) * offlineCapSeconds(state.levels.storage) * (1 + 0.1 * (state.buildings.path ?? 0));
 }
 
 export function chestTotal(chest: Materials): number {

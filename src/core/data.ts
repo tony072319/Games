@@ -22,3 +22,10 @@ export const FLOAT_LIFETIME_MS = 8000;
 export const OFFLINE_MIN_REPORT_SECONDS = 60;
 export const LIVE_DT_MAX_SECONDS = 5;
 export const AUTOSAVE_MS = 10000;
+
+export type BuildingId =
+  | 'dismantler' | 'rack' | 'boatshed'
+  | 'nest' | 'kelp' | 'lookout'
+  | 'depot' | 'workshop' | 'desk'
+  | 'jars' | 'orchard' | 'path';
+export const BUILDING_MAX = 5;

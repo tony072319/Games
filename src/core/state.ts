@@ -1,4 +1,4 @@
-import { MATERIALS, type DestId, type Materials, type UpgradeId } from './data';
+import { MATERIALS, type BuildingId, type DestId, type Materials, type UpgradeId } from './data';
 
 export type Lang = 'zh' | 'en';
 
@@ -14,6 +14,8 @@ export interface Cargo {
   haul: Materials;
   /** First time reaching this island. */
   discovery: boolean;
+  /** Part of the haul that the island's own buildings made. */
+  fromIsland: Materials;
 }
 
 export interface GameState {
@@ -28,6 +30,12 @@ export interface GameState {
   stats: { tapped: number };
   boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null };
   discovered: DestId[];
+  /** Island building levels (absent = not built). */
+  buildings: Partial<Record<BuildingId, number>>;
+  /** What each island's buildings have made, waiting for the boat. */
+  islandStore: Partial<Record<DestId, Materials>>;
+  /** Last time island production was credited. */
+  islandAt: number;
 }
 
 export function emptyMaterials(): Materials {
@@ -47,5 +55,8 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     stats: { tapped: 0 },
     boat: { built: false, voyage: null, cargo: null },
     discovered: [],
+    buildings: {},
+    islandStore: {},
+    islandAt: nowMs,
   };
 }

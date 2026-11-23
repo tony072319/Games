@@ -1,4 +1,5 @@
-import { DEST_IDS, MATERIALS, MAX_LEVEL, UPGRADES, type DestId, type Materials } from './data';
+import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, UPGRADES, type BuildingId, type DestId, type Materials } from './data';
+import { BUILDINGS } from './islands';
 import { newGame, type GameState, type Lang } from './state';
 
 export const SAVE_KEY = 'lightkeeper.save';
@@ -90,13 +91,37 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     if (isObj(c) && DEST_IDS.includes(c.dest as DestId) && isObj(c.haul)) {
       const haul = {} as Materials;
       for (const m of MATERIALS) haul[m] = isAmount(c.haul[m]) ? (c.haul[m] as number) : 0;
-      state.boat.cargo = { dest: c.dest as DestId, haul, discovery: c.discovery === true };
+      const fromIsland = {} as Materials;
+      const fi = isObj(c.fromIsland) ? c.fromIsland : {};
+      for (const m of MATERIALS) fromIsland[m] = isAmount(fi[m]) ? (fi[m] as number) : 0;
+      state.boat.cargo = { dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland };
     } else if (c !== null && c !== undefined) dropped = true;
   } else if ('boat' in data) dropped = true;
+
+  if (isObj(data.buildings)) {
+    for (const [b, v] of Object.entries(data.buildings)) {
+      if (b in BUILDINGS && typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= BUILDING_MAX) state.buildings[b as BuildingId] = v;
+      else dropped = true;
+    }
+  } else if ('buildings' in data) dropped = true;
+  if (isObj(data.islandStore)) {
+    for (const [d, st] of Object.entries(data.islandStore)) {
+      if (!DEST_IDS.includes(d as DestId) || !isObj(st)) {
+        dropped = true;
+        continue;
+      }
+      const m2 = {} as Materials;
+      for (const m of MATERIALS) m2[m] = isAmount(st[m]) ? (st[m] as number) : 0;
+      state.islandStore[d as DestId] = m2;
+    }
+  } else if ('islandStore' in data) dropped = true;
 
   if (typeof data.lastActiveAt === 'number' && Number.isFinite(data.lastActiveAt)) {
     state.lastActiveAt = data.lastActiveAt;
   } else dropped = true;
+  if (typeof data.islandAt === 'number' && Number.isFinite(data.islandAt)) state.islandAt = data.islandAt;
+  else if ('islandAt' in data) dropped = true;
+  else state.islandAt = state.lastActiveAt;
 
   const settings = isObj(data.settings) ? data.settings : {};
   if (settings.lang === 'zh' || settings.lang === 'en') state.settings.lang = settings.lang;
