@@ -1,14 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import { MAX_LEVEL, MATERIALS } from '../../src/core/data';
-import { chestSvg, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg } from '../../src/ui/art';
+import { DEST_IDS } from '../../src/core/data';
+import { boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from '../../src/ui/art';
 
 describe('scene', () => {
-  test('back has the sky; front has the lighthouse beam and a slot for the net', () => {
+  test('back has the sky; front has slots for the lighthouse, dock and net', () => {
     expect(sceneBackSvg()).toContain('class="moon"');
     const front = sceneFrontSvg();
     expect(front.startsWith('<svg')).toBe(true);
-    expect(front).toContain('class="beam"');
     expect(front).toContain('class="net-slot"');
+    expect(front).toContain('class="tower-slot"');
+    expect(front).toContain('class="dock-slot"');
     expect(front).toContain('viewBox="0 0 360 640"');
   });
   test('each material has its own icon', () => {
@@ -26,5 +28,18 @@ describe('every upgrade level looks different', () => {
     const looks = Array.from({ length: MAX_LEVEL.storage }, (_, i) => chestSvg(0, i + 1));
     expect(new Set(looks).size).toBe(MAX_LEVEL.storage);
     expect(chestSvg(0, 1)).not.toBe(chestSvg(1, 1));
+  });
+});
+
+describe('lighthouse, dock, boat, islands', () => {
+  test('every lighthouse level looks different and has a beam', () => {
+    const looks = Array.from({ length: MAX_LEVEL.light }, (_, i) => towerSvg(i + 1));
+    expect(new Set(looks).size).toBe(MAX_LEVEL.light);
+    for (const l of looks) expect(l).toContain('class="beam"');
+  });
+  test('dock, boat (empty vs laden) and island icons', () => {
+    expect(dockSvg()).toContain('<');
+    expect(boatSvg(true, 1)).not.toBe(boatSvg(false, 1));
+    expect(new Set(DEST_IDS.map(islandIcon)).size).toBe(DEST_IDS.length);
   });
 });

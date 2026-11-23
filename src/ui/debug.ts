@@ -8,6 +8,7 @@ export interface DebugActions {
   setInfinite(on: boolean): void;
   reset(): void;
   skySkip(): void;
+  boatNow(): void;
   ambient(): void;
 }
 
@@ -35,6 +36,7 @@ export function createDebug(lang: Lang, infinite: boolean, actions: DebugActions
   add(t(lang, 'debug.plusMillion'), () => actions.addAll(1_000_000));
   add(t(lang, 'debug.plus1h'), () => actions.skip(1));
   add(t(lang, 'debug.plus8h'), () => actions.skip(8));
+  add(t(lang, 'debug.boatNow'), () => actions.boatNow());
   add(t(lang, 'debug.skyPlus'), () => actions.skySkip());
   add(t(lang, 'debug.event'), () => actions.ambient());
   add(t(lang, 'debug.reset'), () => {

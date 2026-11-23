@@ -310,3 +310,56 @@ html, body {
 @keyframes tail { 0% { opacity: 0; transform: translateY(14px); } 25% { opacity: 1; transform: translateY(0); } 70% { opacity: 1; transform: translateY(0) rotate(-6deg); } 100% { opacity: 0; transform: translateY(16px); } }
 .hud .icon-btn { border: 1px solid var(--ui-dim); background: transparent; color: var(--ui-dim); border-radius: 12px; width: 32px; height: 24px; padding: 2px; cursor: pointer; }
 .hud .icon-btn svg { width: 16px; height: 16px; vertical-align: middle; }
+
+/* ---------- boat, toolbar, sea chart ---------- */
+.boat {
+  position: absolute;
+  z-index: 6;
+  width: calc(54px * var(--scene-scale, 1));
+  min-width: 52px;
+  max-width: 86px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -70%);
+}
+.boat svg { width: 100%; display: block; animation: bob 3.2s ease-in-out infinite; }
+.boat.laden svg { filter: drop-shadow(0 0 7px #ffd98a); }
+.halo { animation: spin 18s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.beam2 { animation-delay: -4s; }
+
+.toolbar { z-index: 2; display: flex; justify-content: flex-start; gap: 8px; padding: 6px 10px 0; background: var(--ui-bg); }
+.map-btn { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--lamp); background: rgba(255, 217, 138, 0.08); color: var(--lamp); font-size: 13px; cursor: pointer; }
+.map-btn svg { width: 16px; height: 16px; }
+.map-btn.locked { border-color: var(--ui-dim); color: var(--ui-dim); background: transparent; }
+.map-btn.badge::after { content: ''; position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: #f2a46a; box-shadow: 0 0 8px #f2a46a; animation: breathe 1.4s ease-in-out infinite; }
+
+.map-overlay { align-items: stretch; padding: 10px; background: rgba(5, 6, 18, 0.88); }
+.seamap { width: 100%; max-width: 460px; margin: auto; max-height: 100%; overflow-y: auto; background: #10132a; border: 1px solid #2e3466; border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+.map-head { display: flex; align-items: center; justify-content: space-between; }
+.map-head h2 { margin: 0; font-size: 17px; color: var(--lamp); font-weight: 600; }
+.map-close { border: 1px solid var(--ui-dim); background: transparent; color: var(--ui-text); border-radius: 14px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
+.chart { position: relative; width: 100%; max-width: 360px; margin: 0 auto; aspect-ratio: 1; }
+.chart svg { width: 100%; height: 100%; display: block; }
+.map-light { animation: breathe 5s ease-in-out infinite; }
+.node { position: absolute; transform: translate(-50%, -50%); min-width: 40px; min-height: 40px; border: 0; border-radius: 50%; background: none; color: var(--lamp); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.node.dark { width: 10px; min-width: 10px; min-height: 10px; height: 10px; background: #1b2244; }
+.node.unknown { background: rgba(255, 217, 138, 0.12); border: 1px dashed var(--lamp); text-shadow: 0 0 8px var(--lamp); animation: breathe 2.4s ease-in-out infinite; }
+.node.found svg { width: 52px; height: 44px; }
+.node.found span { font-size: 11px; font-weight: 400; color: var(--ui-text); white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.node.sel { box-shadow: 0 0 0 2px var(--lamp); border-radius: 12px; }
+.map-info { min-height: 48px; }
+.map-info h3 { margin: 0 0 4px; font-size: 15px; }
+.map-info p { margin: 2px 0; font-size: 13px; color: var(--ui-dim); }
+.map-info p.status { color: var(--lamp); }
+.sail-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; }
+.sail-row .haul { display: flex; align-items: center; gap: 6px; flex: 1; color: var(--ui-dim); }
+.sail-row .mat svg { width: 16px; height: 16px; }
+.buy.sail { min-height: 38px; }
+.map-bottom .panel { max-height: none; padding: 0; background: none; }
+.discovery .island-pic svg { width: 120px; height: 100px; }
+.discovery h3 { margin: 4px 0; color: var(--ui-text); }
+.discovery .perk { color: var(--lamp); }
+.boat-note { color: var(--lamp) !important; }

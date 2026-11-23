@@ -111,6 +111,7 @@ export function sceneFrontSvg(): string {
 <ellipse cx="180" cy="458" rx="120" ry="22" fill="url(#pool)"/>
 <path d="M108 452 Q120 424 150 418 L176 412 Q214 410 236 422 Q256 432 262 452 Z" fill="url(#rock)"/>
 <path class="foam" d="M100 452 Q140 446 180 452 T262 452" fill="none" stroke="#e8e0ff" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
+<g class="dock-slot"></g>
 <g class="net-slot"></g>
 <g>
   <rect x="98" y="432" width="166" height="8" rx="2" fill="#7a5640"/>
@@ -120,19 +121,6 @@ export function sceneFrontSvg(): string {
   <rect x="252" y="440" width="5" height="18" fill="#3d291f"/>
 </g>
 
-<!-- tower -->
-<path d="M162 432 L169 272 L191 272 L198 432 Z" fill="url(#tower)"/>
-<path d="M165.6 366 L194.4 366 L195.2 384 L164.8 384 Z M167.7 312 L192.3 312 L192.9 328 L167.1 328 Z" fill="#a04848" opacity="0.9"/>
-<rect x="176" y="404" width="8" height="28" rx="4" fill="#2b2433"/>
-<rect x="177" y="340" width="6" height="9" rx="3" fill="var(--lamp)" opacity="0.6"/>
-<rect x="160" y="268" width="40" height="5" rx="1.5" fill="#3a3044"/>
-<g stroke="#3a3044" stroke-width="1"><line x1="162" y1="268" x2="162" y2="262"/><line x1="198" y1="268" x2="198" y2="262"/><line x1="160" y1="262" x2="200" y2="262"/></g>
-<!-- lamp room -->
-<circle class="lamp" cx="${LAMP.x}" cy="${LAMP.y}" r="36" fill="url(#glow)"/>
-<rect x="169" y="248" width="22" height="20" rx="2" fill="var(--lamp)"/>
-<g stroke="#3a3044" stroke-width="1.5"><line x1="176" y1="248" x2="176" y2="268"/><line x1="184" y1="248" x2="184" y2="268"/></g>
-<path d="M165 249 L180 234 L195 249 Z" fill="#3a3044"/>
-<circle cx="180" cy="232" r="2" fill="#3a3044"/>
-<polygon class="beam" points="${LAMP.x},${LAMP.y} 440,212 440,306" fill="url(#beamGrad)"/>
+<g class="tower-slot"></g>
 </svg>`;
 }

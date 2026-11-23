@@ -50,6 +50,8 @@ export function createHud(lang: Lang, onToggleLang: () => void, sound: boolean, 
   return {
     el: root,
     update(state) {
+      // Glowshards only matter once the boat has found some.
+      items.glow.style.display = state.materials.glow >= 1 || state.discovered.includes('firefly') ? '' : 'none';
       for (const m of MATERIALS) {
         const real = state.materials[m];
         const cur = shown[m];

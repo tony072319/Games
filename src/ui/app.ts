@@ -1,4 +1,4 @@
-import { AUTOSAVE_MS, MATERIALS, OFFLINE_MIN_REPORT_SECONDS, type Materials, type UpgradeId } from '../core/data';
+import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
 import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
 import { collect, newField, updateField, type FlotsamField } from '../core/flotsam';
 import { loadGame, saveGame, type KV } from '../core/save';
@@ -6,7 +6,9 @@ import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } fro
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { allowedEvents, ambientLayer, playAmbient } from './ambient';
-import { CHEST_POS, SEA_BAND, chestSvg, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg } from './art';
+import { BOAT_POS, CHEST_POS, SEA_BAND, boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from './art';
+import { DOCK_LIGHT, buildBoat, startVoyage, unloadBoat } from '../core/boat';
+import { createSeaMap, type SeaMap } from './seaMap';
 import { drawSea } from './sea';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, applySky, skyAt } from './sky';
@@ -47,6 +49,15 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let seaCanvas!: HTMLCanvasElement;
   let netSlot: Element | null = null;
   let netShown = 0;
+  let towerSlot: Element | null = null;
+  let towerShown = 0;
+  let dockSlot: Element | null = null;
+  let boatBtn!: HTMLButtonElement;
+  let boatKey = '';
+  let mapBtn!: HTMLButtonElement;
+  let seaMap: SeaMap | null = null;
+  /** Whether cargo was waiting last frame, to notice the boat coming home. */
+  let hadCargo = state.boat.cargo !== null;
   let nextSeaAt = 0;
   /** Debug only: shifts the sky clock forward. */
   let skyOffset = 0;
@@ -78,7 +89,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       popupEl = null;
       refresh();
       save();
-    });
+    }, state.boat.cargo !== null);
   }
 
   /** Empty the chest into the inventory with a little "+N" for each material. */
@@ -106,6 +117,82 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     g.style.top = `${y}px`;
     stage.append(g);
     setTimeout(() => g.remove(), 1300);
+  }
+
+  function openMap() {
+    if (seaMap) return;
+    const lang = state.settings.lang;
+    seaMap = createSeaMap(lang, state, {
+      now: opts.now,
+      sail: (d: DestId) => {
+        if (!startVoyage(state, d, opts.now())) return;
+        sound.play('upgrade');
+        save();
+        refresh();
+      },
+      build: () => {
+        if (!buildBoat(state)) return;
+        sound.play('upgrade');
+        save();
+        refresh();
+        sparkle(boatBtn);
+      },
+      buy: (id) => {
+        if (!buyUpgrade(state, id)) return;
+        sound.play('upgrade');
+        save();
+        refresh();
+      },
+      close: () => {
+        seaMap?.el.remove();
+        seaMap = null;
+      },
+    });
+    game.append(seaMap.el);
+  }
+
+  function unload() {
+    const cargo = unloadBoat(state);
+    if (!cargo) return;
+    sound.play('chest');
+    const lang = state.settings.lang;
+    const from = boatBtn.getBoundingClientRect();
+    let i = 0;
+    for (const m of MATERIALS) {
+      if (cargo.haul[m] < 1) continue;
+      floatText(`+${formatNumber(cargo.haul[m], lang)}`, boatBtn.offsetLeft - 20, boatBtn.offsetTop - 30 - i * 18, itemIcon(m));
+      flyToHud(m, from.left + from.width / 2, from.top + from.height / 3, Math.min(6, 1 + Math.floor(Math.log10(cargo.haul[m] + 1) * 1.5)), i * 90);
+      i++;
+    }
+    refresh();
+    save();
+    if (cargo.discovery) setTimeout(() => showDiscovery(cargo.dest), 900);
+  }
+
+  function showDiscovery(d: DestId) {
+    const lang = state.settings.lang;
+    const overlay = el('div', 'overlay');
+    const box = el('div', 'popup discovery');
+    box.setAttribute('role', 'dialog');
+    const h = el('h2');
+    h.textContent = t(lang, 'discover.title');
+    const pic = el('div', 'island-pic', islandIcon(d));
+    const name = el('h3');
+    name.textContent = t(lang, `dest.${d}.name`);
+    const desc = el('p');
+    desc.textContent = t(lang, `dest.${d}.desc`);
+    const perk = el('p', 'perk');
+    perk.textContent = t(lang, `dest.${d}.perk`);
+    const ok = el('button', 'primary');
+    ok.textContent = t(lang, 'discover.ok');
+    ok.addEventListener('click', () => overlay.remove());
+    const actions = el('div', 'actions');
+    actions.append(ok);
+    box.append(h, pic, name, desc, perk, actions);
+    overlay.append(box);
+    game.append(overlay);
+    sound.play('upgrade');
+    sparkle(pic);
   }
 
   /** Item icons arc from a point on screen into the material's counter, then it bumps. */
@@ -164,6 +251,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   function toast(text: string) {
+    stage.querySelectorAll('.toast').forEach((old) => old.remove());
     const n = el('div', 'toast');
     n.textContent = text;
     stage.append(n);
@@ -178,7 +266,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     toast(t(lang, 'toast.upgraded', { name: t(lang, `upg.${id}.name`), level: state.levels[id] }));
     panel.flash(id);
     refresh(); // draw the new look first, then celebrate it
-    const target = id === 'net' ? netSlot : chestBtn;
+    const target = id === 'net' ? netSlot : id === 'storage' ? chestBtn : id === 'light' ? towerSlot : boatBtn;
+    if (id === 'light' && state.levels.light >= MAX_LEVEL.light) setTimeout(() => toast(t(lang, 'toast.lit')), 1200);
     target?.classList.remove('pulse');
     void (target as HTMLElement | null)?.getBoundingClientRect();
     target?.classList.add('pulse');
@@ -199,6 +288,18 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     stage.append(back, seaCanvas, farLayer, front, nearLayer);
     netSlot = front.querySelector('.net-slot');
     netShown = 0;
+    towerSlot = front.querySelector('.tower-slot');
+    towerShown = 0;
+    dockSlot = front.querySelector('.dock-slot');
+    boatBtn = el('button', 'boat');
+    boatBtn.setAttribute('aria-label', t(lang, 'boat.label'));
+    boatBtn.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      if (state.boat.cargo) unload();
+      else openMap();
+    });
+    boatKey = '';
+    stage.append(boatBtn);
     nextSkyAt = 0;
     nextSeaAt = 0;
     flotsamLayer = el('div', 'flotsam');
@@ -229,11 +330,31 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       },
     );
     panel = createPanel(lang, onBuy);
-    game.append(hud.el, stage, panel.el);
+    const toolbar = el('div', 'toolbar');
+    mapBtn = el('button', 'map-btn');
+    mapBtn.innerHTML = `<svg viewBox="0 0 16 16"><path d="M1 3l4-1.5 6 2 4-1.5v11l-4 1.5-6-2-4 1.5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.5v11M11 3.5v11" stroke="currentColor" stroke-width="1"/></svg>`;
+    mapBtn.append(t(lang, 'map.open'));
+    mapBtn.addEventListener('click', openMap);
+    toolbar.append(mapBtn);
+    game.append(hud.el, stage, toolbar, panel.el);
+    if (seaMap) {
+      seaMap = null;
+      openMap();
+    }
     if (opts.debug) {
       game.append(
         createDebug(lang, infinite, {
-          skip: (h) => (state.lastActiveAt -= h * 3600 * 1000),
+          skip: (h) => {
+            state.lastActiveAt -= h * 3600 * 1000;
+            const v = state.boat.voyage;
+            if (v) {
+              v.departAt -= h * 3600 * 1000;
+              v.returnAt -= h * 3600 * 1000;
+            }
+          },
+          boatNow: () => {
+            if (state.boat.voyage) state.boat.voyage.returnAt = opts.now();
+          },
           addAll: (n) => MATERIALS.forEach((m) => (state.materials[m] += n)),
           setInfinite: (on) => (infinite = on),
           skySkip: () => {
@@ -279,6 +400,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     nextSeaAt = 0;
     chestBtn.style.left = `${sceneXToPx(CHEST_POS.x)}px`;
     chestBtn.style.top = `${sceneYToPx(CHEST_POS.y)}px`;
+    boatBtn.style.left = `${sceneXToPx(BOAT_POS.x)}px`;
+    boatBtn.style.top = `${sceneYToPx(BOAT_POS.y)}px`;
   }
 
   /** Scene (viewBox 360x640) to stage pixels, matching preserveAspectRatio="xMidYMid slice". */
@@ -349,7 +472,30 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     drawSea(ctx, now, currentSky());
   }
 
+  function renderBoat() {
+    const shown = state.boat.built && !state.boat.voyage;
+    const laden = !!state.boat.cargo;
+    const key = `${shown}:${laden}:${state.levels.cargo}`;
+    if (key === boatKey) return;
+    boatKey = key;
+    boatBtn.style.display = shown ? '' : 'none';
+    boatBtn.innerHTML = boatSvg(laden, state.levels.cargo);
+    boatBtn.classList.toggle('laden', laden);
+  }
+
   function refresh() {
+    if (towerSlot && towerShown !== state.levels.light) {
+      towerSlot.innerHTML = towerSvg(state.levels.light);
+      towerShown = state.levels.light;
+    }
+    if (dockSlot) {
+      const want = state.levels.light >= DOCK_LIGHT;
+      if (want !== dockSlot.hasChildNodes()) dockSlot.innerHTML = want ? dockSvg() : '';
+    }
+    renderBoat();
+    mapBtn.classList.toggle('badge', !!state.boat.cargo);
+    mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
+    seaMap?.update(state);
     if (netSlot && netShown !== state.levels.net) {
       netSlot.innerHTML = netSvg(state.levels.net);
       netShown = state.levels.net;
@@ -364,6 +510,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (infinite) for (const m of MATERIALS) state.materials[m] = Math.max(state.materials[m], INFINITE_AMOUNT);
     const report = tick(state, now);
     if (report) showReport(report);
+    const hasCargo = state.boat.cargo !== null;
+    if (hasCargo && !hadCargo && !report) {
+      toast(t(state.settings.lang, 'toast.boatBack'));
+      sound.play('chest');
+    }
+    hadCargo = hasCargo;
     updateField(field, now, Math.random);
     syncFlotsam(now);
     if (now >= nextSkyAt) {

@@ -22,6 +22,7 @@ export function showOfflinePopup(
   report: OfflineReport,
   chest: Materials,
   onCollect: (double: boolean) => void,
+  boatBack = false,
 ): HTMLElement {
   const overlay = el('div', 'overlay');
   const box = el('div', 'popup');
@@ -35,6 +36,11 @@ export function showOfflinePopup(
     const full = el('p');
     full.textContent = t(lang, 'offline.chestFull');
     box.append(full);
+  }
+  if (boatBack) {
+    const b = el('p', 'boat-note');
+    b.textContent = t(lang, 'offline.boat');
+    box.append(b);
   }
   const label = el('p');
   label.textContent = t(lang, 'offline.inChest');

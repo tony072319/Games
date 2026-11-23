@@ -37,7 +37,7 @@ try {
   page.on('pageerror', (e) => errors.push(String(e)));
 
   await page.goto(BASE);
-  if ((await page.locator('.hud .mat').count()) !== 4) fail('HUD should show 4 materials');
+  if ((await page.locator('.hud .mat:visible').count()) !== 4) fail('HUD should show 4 materials (glow hidden until found)');
   if ((await page.locator('.hud .sound').count()) !== 1) fail('HUD should have a sound toggle');
   await page.locator('.hud .sound').click();
   if ((await page.locator('.hud .sound').getAttribute('aria-pressed')) !== 'false') fail('sound toggle should turn sound off');
@@ -88,6 +88,32 @@ try {
   if (!((await savedTotal()) > beforeChest + 100)) fail('tapping the chest should collect it');
   const emptyPct = await page.$eval('.chest .bar i', (e) => parseFloat(e.style.width));
   if (emptyPct !== 0) fail(`chest should be empty after collecting, got ${emptyPct}%`);
+
+  // Lighthouse to 3 → build boat → sail to the wreck → bring it home → unload → discovery.
+  for (let i = 0; i < 2; i++) await page.locator('[data-upgrade="light"] .buy').click();
+  if (!(await page.locator('.dock-slot .dock').count())) fail('lighthouse 3 should show the dock');
+  await page.locator('.map-btn').click();
+  await page.locator('.seamap').waitFor();
+  await page.locator('.map-bottom .buy').click();
+  if (!(await page.locator('.map-bottom [data-upgrade="speed"]').count())) fail('after building, boat upgrades should show');
+  await page.locator('.node[data-dest="wreck"]').click();
+  await page.locator('.buy.sail').click();
+  if (!(await page.locator('.map-info .status').count())) fail('sailing should show the voyage status');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/map.png` });
+  await page.locator('.map-close').click();
+  if (await page.locator('.boat').isVisible()) fail('boat should be away from the dock');
+  await page.getByText('小船立即返航').click();
+  await page.locator('.boat.laden').waitFor({ timeout: 3000 });
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/boat-laden.png` });
+  await page.locator('.boat').dispatchEvent('pointerdown');
+  await page.locator('.discovery').waitFor({ timeout: 3000 });
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery.png` });
+  await page.locator('.discovery button').click();
+  const disc = await page.evaluate(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).discovered);
+  if (!disc.includes('wreck')) fail('unloading should record the wreck as discovered');
+  await page.locator('.map-btn').click();
+  if (!(await page.locator('.node.found[data-dest="wreck"]').count())) fail('the map should show the discovered wreck');
+  await page.locator('.map-close').click();
 
   await page.reload();
   const lvl2 = await page.locator('[data-upgrade="net"] .level').textContent();
