@@ -1,6 +1,20 @@
-import { MATERIALS, type Materials, type UpgradeId } from './data';
+import { MATERIALS, type DestId, type Materials, type UpgradeId } from './data';
 
 export type Lang = 'zh' | 'en';
+
+export interface Voyage {
+  dest: DestId;
+  departAt: number;
+  returnAt: number;
+}
+
+/** What the boat brought back, waiting on the dock to be unloaded. */
+export interface Cargo {
+  dest: DestId;
+  haul: Materials;
+  /** First time reaching this island. */
+  discovery: boolean;
+}
 
 export interface GameState {
   version: 1;
@@ -12,6 +26,8 @@ export interface GameState {
   lastActiveAt: number;
   settings: { lang: Lang; sound: boolean };
   stats: { tapped: number };
+  boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null };
+  discovered: DestId[];
 }
 
 export function emptyMaterials(): Materials {
@@ -25,9 +41,11 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     version: 1,
     materials: emptyMaterials(),
     chest: emptyMaterials(),
-    levels: { net: 1, storage: 1 },
+    levels: { net: 1, storage: 1, light: 1, speed: 1, cargo: 1 },
     lastActiveAt: nowMs,
     settings: { lang, sound: true },
     stats: { tapped: 0 },
+    boat: { built: false, voyage: null, cargo: null },
+    discovered: [],
   };
 }

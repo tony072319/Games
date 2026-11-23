@@ -8,6 +8,7 @@ describe('pickMaterial', () => {
     expect(pickMaterial(0.55)).toBe('plastic');
     expect(pickMaterial(0.85)).toBe('rope');
     expect(pickMaterial(0.99)).toBe('metal');
+    expect(pickMaterial(0.999999)).not.toBe('glow');
   });
 });
 

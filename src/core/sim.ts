@@ -1,5 +1,5 @@
 import { LIVE_DT_MAX_SECONDS, MATERIALS, MATERIAL_WEIGHTS, type Materials } from './data';
-import { addMaterials, autoRate, chestCapacity, chestTotal } from './economy';
+import { addMaterials, chestCapacity, chestTotal, netRate } from './economy';
 import { emptyMaterials, type GameState } from './state';
 
 export interface OfflineReport {
@@ -10,9 +10,9 @@ export interface OfflineReport {
   gained: Materials;
 }
 
-/** Fractional amounts the net collects in the given time. */
-export function expectedGain(netLevel: number, seconds: number): Materials {
-  const total = autoRate(netLevel) * seconds;
+/** Fractional amounts the net collects in the given time at a given rate (items/second). */
+export function expectedGain(rate: number, seconds: number): Materials {
+  const total = rate * seconds;
   const g = emptyMaterials();
   for (const m of MATERIALS) g[m] = total * MATERIAL_WEIGHTS[m];
   return g;
@@ -21,8 +21,9 @@ export function expectedGain(netLevel: number, seconds: number): Materials {
 /** Let the net work for `seconds`, putting its catch into the chest until it is full. */
 function fillChest(state: GameState, seconds: number): { creditedSeconds: number; gained: Materials } {
   const room = Math.max(0, chestCapacity(state) - chestTotal(state.chest));
-  const creditedSeconds = Math.min(seconds, room / autoRate(state.levels.net));
-  const gained = expectedGain(state.levels.net, creditedSeconds);
+  const rate = netRate(state);
+  const creditedSeconds = Math.min(seconds, room / rate);
+  const gained = expectedGain(rate, creditedSeconds);
   for (const m of MATERIALS) state.chest[m] += gained[m];
   return { creditedSeconds, gained };
 }

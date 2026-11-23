@@ -16,17 +16,39 @@ export function tapYield(netLevel: number): number {
   return Math.max(1, Math.round(autoRate(netLevel) * 10));
 }
 
-/** Cost to go from currentLevel to currentLevel + 1. */
-export function upgradeCost(id: UpgradeId, currentLevel: number): Materials {
+/** Items per second the net actually brings in, including perks from islands. */
+export function netRate(state: GameState): number {
+  return autoRate(state.levels.net) * (state.discovered.includes('gullrock') ? 1.25 : 1);
+}
+
+/**
+ * Cost to go from currentLevel to currentLevel + 1.
+ * Pass the state to apply perks (the old lighthouse's blueprint makes light cheaper).
+ */
+export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameState): Materials {
   const L = currentLevel;
   const c = emptyMaterials();
+  const g = (base: number, r: number, from = 1) => Math.ceil(base * Math.pow(r, L - from));
   if (id === 'net') {
-    c.wood = Math.ceil(15 * Math.pow(1.6, L - 1));
-    if (L >= 3) c.rope = Math.ceil(5 * Math.pow(1.6, L - 3));
-    if (L >= 6) c.metal = Math.ceil(2 * Math.pow(1.6, L - 6));
+    c.wood = g(15, 1.6);
+    if (L >= 3) c.rope = g(5, 1.6, 3);
+    if (L >= 6) c.metal = g(2, 1.6, 6);
+  } else if (id === 'storage') {
+    c.wood = g(30, 1.8);
+    c.plastic = g(10, 1.8);
+  } else if (id === 'light') {
+    c.wood = g(200, 2.2);
+    c.plastic = g(80, 2.2);
+    if (L >= 2) c.rope = g(40, 2.2);
+    if (L >= 2) c.metal = g(20, 2.2, 2);
+    if (L >= 7) c.glow = g(5, 2, 7);
+    if (state?.discovered.includes('oldlight')) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * 0.8);
+  } else if (id === 'speed') {
+    c.wood = g(150, 1.9);
+    c.metal = g(30, 1.9);
   } else {
-    c.wood = Math.ceil(30 * Math.pow(1.8, L - 1));
-    c.plastic = Math.ceil(10 * Math.pow(1.8, L - 1));
+    c.wood = g(120, 1.9);
+    c.rope = g(40, 1.9);
   }
   return c;
 }
@@ -37,13 +59,13 @@ export function isMaxLevel(state: GameState, id: UpgradeId): boolean {
 
 export function canBuy(state: GameState, id: UpgradeId): boolean {
   if (isMaxLevel(state, id)) return false;
-  const cost = upgradeCost(id, state.levels[id]);
+  const cost = upgradeCost(id, state.levels[id], state);
   return MATERIALS.every((m) => state.materials[m] >= cost[m]);
 }
 
 export function buyUpgrade(state: GameState, id: UpgradeId): boolean {
   if (!canBuy(state, id)) return false;
-  const cost = upgradeCost(id, state.levels[id]);
+  const cost = upgradeCost(id, state.levels[id], state);
   for (const m of MATERIALS) state.materials[m] -= cost[m];
   state.levels[id] += 1;
   return true;
@@ -55,7 +77,7 @@ export function addMaterials(state: GameState, gained: Materials, factor = 1): v
 
 /** Items the chest can hold: enough for offlineCapSeconds of the current net. */
 export function chestCapacity(state: GameState): number {
-  return autoRate(state.levels.net) * offlineCapSeconds(state.levels.storage);
+  return netRate(state) * offlineCapSeconds(state.levels.storage);
 }
 
 export function chestTotal(chest: Materials): number {

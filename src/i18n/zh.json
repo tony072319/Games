@@ -35,5 +35,6 @@
   "debug.resetConfirm": "清空测试存档，从头开始？（不影响正式存档）",
   "settings.sound": "声音",
   "debug.skyPlus": "天色 +4 分钟",
-  "debug.event": "随机海上事件"
+  "debug.event": "随机海上事件",
+  "mat.glow": "萤光"
 }

@@ -13,7 +13,7 @@ describe('scene', () => {
   });
   test('each material has its own icon', () => {
     const icons = MATERIALS.map(itemIcon);
-    expect(new Set(icons).size).toBe(4);
+    expect(new Set(icons).size).toBe(MATERIALS.length);
   });
 });
 

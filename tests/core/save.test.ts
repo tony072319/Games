@@ -105,3 +105,37 @@ describe('sound setting', () => {
     expect(r.state.settings.sound).toBe(true);
   });
 });
+
+describe('saves from before the boat', () => {
+  test('load unchanged, with the lighthouse at 1 and no boat', () => {
+    const old = {
+      version: 1,
+      materials: { wood: 50, plastic: 2, rope: 3, metal: 4 },
+      chest: { wood: 1, plastic: 0, rope: 0, metal: 0 },
+      levels: { net: 7, storage: 3 },
+      lastActiveAt: 100,
+      settings: { lang: 'zh', sound: true },
+      stats: { tapped: 9 },
+    };
+    const r = loadGame(memKV({ [SAVE_KEY]: JSON.stringify(old) }), 200, 'zh');
+    expect(r.status).toBe('loaded');
+    expect(r.state.materials.wood).toBe(50);
+    expect(r.state.materials.glow).toBe(0);
+    expect(r.state.levels).toEqual({ net: 7, storage: 3, light: 1, speed: 1, cargo: 1 });
+    expect(r.state.boat).toEqual({ built: false, voyage: null, cargo: null });
+    expect(r.state.discovered).toEqual([]);
+  });
+
+  test('boat and discoveries round-trip', () => {
+    const s = newGame(0, 'zh');
+    s.boat.built = true;
+    s.boat.voyage = { dest: 'wreck', departAt: 10, returnAt: 20 };
+    s.discovered.push('gullrock');
+    const kv = memKV();
+    saveGame(kv, s);
+    const r = loadGame(kv, 30, 'zh');
+    expect(r.status).toBe('loaded');
+    expect(r.state.boat).toEqual(s.boat);
+    expect(r.state.discovered).toEqual(['gullrock']);
+  });
+});

@@ -1,4 +1,4 @@
-import { MATERIALS, UPGRADES, type UpgradeId } from '../core/data';
+import { MATERIALS, PANEL_UPGRADES as UPGRADES, type UpgradeId } from '../core/data';
 import { canBuy, isMaxLevel, upgradeCost } from '../core/economy';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';

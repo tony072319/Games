@@ -35,5 +35,6 @@
   "debug.resetConfirm": "Wipe the test save and start over? (Your real save is untouched.)",
   "settings.sound": "Sound",
   "debug.skyPlus": "Sky +4 min",
-  "debug.event": "Random sea event"
+  "debug.event": "Random sea event",
+  "mat.glow": "Glowshard"
 }
