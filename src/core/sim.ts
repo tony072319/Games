@@ -1,5 +1,6 @@
 import { LIVE_DT_MAX_SECONDS, MATERIALS, MATERIAL_WEIGHTS, type Materials } from './data';
 import { addMaterials, chestCapacity, chestTotal, netRate } from './economy';
+import { settleVoyage } from './boat';
 import { emptyMaterials, type GameState } from './state';
 
 export interface OfflineReport {
@@ -29,6 +30,7 @@ function fillChest(state: GameState, seconds: number): { creditedSeconds: number
 }
 
 export function applyOffline(state: GameState, nowMs: number): OfflineReport {
+  settleVoyage(state, nowMs);
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
   const { creditedSeconds, gained } = fillChest(state, seconds);
   state.lastActiveAt = nowMs;
@@ -53,6 +55,7 @@ export function claimDouble(state: GameState, collected: Materials): void {
  * (tab hidden, device asleep) is treated as offline time and reported.
  */
 export function tick(state: GameState, nowMs: number): OfflineReport | null {
+  settleVoyage(state, nowMs);
   const dt = (nowMs - state.lastActiveAt) / 1000;
   if (dt >= 0 && dt <= LIVE_DT_MAX_SECONDS) {
     fillChest(state, dt);
