@@ -17,6 +17,9 @@ export function createDebug(lang: Lang, infinite: boolean, actions: DebugActions
   const root = el('div', 'debug');
   const badge = el('div', 'debug-badge');
   badge.textContent = t(lang, 'debug.badge');
+  // Collapsed by default so it doesn't cover the game; tap the label to open.
+  root.classList.add('collapsed');
+  badge.addEventListener('click', () => root.classList.toggle('collapsed'));
   root.append(badge);
   const add = (text: string, fn: (b: HTMLButtonElement) => void) => {
     const b = el('button');

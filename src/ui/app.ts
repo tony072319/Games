@@ -9,6 +9,8 @@ import { allowedEvents, ambientLayer, playAmbient } from './ambient';
 import { BOAT_POS, CHEST_POS, SEA_BAND, boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from './art';
 import { DOCK_LIGHT, buildBoat, startVoyage, unloadBoat } from '../core/boat';
 import { createSeaMap, type SeaMap } from './seaMap';
+import { createIslandView, type IslandView } from './islandView';
+import { construct } from '../core/islands';
 import { drawSea } from './sea';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, applySky, skyAt } from './sky';
@@ -56,6 +58,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let boatKey = '';
   let mapBtn!: HTMLButtonElement;
   let seaMap: SeaMap | null = null;
+  let islandView: IslandView | null = null;
   /** Whether cargo was waiting last frame, to notice the boat coming home. */
   let hadCargo = state.boat.cargo !== null;
   let nextSeaAt = 0;
@@ -143,12 +146,35 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         save();
         refresh();
       },
+      land: (d: DestId) => openIsland(d),
       close: () => {
         seaMap?.el.remove();
         seaMap = null;
       },
     });
     game.append(seaMap.el);
+  }
+
+  function openIsland(d: DestId) {
+    seaMap?.el.remove();
+    seaMap = null;
+    const lang = state.settings.lang;
+    islandView = createIslandView(lang, state, d, {
+      build: (b) => {
+        if (!construct(state, b, opts.now())) return;
+        sound.play('upgrade');
+        save();
+        refresh();
+        toast(t(lang, 'toast.built', { name: t(lang, `bld.${b}.name`), level: state.buildings[b] ?? 0 }));
+        sparkle(islandView?.flash(b) ?? null);
+      },
+      back: () => {
+        islandView?.el.remove();
+        islandView = null;
+        openMap();
+      },
+    });
+    game.append(islandView.el);
   }
 
   function unload() {
@@ -251,10 +277,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   function toast(text: string) {
-    stage.querySelectorAll('.toast').forEach((old) => old.remove());
+    game.querySelectorAll('.toast').forEach((old) => old.remove());
     const n = el('div', 'toast');
     n.textContent = text;
-    stage.append(n);
+    game.append(n);
     setTimeout(() => n.remove(), 2200);
   }
 
@@ -337,8 +363,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     mapBtn.addEventListener('click', openMap);
     toolbar.append(mapBtn);
     game.append(hud.el, stage, toolbar, panel.el);
-    if (seaMap) {
+    if (seaMap || islandView) {
       seaMap = null;
+      islandView = null;
       openMap();
     }
     if (opts.debug) {
@@ -346,6 +373,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         createDebug(lang, infinite, {
           skip: (h) => {
             state.lastActiveAt -= h * 3600 * 1000;
+            state.islandAt -= h * 3600 * 1000;
             const v = state.boat.voyage;
             if (v) {
               v.departAt -= h * 3600 * 1000;
@@ -496,6 +524,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
     seaMap?.update(state);
+    islandView?.update(state);
     if (netSlot && netShown !== state.levels.net) {
       netSlot.innerHTML = netSvg(state.levels.net);
       netShown = state.levels.net;

@@ -41,7 +41,7 @@ html, body {
 }
 
 /* ---------- stage ---------- */
-.stage { position: relative; flex: 1; min-height: 240px; overflow: hidden; }
+.stage { position: relative; flex: 1; min-height: 240px; overflow: hidden; isolation: isolate; z-index: 1; }
 .scene, .scene svg, .sea { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .scene.front { pointer-events: none; }
 .flotsam { position: absolute; inset: 0; }
@@ -242,10 +242,11 @@ html, body {
   font-size: 12px;
 }
 
-.debug { position: absolute; right: 8px; top: 64px; z-index: 4; display: grid; gap: 4px; }
+.debug { position: absolute; left: 8px; bottom: 8px; z-index: 70; opacity: 0.85; display: grid; gap: 4px; }
 .debug button { font-size: 11px; padding: 4px 6px; background: #333; color: #ddd; border: 1px solid #666; border-radius: 4px; cursor: pointer; }
 .debug button.on { border-color: #7fd18a; color: #b6f0be; }
-.debug-badge { font-size: 10px; text-align: center; color: #241a2e; background: #7fd18a; border-radius: 4px; padding: 2px 6px; }
+.debug.collapsed button { display: none; }
+.debug-badge { cursor: pointer; font-size: 10px; text-align: center; color: #241a2e; background: #7fd18a; border-radius: 4px; padding: 2px 6px; }
 
 /* ---------- motion (slow and quiet) ---------- */
 .beam { transform-box: view-box; transform-origin: 180px 259px; animation: sweep 8s ease-in-out infinite; }
@@ -363,3 +364,24 @@ html, body {
 .discovery h3 { margin: 4px 0; color: var(--ui-text); }
 .discovery .perk { color: var(--lamp); }
 .boat-note { color: var(--lamp) !important; }
+
+/* ---------- island ---------- */
+.island-scene { position: relative; width: 100%; aspect-ratio: 3 / 2; border-radius: 12px; overflow: hidden; }
+.island-scene svg { width: 100%; height: 100%; display: block; }
+.plot-btn { position: absolute; transform: translate(-50%, -50%); width: 22%; height: 34%; border: 0; border-radius: 12px; background: none; cursor: pointer; }
+.plot-btn.sel { box-shadow: 0 0 0 2px var(--lamp) inset, 0 0 16px rgba(255, 217, 138, 0.35); }
+.island-store p { margin: 0 0 4px; font-size: 13px; color: var(--ui-dim); }
+.island-store .haul { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; }
+.island-store .mat svg { width: 18px; height: 18px; }
+.bld.pulse { animation: pulse 0.8s ease-out; transform-box: fill-box; transform-origin: center bottom; }
+.land { border: 1px solid var(--lamp); background: transparent; color: var(--lamp); border-radius: 8px; min-height: 38px; padding: 0 14px; cursor: pointer; }
+.sway { animation: sway 3s ease-in-out infinite; transform-box: fill-box; transform-origin: top center; }
+@keyframes sway { 50% { transform: rotate(6deg); } }
+.smoke { animation: smoke 4s ease-in-out infinite; }
+@keyframes smoke { 50% { transform: translate(3px, -4px); opacity: 0.25; } }
+.iwing { animation: flap 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.fireflies circle { animation: breathe 2.6s ease-in-out infinite; }
+.fireflies circle:nth-child(2n) { animation-delay: -1.3s; }
+.sparks { animation: twinkle 0.5s steps(2) infinite; }
+.card .perk { color: var(--lamp); }
+.toast { z-index: 60; }

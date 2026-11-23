@@ -54,6 +54,7 @@ try {
   // Test build: separate save, infinite materials on by default.
   await page.goto(BASE + '?debug=1');
   if (!(await page.locator('.debug-badge').count())) fail('test build should show its badge');
+  await page.locator('.debug-badge').click(); // open the test panel
   for (let i = 0; i < 3; i++) await page.locator('[data-upgrade="net"] .buy').click();
   if ((await page.locator('.toast').count()) < 1) fail('upgrading should show a toast');
   const lvl = await page.locator('[data-upgrade="net"] .level').textContent();
@@ -113,12 +114,32 @@ try {
   if (!disc.includes('wreck')) fail('unloading should record the wreck as discovered');
   await page.locator('.map-btn').click();
   if (!(await page.locator('.node.found[data-dest="wreck"]').count())) fail('the map should show the discovered wreck');
+
+  // Go ashore, build the breaking bench, and see the island save up metal.
+  await page.locator('.node[data-dest="wreck"]').click();
+  await page.locator('.land').click();
+  await page.locator('.island-scene').waitFor();
+  await page.locator('.plot-btn[data-b="dismantler"]').click();
+  await page.locator('[data-building="dismantler"] .buy').click();
+  await page.locator('.plot-btn[data-b="dismantler"]').click();
+  const bl = await page.locator('[data-building="dismantler"] .level').textContent();
+  if (!bl?.includes('1')) fail(`breaking bench should be level 1, got ${bl}`);
+  await page.locator('.plot-btn[data-b="boatshed"]').click();
+  await page.locator('[data-building="boatshed"] .buy').click();
+  await page.getByText('+8 小时').click();
+  await page.locator('.popup button').first().click();
+  await page.waitForTimeout(400);
+  if (!(await page.locator('.island-store .haul').count())) fail('the island should save up what it makes');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/island.png` });
+  await page.locator('.map-close').click(); // back to chart
+  await page.locator('.seamap').waitFor();
   await page.locator('.map-close').click();
 
   await page.reload();
   const lvl2 = await page.locator('[data-upgrade="net"] .level').textContent();
   if (!lvl2?.includes('4')) fail(`test save should persist after reload, got ${lvl2}`);
 
+  await page.locator('.debug-badge').click(); // panel starts collapsed after reload
   await page.getByText('天色 +4 分钟').click();
   await page.getByText('随机海上事件').click();
   if (!(await page.locator('.ambient .amb').count())) fail('a sea event should appear');

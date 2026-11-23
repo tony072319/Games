@@ -25,6 +25,7 @@ const reach = (light: number) => 30 + light * 24;
 export interface SeaMapActions {
   now(): number;
   sail(d: DestId): void;
+  land(d: DestId): void;
   build(): void;
   buy(id: UpgradeId): void;
   close(): void;
@@ -144,6 +145,12 @@ ${path}
     info.append(h, p);
     if (!reachable(s, d)) return;
     const row = el('div', 'sail-row');
+    if (found) {
+      const land = el('button', 'land');
+      land.textContent = t(lang, 'island.land');
+      land.addEventListener('click', () => act.land(d));
+      row.append(land);
+    }
     const time = el('span');
     time.textContent = t(lang, 'map.time', { time: formatDuration(voyageMs(s, d) / 1000, lang) });
     row.append(time);

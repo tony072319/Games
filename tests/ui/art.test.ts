@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { MAX_LEVEL, MATERIALS } from '../../src/core/data';
-import { DEST_IDS } from '../../src/core/data';
-import { boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from '../../src/ui/art';
+import { BUILDING_MAX, DEST_IDS } from '../../src/core/data';
+import { BUILDINGS } from '../../src/core/islands';
+import { buildingSvg, islandSceneSvg, boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from '../../src/ui/art';
 
 describe('scene', () => {
   test('back has the sky; front has slots for the lighthouse, dock and net', () => {
@@ -41,5 +42,15 @@ describe('lighthouse, dock, boat, islands', () => {
     expect(dockSvg()).toContain('<');
     expect(boatSvg(true, 1)).not.toBe(boatSvg(false, 1));
     expect(new Set(DEST_IDS.map(islandIcon)).size).toBe(DEST_IDS.length);
+  });
+});
+
+describe('island buildings', () => {
+  test('every building looks different at every level, and islands differ', () => {
+    for (const b of Object.keys(BUILDINGS) as (keyof typeof BUILDINGS)[]) {
+      const looks = Array.from({ length: BUILDING_MAX + 1 }, (_, i) => buildingSvg(b, i));
+      expect(new Set(looks).size).toBe(BUILDING_MAX + 1);
+    }
+    expect(new Set(DEST_IDS.map(islandSceneSvg)).size).toBe(DEST_IDS.length);
   });
 });
