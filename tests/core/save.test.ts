@@ -77,3 +77,15 @@ describe('save/load', () => {
     expect(r.state.chest.wood).toBe(0);
   });
 });
+
+describe('test-mode storage', () => {
+  test('prefixed storage keeps test saves apart from the real save', async () => {
+    const { prefixedKV } = await import('../../src/core/save');
+    const kv = memKV({ [SAVE_KEY]: 'real' });
+    const testKV = prefixedKV(kv, 'test:');
+    expect(testKV.getItem(SAVE_KEY)).toBeNull();
+    testKV.setItem(SAVE_KEY, 'pretend');
+    expect(kv.map.get(SAVE_KEY)).toBe('real');
+    expect(kv.map.get('test:' + SAVE_KEY)).toBe('pretend');
+  });
+});

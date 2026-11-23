@@ -233,7 +233,9 @@ html, body {
 }
 
 .debug { position: absolute; right: 8px; top: 64px; z-index: 4; display: grid; gap: 4px; }
-.debug button { font-size: 11px; padding: 4px 6px; background: #333; color: #ddd; border: 1px solid #666; border-radius: 4px; }
+.debug button { font-size: 11px; padding: 4px 6px; background: #333; color: #ddd; border: 1px solid #666; border-radius: 4px; cursor: pointer; }
+.debug button.on { border-color: #7fd18a; color: #b6f0be; }
+.debug-badge { font-size: 10px; text-align: center; color: #241a2e; background: #7fd18a; border-radius: 4px; padding: 2px 6px; }
 
 /* ---------- motion (slow and quiet) ---------- */
 .beam { transform-box: view-box; transform-origin: 180px 259px; animation: sweep 8s ease-in-out infinite; }

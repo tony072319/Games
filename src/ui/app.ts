@@ -3,7 +3,7 @@ import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
 import { collect, newField, updateField, type FlotsamField } from '../core/flotsam';
 import { loadGame, saveGame, type KV } from '../core/save';
 import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } from '../core/sim';
-import type { GameState } from '../core/state';
+import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { CHEST_POS, SEA_BAND, chestSvg, itemIcon, sceneSvg, tierFor } from './art';
 import { createDebug } from './debug';
@@ -33,6 +33,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let chestBtn!: HTMLButtonElement;
   let chestKey = '';
   const itemEls = new Map<number, HTMLElement>();
+  /** Test build: materials are topped up every frame so nothing ever runs out. */
+  let infinite = opts.debug;
+  const INFINITE_AMOUNT = 1e12;
   const resizeObserver = new ResizeObserver(() => onStageResize());
 
   // An open popup accumulates further time away instead of stacking dialogs.
@@ -128,9 +131,17 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     game.append(hud.el, stage, panel.el);
     if (opts.debug) {
       game.append(
-        createDebug(lang, {
+        createDebug(lang, infinite, {
           skip: (h) => (state.lastActiveAt -= h * 3600 * 1000),
           addAll: (n) => MATERIALS.forEach((m) => (state.materials[m] += n)),
+          setInfinite: (on) => (infinite = on),
+          reset: () => {
+            Object.assign(state, newGame(opts.now(), state.settings.lang));
+            pending = null;
+            popupEl = null;
+            save();
+            build();
+          },
         }),
       );
     }
@@ -224,6 +235,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   function frame() {
     const now = opts.now();
+    if (infinite) for (const m of MATERIALS) state.materials[m] = Math.max(state.materials[m], INFINITE_AMOUNT);
     const report = tick(state, now);
     if (report) showReport(report);
     updateField(field, now, Math.random);

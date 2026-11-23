@@ -48,21 +48,29 @@ try {
   if (!((await total(page)) > before)) fail('tapping flotsam should add material');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/phone-zh.png` });
 
+  // Test build: separate save, infinite materials on by default.
   await page.goto(BASE + '?debug=1');
-  await page.getByText('+1000 全部材料').click();
-  await page.locator('[data-upgrade="net"] .buy').click();
-  if ((await page.locator('.toast').count()) !== 1) fail('upgrading should show a toast');
+  if (!(await page.locator('.debug-badge').count())) fail('test build should show its badge');
+  for (let i = 0; i < 3; i++) await page.locator('[data-upgrade="net"] .buy').click();
+  if ((await page.locator('.toast').count()) < 1) fail('upgrading should show a toast');
   const lvl = await page.locator('[data-upgrade="net"] .level').textContent();
-  if (!lvl?.includes('2')) fail(`net level should be 2, got ${lvl}`);
+  if (!lvl?.includes('4')) fail(`infinite materials should allow buying net to 4, got ${lvl}`);
 
-  const beforeAway = await total(page);
+  const savedTotal = () =>
+    page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('test:lightkeeper.save') || '{}');
+      return Object.values(s.materials || {}).reduce((a, b) => a + b, 0);
+    });
+
+  await page.getByText('无限材料：开').click();
+  const beforeAway = await savedTotal();
   await page.getByText('+8 小时').click();
   await page.locator('.popup').waitFor({ timeout: 3000 });
   await page.waitForTimeout(500);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/popup-zh.png` });
   await page.locator('.popup button.primary').click();
   if ((await page.locator('.popup').count()) !== 0) fail('popup should close');
-  if (!((await total(page)) > beforeAway + 100)) fail('collecting from the popup should empty the chest into materials');
+  if (!((await savedTotal()) > beforeAway + 100)) fail('collecting from the popup should empty the chest into materials');
 
   // Chest fills while away; tapping it collects.
   await page.getByText('+1 小时').click();
@@ -72,15 +80,21 @@ try {
   const fillPct = await page.$eval('.chest .bar i', (e) => parseFloat(e.style.width));
   if (!(fillPct >= 45 && fillPct <= 55)) fail(`an hour away should half-fill a 2-hour chest, got ${fillPct}%`);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/chest-half.png` });
-  const beforeChest = await total(page);
+  const beforeChest = await savedTotal();
   await page.locator('.chest').dispatchEvent('pointerdown');
-  if (!((await total(page)) > beforeChest + 100)) fail('tapping the chest should collect it');
+  if (!((await savedTotal()) > beforeChest + 100)) fail('tapping the chest should collect it');
   const emptyPct = await page.$eval('.chest .bar i', (e) => parseFloat(e.style.width));
   if (emptyPct !== 0) fail(`chest should be empty after collecting, got ${emptyPct}%`);
 
   await page.reload();
   const lvl2 = await page.locator('[data-upgrade="net"] .level').textContent();
-  if (!lvl2?.includes('2')) fail(`net level should persist after reload, got ${lvl2}`);
+  if (!lvl2?.includes('4')) fail(`test save should persist after reload, got ${lvl2}`);
+
+  // The real save was never touched by the test build.
+  await page.goto(BASE);
+  await page.locator('.popup button').first().click({ timeout: 1000 }).catch(() => {});
+  const realLvl = await page.locator('[data-upgrade="net"] .level').textContent();
+  if (!realLvl?.includes('1')) fail(`real save should still be net 1, got ${realLvl}`);
 
   await page.locator('.lang').click();
   if (!(await page.locator('.panel').textContent())?.includes('Net')) fail('language toggle should switch to English');

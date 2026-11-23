@@ -22,10 +22,15 @@
   "save.corrupt": "旧的存档读不出来了，灯塔从头开始。旧存档已另外保存。",
   "debug.plus1h": "+1 小时",
   "debug.plus8h": "+8 小时",
-  "debug.plusMats": "+1000 全部材料",
   "chest.label": "储物箱，点一下收下",
   "chest.full": "满了",
   "toast.upgraded": "{name} 修整到 {level} 级",
   "offline.chestFull": "箱子满了，后来漂来的东西没地方放了。",
-  "offline.inChest": "储物箱里攒下了："
+  "offline.inChest": "储物箱里攒下了：",
+  "debug.badge": "测试版 · 独立存档",
+  "debug.infiniteOn": "无限材料：开",
+  "debug.infiniteOff": "无限材料：关",
+  "debug.plusMillion": "+100万 全部材料",
+  "debug.reset": "重置测试存档",
+  "debug.resetConfirm": "清空测试存档，从头开始？（不影响正式存档）"
 }

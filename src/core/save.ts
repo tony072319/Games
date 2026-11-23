@@ -82,3 +82,11 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   if (dropped) safeSet(kv, CORRUPT_KEY, raw);
   return { state, status: dropped ? 'repaired' : 'loaded' };
 }
+
+/** Storage whose keys are all prefixed, so a test build can't touch the real save. */
+export function prefixedKV(kv: KV, prefix: string): KV {
+  return {
+    getItem: (k) => kv.getItem(prefix + k),
+    setItem: (k, v) => kv.setItem(prefix + k, v),
+  };
+}
