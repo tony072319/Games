@@ -14,6 +14,7 @@ describe('save/load', () => {
     s.materials.wood = 12.5;
     s.levels.net = 4;
     s.stats.tapped = 7;
+    s.chest.rope = 4.5;
     saveGame(kv, s);
     const r = loadGame(kv, 9999, 'zh');
     expect(r.status).toBe('loaded');
@@ -65,5 +66,14 @@ describe('save/load', () => {
     };
     expect(saveGame(full, newGame(0, 'en'))).toBe(false);
     expect(loadGame(full, 100, 'en').status).toBe('corrupt');
+  });
+
+  test('a save from before the chest existed loads cleanly with an empty chest', () => {
+    const s = newGame(5000, 'en');
+    const old = JSON.parse(JSON.stringify(s));
+    delete old.chest;
+    const r = loadGame(memKV({ [SAVE_KEY]: JSON.stringify(old) }), 9999, 'en');
+    expect(r.status).toBe('loaded');
+    expect(r.state.chest.wood).toBe(0);
   });
 });

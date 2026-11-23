@@ -52,12 +52,23 @@ html, body {
   border: 0;
   background: none;
   cursor: pointer;
-  animation: drift 12s linear forwards;
+  animation: drift 8s linear forwards;
 }
-.item svg { width: 100%; height: 100%; animation: bob 3s ease-in-out infinite; filter: drop-shadow(0 0 4px rgba(255, 217, 138, 0.35)); }
+.item svg {
+  width: 100%;
+  height: 100%;
+  transform: scale(var(--depth, 1));
+  opacity: calc(0.55 + 0.45 * var(--depth, 1));
+  animation: bob 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(255, 217, 138, 0.35));
+}
 
 .gain {
   position: absolute;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 2px;
   pointer-events: none;
   font-size: 15px;
   font-weight: 600;
@@ -65,6 +76,50 @@ html, body {
   text-shadow: 0 1px 3px #000;
   animation: rise 1.2s ease-out forwards;
 }
+
+.gain svg { width: 16px; height: 16px; }
+
+/* ---------- storage chest ---------- */
+.chest {
+  position: absolute;
+  z-index: 5;
+  width: calc(46px * var(--scene-scale, 1) / 1.1);
+  min-width: 48px;
+  max-width: 72px;
+  aspect-ratio: 64 / 60;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -88%);
+}
+.chest svg { width: 100%; display: block; }
+.chest .bar { display: block; height: 5px; margin: 2px 6px 0; border-radius: 3px; background: rgba(0, 0, 0, 0.45); overflow: hidden; }
+.chest .bar i { display: block; height: 100%; background: var(--lamp); border-radius: 3px; }
+.chest.full svg { filter: drop-shadow(0 0 6px var(--lamp)); animation: bob 1.6s ease-in-out infinite; }
+
+/* ---------- upgrade feedback ---------- */
+.toast {
+  position: absolute;
+  z-index: 30;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(27, 24, 56, 0.85);
+  border: 1px solid var(--lamp);
+  color: var(--lamp);
+  font-size: 15px;
+  white-space: nowrap;
+  box-shadow: 0 0 18px rgba(255, 217, 138, 0.35);
+  animation: toast 2.2s ease-out forwards;
+}
+.card.flash { animation: cardflash 0.9s ease-out; }
+.scene.pulse .net { animation: pulse 0.8s ease-out; transform-box: fill-box; transform-origin: right top; }
+.chest.pulse svg { animation: pulse 0.8s ease-out; }
+.net { display: none; }
+.stage[data-net="0"] .net-t0, .stage[data-net="1"] .net-t1, .stage[data-net="2"] .net-t2, .stage[data-net="3"] .net-t3 { display: inline; }
 
 /* ---------- hud ---------- */
 .hud {
@@ -181,10 +236,14 @@ html, body {
 .debug button { font-size: 11px; padding: 4px 6px; background: #333; color: #ddd; border: 1px solid #666; border-radius: 4px; }
 
 /* ---------- motion (slow and quiet) ---------- */
-.beam { transform-box: view-box; transform-origin: 180px 247px; animation: sweep 8s ease-in-out infinite; }
+.beam { transform-box: view-box; transform-origin: 180px 259px; animation: sweep 8s ease-in-out infinite; }
 .lamp { animation: breathe 4s ease-in-out infinite; }
-.wave-1 { animation: wave 6s ease-in-out infinite; }
-.wave-2 { animation: wave 7s ease-in-out infinite reverse; }
+.swell { animation: swell 7s ease-in-out infinite alternate; }
+.glint { animation: glint 3s ease-in-out infinite; }
+.cloud { animation: cloud 40s ease-in-out infinite alternate; }
+.c2 { animation-duration: 55s; animation-direction: alternate-reverse; }
+.c3 { animation-duration: 70s; }
+.foam { animation: breathe 3.5s ease-in-out infinite; }
 .star { animation: twinkle 6s ease-in-out infinite; }
 
 @keyframes sweep {
@@ -195,7 +254,12 @@ html, body {
 }
 .beam { animation-direction: alternate; }
 @keyframes breathe { 50% { opacity: 0.7; } }
-@keyframes wave { 50% { transform: translate(20px, 3px); } }
+@keyframes swell { from { transform: translateX(calc(var(--shift) * -1)); } to { transform: translateX(var(--shift)); } }
+@keyframes glint { 50% { opacity: 0.1; } }
+@keyframes cloud { to { transform: translateX(24px); } }
+@keyframes pulse { 0% { transform: scale(1); } 35% { transform: scale(1.18); filter: drop-shadow(0 0 8px #ffd98a); } 100% { transform: scale(1); } }
+@keyframes cardflash { 0% { box-shadow: 0 0 0 2px var(--lamp), 0 0 20px rgba(255, 217, 138, 0.5); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px); } 12% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -12px); } }
 @keyframes twinkle { 50% { opacity: 0.35; } }
 @keyframes drift { from { transform: translateX(-30px); } to { transform: translateX(calc(var(--stage-w, 400px) + 30px)); } }
 @keyframes bob { 50% { transform: translateY(-4px) rotate(4deg); } }

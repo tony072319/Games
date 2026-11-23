@@ -1,4 +1,4 @@
-import { MATERIALS } from '../core/data';
+import { MATERIALS, type Materials } from '../core/data';
 import type { OfflineReport } from '../core/sim';
 import type { Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
@@ -12,13 +12,16 @@ export function formatDuration(seconds: number, lang: Lang): string {
   return h > 0 ? t(lang, 'time.hm', { h, m }) : t(lang, 'time.m', { m });
 }
 
-/** Shows the "while you were away" popup. Gains are already applied; double adds them again. */
+/**
+ * "While you were away": shows how long, and what is waiting in the chest.
+ * Both buttons empty the chest; double adds the haul once more.
+ */
 export function showOfflinePopup(
   container: HTMLElement,
   lang: Lang,
   report: OfflineReport,
-  onDouble: () => void,
-  onClose: () => void,
+  chest: Materials,
+  onCollect: (double: boolean) => void,
 ): HTMLElement {
   const overlay = el('div', 'overlay');
   const box = el('div', 'popup');
@@ -29,15 +32,17 @@ export function showOfflinePopup(
   away.textContent = t(lang, 'offline.away', { time: formatDuration(report.seconds, lang) });
   box.append(h, away);
   if (report.seconds > report.creditedSeconds + 1) {
-    const capped = el('p');
-    capped.textContent = t(lang, 'offline.capped');
-    box.append(capped);
+    const full = el('p');
+    full.textContent = t(lang, 'offline.chestFull');
+    box.append(full);
   }
+  const label = el('p');
+  label.textContent = t(lang, 'offline.inChest');
   const haul = el('div', 'haul');
   for (const m of MATERIALS) {
-    if (report.gained[m] < 1) continue;
+    if (chest[m] < 1) continue;
     const item = el('div', 'mat', itemIcon(m));
-    item.append(`+${formatNumber(report.gained[m], lang)}`);
+    item.append(`+${formatNumber(chest[m], lang)}`);
     haul.append(item);
   }
   const actions = el('div', 'actions');
@@ -45,17 +50,14 @@ export function showOfflinePopup(
   take.textContent = t(lang, 'offline.collect');
   const dbl = el('button', 'primary');
   dbl.textContent = t(lang, 'offline.double');
-  const close = () => {
+  const close = (double: boolean) => {
     overlay.remove();
-    onClose();
+    onCollect(double);
   };
-  take.addEventListener('click', close);
-  dbl.addEventListener('click', () => {
-    onDouble();
-    close();
-  });
+  take.addEventListener('click', () => close(false));
+  dbl.addEventListener('click', () => close(true));
   actions.append(take, dbl);
-  box.append(haul, actions);
+  box.append(label, haul, actions);
   overlay.append(box);
   container.append(overlay);
   return overlay;

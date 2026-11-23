@@ -1,11 +1,11 @@
 import { LIVE_DT_MAX_SECONDS, MATERIALS, MATERIAL_WEIGHTS, type Materials } from './data';
-import { addMaterials, autoRate, offlineCapSeconds } from './economy';
+import { addMaterials, autoRate, chestCapacity, chestTotal } from './economy';
 import { emptyMaterials, type GameState } from './state';
 
 export interface OfflineReport {
   /** Real time away, in seconds. */
   seconds: number;
-  /** Time that actually paid out (capped by storage). */
+  /** Time that actually filled the chest (stops when the chest is full). */
   creditedSeconds: number;
   gained: Materials;
 }
@@ -18,17 +18,33 @@ export function expectedGain(netLevel: number, seconds: number): Materials {
   return g;
 }
 
+/** Let the net work for `seconds`, putting its catch into the chest until it is full. */
+function fillChest(state: GameState, seconds: number): { creditedSeconds: number; gained: Materials } {
+  const room = Math.max(0, chestCapacity(state) - chestTotal(state.chest));
+  const creditedSeconds = Math.min(seconds, room / autoRate(state.levels.net));
+  const gained = expectedGain(state.levels.net, creditedSeconds);
+  for (const m of MATERIALS) state.chest[m] += gained[m];
+  return { creditedSeconds, gained };
+}
+
 export function applyOffline(state: GameState, nowMs: number): OfflineReport {
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
-  const creditedSeconds = Math.min(seconds, offlineCapSeconds(state.levels.storage));
-  const gained = expectedGain(state.levels.net, creditedSeconds);
-  addMaterials(state, gained);
+  const { creditedSeconds, gained } = fillChest(state, seconds);
   state.lastActiveAt = nowMs;
   return { seconds, creditedSeconds, gained };
 }
 
-export function claimDouble(state: GameState, report: OfflineReport): void {
-  addMaterials(state, report.gained);
+/** Empty the chest into the inventory. Returns what was moved. */
+export function collectChest(state: GameState): Materials {
+  const moved = { ...state.chest };
+  addMaterials(state, moved);
+  state.chest = emptyMaterials();
+  return moved;
+}
+
+/** "Take double": add a collected haul once more. */
+export function claimDouble(state: GameState, collected: Materials): void {
+  addMaterials(state, collected);
 }
 
 /**
@@ -38,7 +54,7 @@ export function claimDouble(state: GameState, report: OfflineReport): void {
 export function tick(state: GameState, nowMs: number): OfflineReport | null {
   const dt = (nowMs - state.lastActiveAt) / 1000;
   if (dt >= 0 && dt <= LIVE_DT_MAX_SECONDS) {
-    addMaterials(state, expectedGain(state.levels.net, dt));
+    fillChest(state, dt);
     state.lastActiveAt = nowMs;
     return null;
   }

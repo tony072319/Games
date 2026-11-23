@@ -1,5 +1,5 @@
 import { MATERIALS, UPGRADES, type UpgradeId } from '../core/data';
-import { autoRate, canBuy, isMaxLevel, offlineCapSeconds, upgradeCost } from '../core/economy';
+import { canBuy, isMaxLevel, upgradeCost } from '../core/economy';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { itemIcon } from './art';
@@ -8,11 +8,8 @@ import { el } from './dom';
 export interface Panel {
   el: HTMLElement;
   update(state: GameState): void;
-}
-
-function describe(id: UpgradeId, state: GameState, lang: Lang): string {
-  if (id === 'net') return t(lang, 'upg.net.desc', { rate: formatNumber(autoRate(state.levels.net) * 3600, lang) });
-  return t(lang, 'upg.storage.desc', { hours: offlineCapSeconds(state.levels.storage) / 3600 });
+  /** Briefly highlight a card after it was upgraded. */
+  flash(id: UpgradeId): void;
 }
 
 /** Cheap fingerprint: the panel is rebuilt only when this changes. */
@@ -26,11 +23,12 @@ function signature(state: GameState): string {
 export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void): Panel {
   const root = el('div', 'panel');
   let last = '';
+  let flashing: UpgradeId | null = null;
 
   function render(state: GameState) {
     root.replaceChildren();
     for (const id of UPGRADES) {
-      const card = el('div', 'card');
+      const card = el('div', id === flashing ? 'card flash' : 'card');
       card.dataset.upgrade = id;
       const title = el('h3');
       title.textContent = t(lang, `upg.${id}.name`);
@@ -38,7 +36,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void): Panel {
       lvl.textContent = t(lang, 'ui.level', { level: state.levels[id] });
       title.append(lvl);
       const desc = el('p');
-      desc.textContent = describe(id, state, lang);
+      desc.textContent = t(lang, `upg.${id}.desc`);
       const btn = el('button', 'buy');
       card.append(title, desc);
       if (isMaxLevel(state, id)) {
@@ -71,6 +69,13 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void): Panel {
         last = sig;
         render(state);
       }
+    },
+    flash(id) {
+      flashing = id;
+      root.querySelector(`[data-upgrade="${id}"]`)?.classList.add('flash');
+      setTimeout(() => {
+        if (flashing === id) flashing = null;
+      }, 900);
     },
   };
 }

@@ -6,7 +6,7 @@ export function autoRate(netLevel: number): number {
   return 0.1 * netLevel * Math.pow(1.1, netLevel - 1);
 }
 
-/** Longest stretch of offline time that still pays out. Level 1 = 2h, +1h per level. */
+/** How many hours of netting the chest holds. Level 1 = 2h, +1h per level. */
 export function offlineCapSeconds(storageLevel: number): number {
   return (1 + storageLevel) * 3600;
 }
@@ -51,4 +51,13 @@ export function buyUpgrade(state: GameState, id: UpgradeId): boolean {
 
 export function addMaterials(state: GameState, gained: Materials, factor = 1): void {
   for (const m of MATERIALS) state.materials[m] += gained[m] * factor;
+}
+
+/** Items the chest can hold: enough for offlineCapSeconds of the current net. */
+export function chestCapacity(state: GameState): number {
+  return autoRate(state.levels.net) * offlineCapSeconds(state.levels.storage);
+}
+
+export function chestTotal(chest: Materials): number {
+  return MATERIALS.reduce((a, m) => a + chest[m], 0);
 }

@@ -9,9 +9,9 @@ export type UpgradeId = 'net' | 'storage';
 export const UPGRADES: readonly UpgradeId[] = ['net', 'storage'];
 export const MAX_LEVEL: Record<UpgradeId, number> = { net: 50, storage: 11 };
 
-export const SPAWN_INTERVAL_MS = 3000;
+export const SPAWN_INTERVAL_MS = 2000;
 export const MAX_FLOATING = 6;
-export const FLOAT_LIFETIME_MS = 12000;
+export const FLOAT_LIFETIME_MS = 8000;
 
 export const OFFLINE_MIN_REPORT_SECONDS = 60;
 export const LIVE_DT_MAX_SECONDS = 5;

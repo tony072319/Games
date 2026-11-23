@@ -53,6 +53,13 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     else dropped = true;
   }
 
+  // The chest was added after the first release; a save without it simply has an empty chest.
+  const chest = isObj(data.chest) ? data.chest : {};
+  for (const m of MATERIALS) {
+    if (isAmount(chest[m])) state.chest[m] = chest[m];
+    else if (m in chest) dropped = true;
+  }
+
   const levels = isObj(data.levels) ? data.levels : {};
   for (const u of UPGRADES) {
     const v = levels[u];
