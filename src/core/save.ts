@@ -11,8 +11,18 @@ export interface KV {
 
 export type LoadStatus = 'new' | 'loaded' | 'repaired' | 'corrupt';
 
-export function saveGame(kv: KV, state: GameState): void {
-  kv.setItem(SAVE_KEY, JSON.stringify(state));
+/** Writes the save. Returns false (never throws) if storage refuses, e.g. quota full. */
+export function saveGame(kv: KV, state: GameState): boolean {
+  return safeSet(kv, SAVE_KEY, JSON.stringify(state));
+}
+
+function safeSet(kv: KV, key: string, value: string): boolean {
+  try {
+    kv.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 type Obj = Record<string, unknown>;
@@ -30,7 +40,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     data = undefined;
   }
   if (!isObj(data) || data.version !== 1) {
-    kv.setItem(CORRUPT_KEY, raw);
+    safeSet(kv, CORRUPT_KEY, raw);
     return { state: newGame(nowMs, lang), status: 'corrupt' };
   }
 
@@ -62,5 +72,6 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   if (isAmount(stats.tapped)) state.stats.tapped = stats.tapped;
   else dropped = true;
 
+  if (dropped) safeSet(kv, CORRUPT_KEY, raw);
   return { state, status: dropped ? 'repaired' : 'loaded' };
 }

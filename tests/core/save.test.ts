@@ -48,4 +48,22 @@ describe('save/load', () => {
     const kv = memKV({ [SAVE_KEY]: '{"version":2}' });
     expect(loadGame(kv, 100, 'en').status).toBe('corrupt');
   });
+
+  test('a repaired save keeps a backup of the original', () => {
+    const raw = '{"version":1,"materials":{"wood":-5},"levels":{"net":60}}';
+    const kv = memKV({ [SAVE_KEY]: raw });
+    expect(loadGame(kv, 100, 'en').status).toBe('repaired');
+    expect(kv.map.get(CORRUPT_KEY)).toBe(raw);
+  });
+
+  test('storage that refuses writes never throws', () => {
+    const full: KV = {
+      getItem: () => '{oops',
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    };
+    expect(saveGame(full, newGame(0, 'en'))).toBe(false);
+    expect(loadGame(full, 100, 'en').status).toBe('corrupt');
+  });
 });
