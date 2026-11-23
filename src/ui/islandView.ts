@@ -4,6 +4,7 @@ import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { PLOTS, buildingSvg, islandSceneSvg, itemIcon } from './art';
 import { el } from './dom';
+import { destName } from './names';
 
 export interface IslandActions {
   build(b: BuildingId): void;
@@ -24,7 +25,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
   const box = el('div', 'seamap island');
   const head = el('div', 'map-head');
   const title = el('h2');
-  title.textContent = t(lang, `dest.${d}.name`);
+  title.textContent = destName(lang, state.sea, d);
   const back = el('button', 'map-close');
   back.textContent = t(lang, 'island.back');
   back.addEventListener('click', act.back);
@@ -45,7 +46,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
       // The outer group places the building; the inner one can be animated without losing that position.
       .map((b, i) => `<g transform="translate(${plots[i][0]} ${plots[i][1]})"><g class="bld" data-b="${b}">${buildingSvg(b, buildingLevel(s, b))}</g></g>`)
       .join('');
-    scene.innerHTML = `<svg viewBox="0 0 360 240" aria-hidden="true">${islandSceneSvg(d)}${gs}</svg>`;
+    scene.innerHTML = `<svg viewBox="0 0 360 240" aria-hidden="true">${islandSceneSvg(d, s.sea)}${gs}</svg>`;
     blds.forEach((b, i) => {
       const btn = el('button', `plot-btn${selected === b ? ' sel' : ''}`);
       btn.dataset.b = b;
@@ -113,7 +114,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
       btn.textContent = t(lang, 'ui.max');
       btn.disabled = true;
     } else {
-      const cost = buildCost(b, lvl);
+      const cost = buildCost(b, lvl, s);
       const costEl = el('div', 'cost');
       for (const m of MATERIALS) {
         if (cost[m] <= 0) continue;
@@ -136,7 +137,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
       ISLAND_BUILDINGS[d].map((b) => buildingLevel(s, b)).join(),
       selected,
       st ? MATERIALS.map((m) => Math.floor(st[m])).join() : '',
-      selected ? MATERIALS.map((m) => (s.materials[m] >= buildCost(selected!, buildingLevel(s, selected!))[m] ? 1 : 0)).join('') : '',
+      selected ? MATERIALS.map((m) => (s.materials[m] >= buildCost(selected!, buildingLevel(s, selected!), s)[m] ? 1 : 0)).join('') : '',
     ].join('|');
     if (k === key) return;
     const levelsChanged = key.split('|')[0] !== k.split('|')[0] || key.split('|')[1] !== k.split('|')[1];

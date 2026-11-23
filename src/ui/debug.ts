@@ -9,6 +9,7 @@ export interface DebugActions {
   reset(): void;
   skySkip(): void;
   boatNow(): void;
+  lightMax(): void;
   ambient(): void;
 }
 
@@ -40,6 +41,7 @@ export function createDebug(lang: Lang, infinite: boolean, actions: DebugActions
   add(t(lang, 'debug.plus1h'), () => actions.skip(1));
   add(t(lang, 'debug.plus8h'), () => actions.skip(8));
   add(t(lang, 'debug.boatNow'), () => actions.boatNow());
+  add(t(lang, 'debug.lightMax'), () => actions.lightMax());
   add(t(lang, 'debug.skyPlus'), () => actions.skySkip());
   add(t(lang, 'debug.event'), () => actions.ambient());
   add(t(lang, 'debug.reset'), () => {

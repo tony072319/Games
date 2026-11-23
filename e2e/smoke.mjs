@@ -144,6 +144,29 @@ try {
   await page.getByText('随机海上事件').click();
   if (!(await page.locator('.ambient .amb').count())) fail('a sea event should appear');
 
+  // Pass the light on: lighthouse to 10 → button → confirm → arrive at the fog sea.
+  await page.getByText('灯塔修满').click();
+  await page.locator('.pass-btn').waitFor({ state: 'visible', timeout: 3000 });
+  await page.locator('.pass-btn').click();
+  await page.locator('.popup.pass .primary').click();
+  await page.waitForTimeout(5200);
+  if (!(await page.locator('.sea-chip.sea-fog.on').count())) fail('should arrive at the fog sea');
+  if (!(await page.locator('.starlight').isVisible())) fail('starlight should show in the HUD');
+  const fogLight = await page.locator('[data-upgrade="light"] .level').textContent();
+  if (!fogLight?.includes('1')) fail(`new sea should start with lighthouse 1, got ${fogLight}`);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/fog.png` });
+  await page.locator('.sea-chip.sea-dusk').click();
+  const duskLight = await page.locator('[data-upgrade="light"] .level').textContent();
+  if (!duskLight?.includes('10')) fail(`the old sea should still be lit at 10, got ${duskLight}`);
+  await page.locator('.sea-chip.sea-fog').click();
+  await page.locator('.debug-badge').click();
+  await page.getByText('灯塔修满').click();
+  await page.locator('.pass-btn').click();
+  await page.locator('.popup.pass .primary').click();
+  await page.waitForTimeout(5200);
+  if (!(await page.locator('.sea-chip.sea-aurora.on').count())) fail('should arrive at the aurora sea');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/aurora.png` });
+
   // The real save was never touched by the test build.
   await page.goto(BASE);
   await page.locator('.popup button').first().click({ timeout: 1000 }).catch(() => {});

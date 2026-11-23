@@ -385,3 +385,29 @@ html, body {
 .sparks { animation: twinkle 0.5s steps(2) infinite; }
 .card .perk { color: var(--lamp); }
 .toast { z-index: 60; }
+
+/* ---------- sea weather ---------- */
+.fogbank { animation: fogdrift 40s ease-in-out infinite alternate; }
+.fogbank.f2 { animation-duration: 55s; animation-direction: alternate-reverse; }
+.fogbank.f3 { animation-duration: 70s; }
+@keyframes fogdrift { to { transform: translateX(40px); } }
+.aur { animation: aurora 12s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+.aur.a2 { animation-duration: 17s; animation-direction: alternate-reverse; }
+@keyframes aurora { 0% { opacity: 0.55; transform: skewX(-4deg) translateX(-10px); } 100% { opacity: 1; transform: skewX(5deg) translateX(10px); } }
+.floes path { animation: bob 6s ease-in-out infinite; }
+.snow { animation: snow 6s linear infinite; }
+@keyframes snow { to { transform: translate(-10px, 60px); opacity: 0; } }
+
+/* ---------- seas ---------- */
+.toolbar { flex-wrap: wrap; align-items: center; }
+.sea-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.sea-chip { border: 1px solid var(--ui-dim); background: transparent; color: var(--ui-dim); border-radius: 14px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.sea-chip.on { color: #241a2e; background: var(--lamp); border-color: var(--lamp); }
+.pass-btn { border: 0; border-radius: 16px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: #241a2e; background: linear-gradient(90deg, #ffd98a, #fff0b8, #ffd98a); background-size: 200% 100%; animation: shimmer 2.4s linear infinite; box-shadow: 0 0 14px rgba(255, 217, 138, 0.6); }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.starlight { color: #fff0b8; font-size: 14px; text-shadow: 0 0 8px #ffd98a; white-space: nowrap; }
+.popup.pass p { text-align: left; }
+.travel { position: absolute; inset: 0; z-index: 80; background: #03040c; display: flex; align-items: center; justify-content: center; padding: 30px; animation: fade 1.6s ease-out; }
+.travel p { color: var(--lamp); font-size: 17px; line-height: 1.8; text-align: center; white-space: pre-line; animation: fade 2.4s ease-out; }
+.travel.out { animation: fadeout 1.6s ease-in forwards; }
+@keyframes fadeout { to { opacity: 0; } }

@@ -2,6 +2,8 @@
  * The sky drifts through dusk → twilight → night → pre-dawn and back, on a loop
  * tied to real time so it keeps moving while the game is open (and across visits).
  */
+import type { SeaId } from '../core/data';
+
 export const SKY_CYCLE_MS = 20 * 60 * 1000;
 
 export interface Sky {
@@ -81,4 +83,32 @@ export function applySky(target: HTMLElement, s: Sky): void {
   st.setProperty('--moon', s.moon.toFixed(3));
   st.setProperty('--stars', s.stars.toFixed(3));
   st.setProperty('--cloud-warm', s.cloudWarm.toFixed(3));
+}
+
+/** Each sea has its own air: fog greys and softens; the aurora sea is colder and greener. */
+export function tintSky(s: Sky, sea: SeaId): Sky {
+  if (sea === 'dusk') return s;
+  if (sea === 'fog') {
+    const g = '#545468';
+    return {
+      ...s,
+      skyTop: mix(s.skyTop, '#1c1c2a', 0.4),
+      skyMid: mix(s.skyMid, g, 0.4),
+      skyLow: mix(s.skyLow, '#6a6a80', 0.5),
+      horizon: mix(s.horizon, '#7a7a90', 0.55),
+      stars: s.stars * 0.35,
+      sun: s.sun * 0.55,
+      moon: s.moon * 0.6,
+      cloudWarm: s.cloudWarm * 0.4,
+    };
+  }
+  return {
+    ...s,
+    skyTop: mix(s.skyTop, '#04141e', 0.45),
+    skyMid: mix(s.skyMid, '#123a4a', 0.4),
+    skyLow: mix(s.skyLow, '#3a7a86', 0.35),
+    horizon: mix(s.horizon, '#8ac4c8', 0.4),
+    stars: Math.min(1, s.stars * 1.3 + 0.2),
+    cloudWarm: s.cloudWarm * 0.3,
+  };
 }

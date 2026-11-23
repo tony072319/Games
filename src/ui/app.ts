@@ -13,7 +13,10 @@ import { createIslandView, type IslandView } from './islandView';
 import { construct } from '../core/islands';
 import { drawSea } from './sea';
 import { SoundEngine } from './audio';
-import { SKY_CYCLE_MS, applySky, skyAt } from './sky';
+import { SKY_CYCLE_MS, applySky, skyAt, tintSky } from './sky';
+import { canPassLight, nextSea, passLight, starlightFor, switchSea } from '../core/seas';
+import { SEA_IDS, type SeaId } from '../core/data';
+import { destDesc, destName } from './names';
 import { createDebug } from './debug';
 import { el } from './dom';
 import { createHud, type Hud } from './hud';
@@ -58,6 +61,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let boatKey = '';
   let mapBtn!: HTMLButtonElement;
   let seaMap: SeaMap | null = null;
+  let seaChips!: HTMLElement;
+  let passBtn!: HTMLButtonElement;
+  let chipsKey = '';
   let islandView: IslandView | null = null;
   /** Whether cargo was waiting last frame, to notice the boat coming home. */
   let hadCargo = state.boat.cargo !== null;
@@ -66,7 +72,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let skyOffset = 0;
   let nextSkyAt = 0;
   let nextAmbientAt = opts.now() + 8000;
-  const currentSky = () => skyAt(opts.now() + skyOffset);
+  const currentSky = () => tintSky(skyAt(opts.now() + skyOffset), state.sea);
   function triggerAmbient() {
     const kinds = allowedEvents(currentSky());
     playAmbient(farLayer, nearLayer, kinds[Math.floor(Math.random() * kinds.length)]);
@@ -120,6 +126,76 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     g.style.top = `${y}px`;
     stage.append(g);
     setTimeout(() => g.remove(), 1300);
+  }
+
+  function renderChips() {
+    const key = `${state.sea}:${state.reached.join()}`;
+    if (key === chipsKey) return;
+    chipsKey = key;
+    seaChips.replaceChildren();
+    if (state.reached.length < 2) return;
+    for (const id of SEA_IDS) {
+      if (!state.reached.includes(id)) continue;
+      const c = el('button', `sea-chip sea-${id}${id === state.sea ? ' on' : ''}`);
+      c.textContent = t(state.settings.lang, `sea.${id}`);
+      c.addEventListener('click', () => {
+        if (id === state.sea || !switchSea(state, id, opts.now())) return;
+        save();
+        build();
+      });
+      seaChips.append(c);
+    }
+  }
+
+  function confirmPass() {
+    if (!canPassLight(state)) return;
+    const lang = state.settings.lang;
+    const to = nextSea(state)!;
+    const overlay = el('div', 'overlay');
+    const box = el('div', 'popup pass');
+    box.setAttribute('role', 'dialog');
+    const h = el('h2');
+    h.textContent = t(lang, 'pass.title');
+    const p1 = el('p');
+    p1.textContent = t(lang, 'pass.text', { from: t(lang, `sea.${state.sea}`), to: t(lang, `sea.${to}`) });
+    const p2 = el('p');
+    p2.textContent = t(lang, 'pass.keep');
+    const p3 = el('p', 'perk');
+    p3.textContent = t(lang, 'pass.gain', { n: starlightFor(state) });
+    const actions = el('div', 'actions');
+    const wait = el('button');
+    wait.textContent = t(lang, 'pass.wait');
+    wait.addEventListener('click', () => overlay.remove());
+    const go = el('button', 'primary');
+    go.textContent = t(lang, 'pass.go');
+    go.addEventListener('click', () => {
+      overlay.remove();
+      const from = state.sea;
+      if (!passLight(state, opts.now())) return;
+      save();
+      travel(from, state.sea);
+    });
+    actions.append(wait, go);
+    box.append(h, p1, p2, p3, actions);
+    overlay.append(box);
+    game.append(overlay);
+  }
+
+  /** A quiet fade to black and back, sailing from one sea to the next. */
+  function travel(from: SeaId, to: SeaId) {
+    const lang = state.settings.lang;
+    const veil = el('div', 'travel');
+    const text = el('p');
+    text.textContent = t(lang, 'pass.travel', { from: t(lang, `sea.${from}`), to: t(lang, `sea.${to}`) });
+    veil.append(text);
+    game.append(veil);
+    sound.play('upgrade');
+    setTimeout(() => {
+      build();
+      game.append(veil);
+      veil.classList.add('out');
+      setTimeout(() => veil.remove(), 1600);
+    }, 3200);
   }
 
   function openMap() {
@@ -192,10 +268,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     refresh();
     save();
-    if (cargo.discovery) setTimeout(() => showDiscovery(cargo.dest), 900);
+    if (cargo.discovery) setTimeout(() => showDiscovery(cargo.sea, cargo.dest), 900);
   }
 
-  function showDiscovery(d: DestId) {
+  function showDiscovery(sea: SeaId, d: DestId) {
     const lang = state.settings.lang;
     const overlay = el('div', 'overlay');
     const box = el('div', 'popup discovery');
@@ -204,9 +280,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     h.textContent = t(lang, 'discover.title');
     const pic = el('div', 'island-pic', islandIcon(d));
     const name = el('h3');
-    name.textContent = t(lang, `dest.${d}.name`);
+    name.textContent = destName(lang, sea, d);
     const desc = el('p');
-    desc.textContent = t(lang, `dest.${d}.desc`);
+    desc.textContent = destDesc(lang, sea, d);
     const perk = el('p', 'perk');
     perk.textContent = t(lang, `dest.${d}.perk`);
     const ok = el('button', 'primary');
@@ -293,7 +369,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     panel.flash(id);
     refresh(); // draw the new look first, then celebrate it
     const target = id === 'net' ? netSlot : id === 'storage' ? chestBtn : id === 'light' ? towerSlot : boatBtn;
-    if (id === 'light' && state.levels.light >= MAX_LEVEL.light) setTimeout(() => toast(t(lang, 'toast.lit')), 1200);
+    if (id === 'light' && state.levels.light >= MAX_LEVEL.light)
+      setTimeout(() => toast(t(lang, state.sea === 'aurora' ? 'toast.allLit' : 'toast.lit')), 1200);
     target?.classList.remove('pulse');
     void (target as HTMLElement | null)?.getBoundingClientRect();
     target?.classList.add('pulse');
@@ -306,10 +383,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     document.title = t(lang, 'game.title');
     game = el('div', 'game');
     stage = el('div', 'stage');
-    const back = el('div', 'scene back', sceneBackSvg());
+    const back = el('div', 'scene back', sceneBackSvg(state.sea));
     seaCanvas = el('canvas', 'sea');
     farLayer = ambientLayer();
-    const front = el('div', 'scene front', sceneFrontSvg());
+    const front = el('div', 'scene front', sceneFrontSvg(state.sea));
     nearLayer = ambientLayer();
     stage.append(back, seaCanvas, farLayer, front, nearLayer);
     netSlot = front.querySelector('.net-slot');
@@ -362,6 +439,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     mapBtn.append(t(lang, 'map.open'));
     mapBtn.addEventListener('click', openMap);
     toolbar.append(mapBtn);
+    seaChips = el('div', 'sea-chips');
+    passBtn = el('button', 'pass-btn');
+    passBtn.textContent = `✦ ${t(lang, 'pass.button')}`;
+    passBtn.addEventListener('click', confirmPass);
+    toolbar.append(passBtn, seaChips);
+    chipsKey = '';
     game.append(hud.el, stage, toolbar, panel.el);
     if (seaMap || islandView) {
       seaMap = null;
@@ -379,6 +462,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
               v.departAt -= h * 3600 * 1000;
               v.returnAt -= h * 3600 * 1000;
             }
+          },
+          lightMax: () => {
+            state.levels.light = 10;
+            refresh();
           },
           boatNow: () => {
             if (state.boat.voyage) state.boat.voyage.returnAt = opts.now();
@@ -517,11 +604,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       towerShown = state.levels.light;
     }
     if (dockSlot) {
-      const want = state.levels.light >= DOCK_LIGHT;
+      const want = state.levels.light >= DOCK_LIGHT || state.boat.built; // the boat sails with you, so its dock does too
       if (want !== dockSlot.hasChildNodes()) dockSlot.innerHTML = want ? dockSvg() : '';
     }
     renderBoat();
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
+    passBtn.style.display = canPassLight(state) ? '' : 'none';
+    renderChips();
     mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
     seaMap?.update(state);
     islandView?.update(state);

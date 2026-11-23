@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { SKY_CYCLE_MS, skyAt } from '../../src/ui/sky';
+import { SKY_CYCLE_MS, skyAt, tintSky } from '../../src/ui/sky';
 
 describe('sky cycle', () => {
   test('starts at dusk with the sun up and no moon', () => {
@@ -21,5 +21,15 @@ describe('sky cycle', () => {
       const s = skyAt(t);
       for (const c of [s.skyTop, s.skyMid, s.skyLow, s.horizon, s.seaTint]) expect(c).toMatch(/^#[0-9a-f]{6}$/);
     }
+  });
+});
+
+describe('sea tint', () => {
+  test('the dusk sea is untouched; fog and aurora shift the colours', () => {
+    const s = skyAt(0);
+    expect(tintSky(s, 'dusk')).toEqual(s);
+    expect(tintSky(s, 'fog').skyTop).not.toBe(s.skyTop);
+    expect(tintSky(s, 'aurora').horizon).not.toBe(s.horizon);
+    expect(tintSky(s, 'fog').skyTop).toMatch(/^#[0-9a-f]{6}$/);
   });
 });

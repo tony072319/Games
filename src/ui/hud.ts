@@ -45,11 +45,21 @@ export function createHud(lang: Lang, onToggleLang: () => void, sound: boolean, 
     snd.setAttribute('aria-pressed', String(sound));
     onToggleSound(sound);
   });
-  root.append(mats, snd, toggle);
+  const star = el('div', 'starlight');
+  star.style.display = 'none';
+  root.append(mats, star, snd, toggle);
 
   return {
     el: root,
     update(state) {
+      if (state.starlight > 0) {
+        const text = `✦ ${state.starlight}`;
+        if (star.textContent !== text) {
+          star.textContent = text;
+          star.title = t(lang, 'hud.starlight', { n: state.starlight, p: Math.round(state.starlight * 3) });
+        }
+        star.style.display = '';
+      }
       // Glowshards only matter once the boat has found some.
       items.glow.style.display = state.materials.glow >= 1 || state.discovered.includes('firefly') ? '' : 'none';
       for (const m of MATERIALS) {

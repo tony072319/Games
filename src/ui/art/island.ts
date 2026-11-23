@@ -1,4 +1,4 @@
-import type { BuildingId, DestId } from '../../core/data';
+import type { BuildingId, DestId, SeaId } from '../../core/data';
 
 /**
  * Island scenes (viewBox 0 0 360 240) and the buildings that go on them.
@@ -42,8 +42,19 @@ const LAND: Record<DestId, string> = {
 <g class="fireflies"><circle cx="40" cy="140" r="6" fill="url(#fglow)"/><circle cx="150" cy="130" r="5" fill="url(#fglow)"/><circle cx="250" cy="120" r="6" fill="url(#fglow)"/><circle cx="320" cy="150" r="5" fill="url(#fglow)"/><circle cx="210" cy="160" r="4" fill="url(#fglow)"/><circle cx="100" cy="170" r="4" fill="url(#fglow)"/></g>`,
 };
 
-export function islandSceneSvg(d: DestId): string {
-  return `${SKY}${LAND[d]}`;
+/** Each sea's weather over its islands. */
+const WEATHER: Record<SeaId, string> = {
+  dusk: '',
+  fog: `<g fill="#d0d0e0"><ellipse class="fogbank" cx="80" cy="180" rx="140" ry="16" opacity="0.22"/><ellipse class="fogbank f2" cx="280" cy="150" rx="150" ry="14" opacity="0.18"/><ellipse class="fogbank f3" cx="180" cy="220" rx="200" ry="12" opacity="0.2"/></g><rect width="360" height="240" fill="#8a8aa0" opacity="0.12"/>`,
+  aurora: `<defs><linearGradient id="iaur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7affc0" stop-opacity="0"/><stop offset="0.5" stop-color="#7affc0" stop-opacity="0.4"/><stop offset="1" stop-color="#b48aff" stop-opacity="0"/></linearGradient></defs>
+<path class="aur a1" d="M-20 20 Q80 -10 170 30 T380 20 L380 90 Q280 60 180 90 T-20 80 Z" fill="url(#iaur)"/>
+<rect width="360" height="240" fill="#4ab0c8" opacity="0.08"/>
+<g fill="#eef8ff"><circle class="snow" cx="40" cy="40" r="1.2"/><circle class="snow" cx="120" cy="70" r="1"/><circle class="snow" cx="210" cy="30" r="1.3"/><circle class="snow" cx="300" cy="80" r="1"/><circle class="snow" cx="170" cy="110" r="1.1"/></g>
+<g fill="#dceef6" opacity="0.9"><path d="M14 226 L40 222 L44 230 L16 232 Z"/><path d="M320 230 L348 226 L352 234 L322 236 Z"/></g>`,
+};
+
+export function islandSceneSvg(d: DestId, sea: SeaId = 'dusk'): string {
+  return `${SKY}${LAND[d]}${WEATHER[sea]}`;
 }
 
 const lamp = (x: number, y: number) =>

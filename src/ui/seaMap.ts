@@ -6,6 +6,7 @@ import { islandIcon, itemIcon } from './art';
 import { el } from './dom';
 import { formatDuration } from './offlinePopup';
 import { createPanel } from './upgrades';
+import { destDesc, destName } from './names';
 
 /** Map layout: 360x360 chart, lighthouse at the centre. */
 const C = 180;
@@ -41,7 +42,7 @@ export function createSeaMap(lang: Lang, state: GameState, act: SeaMapActions): 
   const box = el('div', 'seamap');
   const head = el('div', 'map-head');
   const title = el('h2');
-  title.textContent = t(lang, 'map.title');
+  title.textContent = `${t(lang, 'map.title')} · ${t(lang, `sea.${state.sea}`)}`;
   const close = el('button', 'map-close');
   close.textContent = t(lang, 'map.close');
   close.addEventListener('click', act.close);
@@ -61,7 +62,7 @@ export function createSeaMap(lang: Lang, state: GameState, act: SeaMapActions): 
     const r = reach(s.levels.light);
     const v = s.boat.voyage;
     let path = '';
-    if (v) {
+    if (v && v.sea === s.sea) {
       const p = pos(v.dest);
       const f = Math.max(0, Math.min(1, (act.now() - v.departAt) / (v.returnAt - v.departAt)));
       // Out and back: the boat reaches the island halfway through the trip.
@@ -97,7 +98,7 @@ ${path}
       if (found) {
         b.innerHTML = islandIcon(d);
         const label = el('span');
-        label.textContent = t(lang, `dest.${d}.name`);
+        label.textContent = destName(lang, s.sea, d);
         b.append(label);
       } else if (lit) b.textContent = '?';
       b.addEventListener('click', () => {
@@ -120,7 +121,7 @@ ${path}
     }
     if (v) {
       const p = el('p', 'status');
-      p.textContent = t(lang, 'map.away', { name: t(lang, s.discovered.includes(v.dest) ? `dest.${v.dest}.name` : 'map.unknown'), time: formatDuration(Math.max(60, (v.returnAt - act.now()) / 1000), lang) });
+      p.textContent = t(lang, 'map.away', { name: v.sea !== s.sea || s.discovered.includes(v.dest) ? destName(lang, v.sea, v.dest) : t(lang, 'map.unknown'), time: formatDuration(Math.max(60, (v.returnAt - act.now()) / 1000), lang) });
       info.append(p);
     } else if (s.boat.cargo) {
       const p = el('p', 'status');
@@ -139,9 +140,9 @@ ${path}
     const lit = s.levels.light >= DESTS[d].needLight;
     const found = s.discovered.includes(d);
     const h = el('h3');
-    h.textContent = lit ? t(lang, found ? `dest.${d}.name` : 'map.unknown') : '…';
+    h.textContent = lit ? (found ? destName(lang, s.sea, d) : t(lang, 'map.unknown')) : '…';
     const p = el('p');
-    p.textContent = lit ? t(lang, found ? `dest.${d}.desc` : 'map.unknownDesc') : t(lang, 'map.dark');
+    p.textContent = lit ? (found ? destDesc(lang, s.sea, d) : t(lang, 'map.unknownDesc')) : t(lang, 'map.dark');
     info.append(h, p);
     if (!reachable(s, d)) return;
     const row = el('div', 'sail-row');

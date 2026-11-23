@@ -8,6 +8,8 @@
  * lighthouse passes in front of them.
  */
 
+import type { SeaId } from '../../core/data';
+
 export const HORIZON_Y = 330;
 /** Where the lamp sits; the beam rotates around this point. */
 export const LAMP = { x: 180, y: 259 };
@@ -80,7 +82,29 @@ const DEFS = `
 
 const open = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">`;
 
-export function sceneBackSvg(): string {
+/** What makes each sea's sky and horizon its own. */
+const BACK_EXTRA: Record<SeaId, string> = {
+  dusk: '',
+  fog: `<g class="fogbanks" fill="#c8c8dc">
+<ellipse class="fogbank" cx="60" cy="318" rx="120" ry="14" opacity="0.18"/>
+<ellipse class="fogbank f2" cx="280" cy="324" rx="140" ry="12" opacity="0.16"/>
+<ellipse class="fogbank f3" cx="170" cy="300" rx="160" ry="10" opacity="0.1"/></g>`,
+  aurora: `<defs><linearGradient id="aur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7affc0" stop-opacity="0"/><stop offset="0.5" stop-color="#7affc0" stop-opacity="0.45"/><stop offset="1" stop-color="#b48aff" stop-opacity="0"/></linearGradient></defs>
+<g class="aurora">
+<path class="aur a1" d="M-20 70 Q60 30 140 80 T300 60 T400 90 L400 160 Q300 120 220 150 T60 130 T-20 150 Z" fill="url(#aur)"/>
+<path class="aur a2" d="M-20 130 Q80 90 170 130 T380 110 L380 190 Q280 160 190 190 T-20 200 Z" fill="url(#aur)" opacity="0.7"/></g>
+<g fill="#d8ecf4"><path d="M20 ${HORIZON_Y} L34 ${HORIZON_Y - 16} L46 ${HORIZON_Y - 10} L60 ${HORIZON_Y} Z"/><path d="M300 ${HORIZON_Y} L312 ${HORIZON_Y - 9} L330 ${HORIZON_Y} Z"/></g>
+<g fill="#9cc4d4" opacity="0.7"><path d="M34 ${HORIZON_Y - 16} L46 ${HORIZON_Y - 10} L42 ${HORIZON_Y} L36 ${HORIZON_Y} Z"/></g>`,
+};
+
+const FRONT_EXTRA: Record<SeaId, string> = {
+  dusk: '',
+  fog: `<g fill="#c8c8dc"><ellipse class="fogbank" cx="90" cy="470" rx="110" ry="10" opacity="0.12"/><ellipse class="fogbank f2" cx="290" cy="500" rx="120" ry="12" opacity="0.1"/></g>`,
+  aurora: `<g class="floes"><path d="M28 494 L58 490 L64 498 L30 500 Z" fill="#dceef6" opacity="0.9"/><path d="M300 520 L336 514 L344 524 L304 528 Z" fill="#dceef6" opacity="0.85"/><path d="M200 560 L222 556 L228 562 L204 564 Z" fill="#cfe6f0" opacity="0.8"/></g>
+<path d="M150 418 Q176 410 210 414 Q232 418 242 424 L236 422 Q210 414 176 416 Z" fill="#eef8ff" opacity="0.85"/>`,
+};
+
+export function sceneBackSvg(sea: SeaId = 'dusk'): string {
   const stars = STARS.map(
     ([x, y, r], i) => `<circle class="star" style="animation-delay:${(i % 5) * 1.3}s" cx="${x}" cy="${y}" r="${r}"/>`,
   ).join('');
@@ -101,10 +125,11 @@ export function sceneBackSvg(): string {
 <path d="M8 ${HORIZON_Y} Q22 ${HORIZON_Y - 9} 40 ${HORIZON_Y - 6} Q58 ${HORIZON_Y - 12} 78 ${HORIZON_Y} Z" fill="#2c2446" opacity="0.85"/>
 <path d="M318 ${HORIZON_Y} Q328 ${HORIZON_Y - 4} 342 ${HORIZON_Y} Z" fill="#2c2446" opacity="0.7"/>
 
+${BACK_EXTRA[sea]}
 </svg>`;
 }
 
-export function sceneFrontSvg(): string {
+export function sceneFrontSvg(sea: SeaId = 'dusk'): string {
   return `${open}<defs>${DEFS}</defs>
 <rect class="haze" y="${HORIZON_Y}" width="360" height="36" fill="url(#haze)"/>
 <!-- island, light pool, platform -->
@@ -122,5 +147,6 @@ export function sceneFrontSvg(): string {
 </g>
 
 <g class="tower-slot"></g>
+${FRONT_EXTRA[sea]}
 </svg>`;
 }

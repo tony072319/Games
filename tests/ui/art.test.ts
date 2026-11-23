@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { MAX_LEVEL, MATERIALS } from '../../src/core/data';
-import { BUILDING_MAX, DEST_IDS } from '../../src/core/data';
+import { BUILDING_MAX, DEST_IDS, SEA_IDS } from '../../src/core/data';
 import { BUILDINGS } from '../../src/core/islands';
 import { buildingSvg, islandSceneSvg, boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from '../../src/ui/art';
 
@@ -51,6 +51,14 @@ describe('island buildings', () => {
       const looks = Array.from({ length: BUILDING_MAX + 1 }, (_, i) => buildingSvg(b, i));
       expect(new Set(looks).size).toBe(BUILDING_MAX + 1);
     }
-    expect(new Set(DEST_IDS.map(islandSceneSvg)).size).toBe(DEST_IDS.length);
+    expect(new Set(DEST_IDS.map((d) => islandSceneSvg(d))).size).toBe(DEST_IDS.length);
+  });
+});
+
+describe('each sea has its own look', () => {
+  test('sky, horizon and islands differ per sea', () => {
+    expect(new Set(SEA_IDS.map((s) => sceneBackSvg(s))).size).toBe(3);
+    expect(new Set(SEA_IDS.map((s) => sceneFrontSvg(s))).size).toBe(3);
+    expect(new Set(SEA_IDS.map((s) => islandSceneSvg('wreck', s))).size).toBe(3);
   });
 });
