@@ -26,7 +26,12 @@ export function allowedEvents(sky: Sky): AmbientKind[] {
   return out;
 }
 
-export function playAmbient(layer: SVGSVGElement, kind: AmbientKind, rnd: () => number = Math.random): void {
+/**
+ * Play an event. Far things (horizon, sky) go in `far`, which sits behind the
+ * lighthouse; things close to the viewer go in `near`.
+ */
+export function playAmbient(far: SVGSVGElement, near: SVGSVGElement, kind: AmbientKind, rnd: () => number = Math.random): void {
+  const layer = kind === 'fish' ? near : far;
   switch (kind) {
     case 'star': {
       const x = 140 + rnd() * 200;

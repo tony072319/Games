@@ -6,7 +6,8 @@ import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } fro
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { allowedEvents, ambientLayer, playAmbient } from './ambient';
-import { CHEST_POS, SEA_BAND, chestSvg, chestTier, itemIcon, netTier, sceneSvg } from './art';
+import { CHEST_POS, SEA_BAND, chestSvg, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg } from './art';
+import { drawSea } from './sea';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, applySky, skyAt } from './sky';
 import { createDebug } from './debug';
@@ -41,7 +42,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   const INFINITE_AMOUNT = 1e12;
   const resizeObserver = new ResizeObserver(() => onStageResize());
   const sound = new SoundEngine(state.settings.sound);
-  let ambient!: SVGSVGElement;
+  let farLayer!: SVGSVGElement;
+  let nearLayer!: SVGSVGElement;
+  let seaCanvas!: HTMLCanvasElement;
+  let netSlot: Element | null = null;
+  let netShown = 0;
+  let nextSeaAt = 0;
   /** Debug only: shifts the sky clock forward. */
   let skyOffset = 0;
   let nextSkyAt = 0;
@@ -49,7 +55,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   const currentSky = () => skyAt(opts.now() + skyOffset);
   function triggerAmbient() {
     const kinds = allowedEvents(currentSky());
-    playAmbient(ambient, kinds[Math.floor(Math.random() * kinds.length)]);
+    playAmbient(farLayer, nearLayer, kinds[Math.floor(Math.random() * kinds.length)]);
   }
 
   // An open popup accumulates further time away instead of stacking dialogs.
@@ -80,10 +86,14 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const moved = collectChest(state);
     if (chestTotal(moved) >= 1) sound.play('chest');
     const lang = state.settings.lang;
+    const from = chestBtn.getBoundingClientRect();
     let i = 0;
     for (const m of MATERIALS) {
       if (moved[m] < 1) continue;
       floatText(`+${formatNumber(moved[m], lang)}`, chestBtn.offsetLeft + 4, chestBtn.offsetTop - 10 - i * 18, itemIcon(m));
+      // A handful of icons per material, more for bigger hauls.
+      const n = Math.min(6, 1 + Math.floor(Math.log10(moved[m] + 1) * 1.5));
+      flyToHud(m, from.left + from.width / 2, from.top + from.height / 3, n, i * 90);
       i++;
     }
     return moved;
@@ -96,6 +106,61 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     g.style.top = `${y}px`;
     stage.append(g);
     setTimeout(() => g.remove(), 1300);
+  }
+
+  /** Item icons arc from a point on screen into the material's counter, then it bumps. */
+  function flyToHud(m: (typeof MATERIALS)[number], x: number, y: number, n: number, delay = 0) {
+    const g = game.getBoundingClientRect();
+    const to = hud.target(m).getBoundingClientRect();
+    const tx = to.left + 10 - g.left;
+    const ty = to.top + to.height / 2 - g.top;
+    for (let k = 0; k < n; k++) {
+      const f = el('div', 'fly', itemIcon(m));
+      const sx = x - g.left + (Math.random() - 0.5) * 30;
+      const sy = y - g.top + (Math.random() - 0.5) * 16;
+      f.style.left = `${sx}px`;
+      f.style.top = `${sy}px`;
+      game.append(f);
+      const dx = tx - sx;
+      const dy = ty - sy;
+      const lift = -40 - Math.random() * 40;
+      const anim = f.animate(
+        [
+          { transform: 'translate(-50%,-50%) scale(0.6)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${dx * 0.3}px), calc(-50% + ${dy * 0.3 + lift}px)) scale(1.25)`, opacity: 1, offset: 0.35 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity: 0.9 },
+        ],
+        { duration: 650 + Math.random() * 250, delay: delay + k * 70, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'backwards' },
+      );
+      anim.onfinish = () => {
+        f.remove();
+        hud.bump(m);
+      };
+    }
+  }
+
+  /** A burst of little lights around something that was just mended. */
+  function sparkle(target: Element | null) {
+    if (!target) return;
+    const g = game.getBoundingClientRect();
+    const r = target.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - g.left;
+    const cy = r.top + r.height / 2 - g.top;
+    for (let k = 0; k < 16; k++) {
+      const p = el('div', 'spark');
+      p.style.left = `${cx}px`;
+      p.style.top = `${cy}px`;
+      game.append(p);
+      const a = (k / 16) * Math.PI * 2 + Math.random() * 0.4;
+      const d = 30 + Math.random() * Math.max(30, r.width * 0.6);
+      p.animate(
+        [
+          { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+          { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(0.2)`, opacity: 0 },
+        ],
+        { duration: 700 + Math.random() * 400, easing: 'cubic-bezier(.2,.8,.4,1)' },
+      ).onfinish = () => p.remove();
+    }
   }
 
   function toast(text: string) {
@@ -112,11 +177,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     toast(t(lang, 'toast.upgraded', { name: t(lang, `upg.${id}.name`), level: state.levels[id] }));
     panel.flash(id);
-    const target = id === 'net' ? stage.querySelector('.scene') : chestBtn;
+    refresh(); // draw the new look first, then celebrate it
+    const target = id === 'net' ? netSlot : chestBtn;
     target?.classList.remove('pulse');
-    void (target as HTMLElement | null)?.offsetWidth; // restart the animation
+    void (target as HTMLElement | null)?.getBoundingClientRect();
     target?.classList.add('pulse');
-    refresh();
+    sparkle(target);
   }
 
   function build() {
@@ -125,10 +191,16 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     document.title = t(lang, 'game.title');
     game = el('div', 'game');
     stage = el('div', 'stage');
-    stage.append(el('div', 'scene', sceneSvg()));
-    ambient = ambientLayer();
-    stage.append(ambient);
+    const back = el('div', 'scene back', sceneBackSvg());
+    seaCanvas = el('canvas', 'sea');
+    farLayer = ambientLayer();
+    const front = el('div', 'scene front', sceneFrontSvg());
+    nearLayer = ambientLayer();
+    stage.append(back, seaCanvas, farLayer, front, nearLayer);
+    netSlot = front.querySelector('.net-slot');
+    netShown = 0;
     nextSkyAt = 0;
+    nextSeaAt = 0;
     flotsamLayer = el('div', 'flotsam');
     chestBtn = el('button', 'chest');
     chestBtn.setAttribute('aria-label', t(lang, 'chest.label'));
@@ -201,6 +273,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     scale = Math.max(stageW / 360, stageH / 640);
     stage.style.setProperty('--stage-w', `${stageW}px`);
     stage.style.setProperty('--scene-scale', String(scale));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    seaCanvas.width = Math.round(stageW * dpr);
+    seaCanvas.height = Math.round(stageH * dpr);
+    nextSeaAt = 0;
     chestBtn.style.left = `${sceneXToPx(CHEST_POS.x)}px`;
     chestBtn.style.top = `${sceneYToPx(CHEST_POS.y)}px`;
   }
@@ -244,6 +320,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         b.remove();
         itemEls.delete(item.id);
         floatText(`+${formatNumber(got.amount, state.settings.lang)}`, rect.left - srect.left + 8, rect.top - srect.top - 4);
+        flyToHud(got.material, rect.left + rect.width / 2, rect.top + rect.height / 2, 1);
       });
       itemEls.set(item.id, b);
       flotsamLayer.append(b);
@@ -252,7 +329,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   function renderChest() {
     const fill = Math.min(1, chestTotal(state.chest) / chestCapacity(state));
-    const tier = chestTier(state.levels.storage);
+    const tier = state.levels.storage;
     // Redraw only when the picture would change (fill in 5% steps).
     const key = `${tier}:${Math.floor(fill * 20)}`;
     if (key === chestKey) return;
@@ -261,8 +338,22 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     chestBtn.classList.toggle('full', fill >= 0.999);
   }
 
+  function paintSea(now: number) {
+    const ctx = seaCanvas.getContext('2d');
+    if (!ctx || !stageW) return;
+    const dpr = seaCanvas.width / stageW;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, seaCanvas.width, seaCanvas.height);
+    // Same mapping as the SVG layers: preserveAspectRatio="xMidYMid slice".
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (stageW / 2 - 180 * scale) * dpr, (stageH / 2 - 320 * scale) * dpr);
+    drawSea(ctx, now, currentSky());
+  }
+
   function refresh() {
-    stage.dataset.net = String(netTier(state.levels.net));
+    if (netSlot && netShown !== state.levels.net) {
+      netSlot.innerHTML = netSvg(state.levels.net);
+      netShown = state.levels.net;
+    }
     renderChest();
     hud.update(state);
     panel.update(state);
@@ -278,6 +369,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (now >= nextSkyAt) {
       applySky(stage, currentSky());
       nextSkyAt = now + 1000;
+    }
+    if (now >= nextSeaAt) {
+      paintSea(now);
+      nextSeaAt = now + 33;
     }
     if (now >= nextAmbientAt) {
       triggerAmbient();
