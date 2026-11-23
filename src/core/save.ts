@@ -74,6 +74,9 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   const settings = isObj(data.settings) ? data.settings : {};
   if (settings.lang === 'zh' || settings.lang === 'en') state.settings.lang = settings.lang;
   else dropped = true;
+  // Added after the first release: a missing value keeps the default.
+  if (typeof settings.sound === 'boolean') state.settings.sound = settings.sound;
+  else if ('sound' in settings) dropped = true;
 
   const stats = isObj(data.stats) ? data.stats : {};
   if (isAmount(stats.tapped)) state.stats.tapped = stats.tapped;

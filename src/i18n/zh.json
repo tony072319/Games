@@ -32,5 +32,8 @@
   "debug.infiniteOff": "无限材料：关",
   "debug.plusMillion": "+100万 全部材料",
   "debug.reset": "重置测试存档",
-  "debug.resetConfirm": "清空测试存档，从头开始？（不影响正式存档）"
+  "debug.resetConfirm": "清空测试存档，从头开始？（不影响正式存档）",
+  "settings.sound": "声音",
+  "debug.skyPlus": "天色 +4 分钟",
+  "debug.event": "随机海上事件"
 }

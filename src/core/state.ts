@@ -10,7 +10,7 @@ export interface GameState {
   levels: Record<UpgradeId, number>;
   /** Epoch ms of the last moment progress was credited. */
   lastActiveAt: number;
-  settings: { lang: Lang };
+  settings: { lang: Lang; sound: boolean };
   stats: { tapped: number };
 }
 
@@ -27,7 +27,7 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     chest: emptyMaterials(),
     levels: { net: 1, storage: 1 },
     lastActiveAt: nowMs,
-    settings: { lang },
+    settings: { lang, sound: true },
     stats: { tapped: 0 },
   };
 }

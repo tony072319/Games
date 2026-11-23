@@ -1,7 +1,10 @@
 :root {
   --sky-top: #12112b;
   --sky-mid: #3a2c5a;
+  --sky-low: #9b5a78;
   --sky-horizon: #b8677a;
+  --sea-tint: #000000;
+  --sea-tint-op: 0;
   --sea-top: #2a2f55;
   --sea: #0b0f22;
   --lamp: #ffd98a;
@@ -119,7 +122,8 @@ html, body {
 .scene.pulse .net { animation: pulse 0.8s ease-out; transform-box: fill-box; transform-origin: right top; }
 .chest.pulse svg { animation: pulse 0.8s ease-out; }
 .net { display: none; }
-.stage[data-net="0"] .net-t0, .stage[data-net="1"] .net-t1, .stage[data-net="2"] .net-t2, .stage[data-net="3"] .net-t3 { display: inline; }
+.stage[data-net="0"] .net-t0, .stage[data-net="1"] .net-t1, .stage[data-net="2"] .net-t2,
+.stage[data-net="3"] .net-t3, .stage[data-net="4"] .net-t4, .stage[data-net="5"] .net-t5 { display: inline; }
 
 /* ---------- hud ---------- */
 .hud {
@@ -240,6 +244,12 @@ html, body {
 /* ---------- motion (slow and quiet) ---------- */
 .beam { transform-box: view-box; transform-origin: 180px 259px; animation: sweep 8s ease-in-out infinite; }
 .lamp { animation: breathe 4s ease-in-out infinite; }
+.stars { opacity: var(--stars, 0.5); transition: opacity 2s; }
+.moon, .moon-glints { opacity: var(--moon, 0); }
+.sun { opacity: var(--sun, 1); transform: translateY(calc((1 - var(--sun, 1)) * 34px)); }
+.sun-glints { opacity: var(--sun, 1); }
+.haze { opacity: calc(0.25 + 0.75 * var(--sun, 1)); }
+.cloudset-warm { opacity: var(--cloud-warm, 1); }
 .swell { animation: swell 7s ease-in-out infinite alternate; }
 .glint { animation: glint 3s ease-in-out infinite; }
 .cloud { animation: cloud 40s ease-in-out infinite alternate; }
@@ -272,3 +282,25 @@ html, body {
   *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
   .item { animation: none; transform: translateX(calc(var(--x, 0.5) * var(--stage-w, 400px))); }
 }
+
+/* ---------- ambient events ---------- */
+.ambient { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.amb * { transform-box: fill-box; }
+.a-star line { animation: shoot 1.4s ease-out forwards; transform-origin: right center; }
+@keyframes shoot { 0% { opacity: 0; transform: translate(0, 0) scaleX(0.3); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-110px, 44px) scaleX(1); } }
+.a-birds > g { animation: fly 26s linear forwards; }
+.a-birds .wing { animation: flap 0.9s ease-in-out infinite; transform-origin: center; }
+@keyframes fly { from { transform: translate(400px, var(--y)); } to { transform: translate(-60px, calc(var(--y) - 40px)); } }
+@keyframes flap { 50% { transform: scaleY(-0.6); } }
+.ship-move { animation: sail 90s linear forwards; }
+@keyframes sail { from { transform: translateX(-20px); opacity: 0; } 5% { opacity: 1; } 95% { opacity: 1; } to { transform: translateX(380px); opacity: 0; } }
+.fish-jump { animation: jump 1.2s ease-in-out forwards; opacity: 0; }
+@keyframes jump { 0% { opacity: 1; transform: translate(-12px, 0) rotate(-50deg); } 50% { transform: translate(0, -22px) rotate(0deg); } 100% { opacity: 1; transform: translate(12px, 0) rotate(50deg); } }
+.splash { opacity: 0; animation: splash 1.8s ease-out forwards; transform-origin: center; }
+.a-fish .splash { animation-delay: 1s; }
+@keyframes splash { 0% { opacity: 0.8; transform: scale(0.3); } 100% { opacity: 0; transform: scale(1.6); } }
+.whale-tail { animation: tail 5s ease-in-out forwards; opacity: 0; transform-origin: center bottom; }
+.a-whale .splash { animation-delay: 3.6s; }
+@keyframes tail { 0% { opacity: 0; transform: translateY(14px); } 25% { opacity: 1; transform: translateY(0); } 70% { opacity: 1; transform: translateY(0) rotate(-6deg); } 100% { opacity: 0; transform: translateY(16px); } }
+.hud .icon-btn { border: 1px solid var(--ui-dim); background: transparent; color: var(--ui-dim); border-radius: 12px; width: 32px; height: 24px; padding: 2px; cursor: pointer; }
+.hud .icon-btn svg { width: 16px; height: 16px; vertical-align: middle; }

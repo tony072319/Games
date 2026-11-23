@@ -38,6 +38,9 @@ try {
 
   await page.goto(BASE);
   if ((await page.locator('.hud .mat').count()) !== 4) fail('HUD should show 4 materials');
+  if ((await page.locator('.hud .sound').count()) !== 1) fail('HUD should have a sound toggle');
+  await page.locator('.hud .sound').click();
+  if ((await page.locator('.hud .sound').getAttribute('aria-pressed')) !== 'false') fail('sound toggle should turn sound off');
 
   const before = await total(page);
   const item = page.locator('.item').first();
@@ -89,6 +92,10 @@ try {
   await page.reload();
   const lvl2 = await page.locator('[data-upgrade="net"] .level').textContent();
   if (!lvl2?.includes('4')) fail(`test save should persist after reload, got ${lvl2}`);
+
+  await page.getByText('天色 +4 分钟').click();
+  await page.getByText('随机海上事件').click();
+  if (!(await page.locator('.ambient .amb').count())) fail('a sea event should appear');
 
   // The real save was never touched by the test build.
   await page.goto(BASE);

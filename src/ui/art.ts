@@ -70,7 +70,7 @@ function hash(i: number): number {
 }
 
 /** Broken glints of sunset on the water: dense and narrow near the horizon, sparse and wide up close. */
-function sunReflection(): string {
+function sunReflection(cx: number, color: string): string {
   let out = '';
   const n = 34;
   for (let i = 0; i < n; i++) {
@@ -78,22 +78,78 @@ function sunReflection(): string {
     const y = HORIZON_Y + 2 + 170 * t + hash(i) * 4;
     const spread = 10 + 34 * t;
     const w = (4 + 18 * hash(i + 50)) * (0.5 + t);
-    const x = 270 + (hash(i + 100) - 0.5) * spread * 2 - w / 2;
+    const x = cx + (hash(i + 100) - 0.5) * spread * 2 - w / 2;
     const op = (0.6 - 0.45 * t) * (0.5 + 0.5 * hash(i + 200));
-    out += `<rect class="glint" style="animation-delay:${(hash(i + 300) * 3).toFixed(2)}s" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(0.8 + 1.4 * t).toFixed(1)}" rx="1" fill="#f6b27a" opacity="${op.toFixed(2)}"/>`;
+    out += `<rect class="glint" style="animation-delay:${(hash(i + 300) * 3).toFixed(2)}s" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(0.8 + 1.4 * t).toFixed(1)}" rx="1" fill="${color}" opacity="${op.toFixed(2)}"/>`;
   }
   return out;
 }
 
+/** Net looks: each tier is a different kind of gear, not just a bigger net. */
+export const NET_TIERS = 6;
+const NET_AT = [1, 3, 6, 10, 18, 30];
+export function netTier(level: number): number {
+  let t = 0;
+  for (let i = 0; i < NET_AT.length; i++) if (level >= NET_AT[i]) t = i;
+  return t;
+}
+
 function nets(): string {
-  // Four looks for the net as it is mended, shown one at a time via data-net on the stage.
-  const mesh = (x: number, y: number, w: number, h: number) =>
-    `<path d="M${x} ${y} L${x + w} ${y} L${x + w * 0.85} ${y + h} Q${x + w / 2} ${y + h * 1.25} ${x + w * 0.15} ${y + h} Z" fill="url(#mesh)" stroke="#c9a978" stroke-width="1"/>`;
-  return `
-<g class="net net-t0"><line x1="104" y1="438" x2="84" y2="452" stroke="#6b4a36" stroke-width="2.5"/>${mesh(72, 452, 22, 14)}</g>
-<g class="net net-t1"><line x1="104" y1="438" x2="76" y2="452" stroke="#6b4a36" stroke-width="3"/>${mesh(58, 452, 34, 20)}</g>
-<g class="net net-t2"><line x1="104" y1="438" x2="66" y2="450" stroke="#6b4a36" stroke-width="3.5"/><line x1="104" y1="444" x2="78" y2="456" stroke="#6b4a36" stroke-width="2"/>${mesh(42, 450, 50, 26)}<circle cx="44" cy="451" r="3" fill="#d96b4a"/><circle cx="90" cy="451" r="3" fill="#d96b4a"/></g>
-<g class="net net-t3"><line x1="104" y1="436" x2="56" y2="446" stroke="#7a5640" stroke-width="4"/><line x1="104" y1="444" x2="64" y2="456" stroke="#7a5640" stroke-width="2.5"/>${mesh(24, 446, 70, 34)}<circle cx="26" cy="447" r="3.5" fill="#d96b4a"/><circle cx="58" cy="445" r="3.5" fill="#f3ecff"/><circle cx="92" cy="447" r="3.5" fill="#d96b4a"/></g>`;
+  const bag = (cx: number, top: number, w: number, h: number, fill = 'url(#mesh)', stroke = '#c9a978') =>
+    `<path d="M${cx - w / 2} ${top} Q${cx - w / 2 + 2} ${top + h * 0.8} ${cx} ${top + h} Q${cx + w / 2 - 2} ${top + h * 0.8} ${cx + w / 2} ${top} Z" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`;
+  const float = (x: number, y: number, c: string) => `<ellipse cx="${x}" cy="${y}" rx="3.4" ry="2.4" fill="${c}" stroke="#2b2433" stroke-width="0.6"/>`;
+  const floats = (pts: [number, number][], glow = false) =>
+    pts.map(([x, y], i) => (glow ? `<circle cx="${x}" cy="${y}" r="5" fill="url(#glow)" opacity="0.6"/>` : '') + float(x, y, i % 2 ? '#f3ecff' : '#d96b4a')).join('');
+  const lantern = (x: number, y: number) =>
+    `<circle cx="${x}" cy="${y + 4}" r="9" fill="url(#glow)" class="lamp"/><rect x="${x - 2.5}" y="${y}" width="5" height="7" rx="1.2" fill="var(--lamp)" stroke="#3a3044" stroke-width="0.8"/><line x1="${x}" y1="${y - 3}" x2="${x}" y2="${y}" stroke="#3a3044" stroke-width="0.8"/>`;
+
+  // t0 hand net leaning on the platform
+  const t0 = `<line x1="112" y1="432" x2="76" y2="450" stroke="#8a6a4a" stroke-width="2.2" stroke-linecap="round"/>
+<ellipse cx="68" cy="452" rx="10" ry="4" fill="none" stroke="#8a6a4a" stroke-width="1.6"/>${bag(68, 452, 18, 14)}`;
+
+  // t1 rope net strung between two bamboo poles
+  const t1 = `<line x1="58" y1="474" x2="58" y2="418" stroke="#b49a5a" stroke-width="2.6"/><line x1="96" y1="470" x2="96" y2="414" stroke="#b49a5a" stroke-width="2.6"/>
+<g stroke="#8a7a3a" stroke-width="0.8"><line x1="56" y1="430" x2="60" y2="430"/><line x1="56" y1="446" x2="60" y2="446"/><line x1="94" y1="428" x2="98" y2="428"/><line x1="94" y1="444" x2="98" y2="444"/></g>
+<path d="M58 422 Q77 430 96 418 L96 458 Q77 472 58 462 Z" fill="url(#mesh)" stroke="#d7b882" stroke-width="1.2"/>
+<path d="M58 422 Q77 430 96 418" fill="none" stroke="#d7b882" stroke-width="2"/>`;
+
+  // t2 drift net: an arc of floats on the water with the net hanging beneath
+  const arc: [number, number][] = [[96, 458], [82, 466], [66, 471], [50, 473], [34, 470], [20, 464]];
+  const t2 = `<path d="M100 438 Q100 452 96 458" fill="none" stroke="#d7b882" stroke-width="1.4"/>
+<path d="M96 458 Q58 480 20 464 L24 490 Q58 504 92 484 Z" fill="url(#mesh)" opacity="0.55"/>
+<path d="M96 458 Q58 480 20 464" fill="none" stroke="#d7b882" stroke-width="1.4"/>${floats(arc)}`;
+
+  // t3 wooden crane with a net bag on a pulley
+  const t3 = `<rect x="110" y="380" width="5" height="52" fill="#7a5640"/><line x1="112" y1="384" x2="48" y2="396" stroke="#7a5640" stroke-width="4" stroke-linecap="round"/>
+<line x1="112" y1="408" x2="80" y2="390" stroke="#5d4030" stroke-width="2"/><circle cx="50" cy="397" r="3.5" fill="#3d291f" stroke="#c9a978" stroke-width="1"/>
+<line x1="50" y1="400" x2="50" y2="428" stroke="#d7b882" stroke-width="1.2"/>${bag(50, 428, 30, 34)}
+<path d="M36 456 Q50 452 64 456" fill="none" stroke="#e8e0ff" stroke-opacity="0.35" stroke-width="1.5"/>`;
+
+  // t4 iron crane, iron-framed cage net, lantern on the boom
+  const t4 = `<rect x="108" y="372" width="6" height="60" fill="#5d6270" stroke="#3a3f4a" stroke-width="0.8"/>
+<line x1="111" y1="376" x2="40" y2="388" stroke="#6c7482" stroke-width="4.5" stroke-linecap="round"/>
+<g stroke="#3a3f4a" stroke-width="1"><line x1="111" y1="404" x2="70" y2="381"/><line x1="90" y1="380" x2="96" y2="392"/><line x1="70" y1="383" x2="76" y2="394"/></g>
+<g fill="#a8b0bd"><circle cx="111" cy="390" r="1.2"/><circle cx="111" cy="410" r="1.2"/><circle cx="80" cy="381" r="1"/></g>
+<circle cx="42" cy="389" r="3.5" fill="#2b2433" stroke="#a8b0bd" stroke-width="1"/>
+<line x1="42" y1="392" x2="42" y2="418" stroke="#a8b0bd" stroke-width="1.2"/>
+<rect x="24" y="418" width="36" height="36" rx="2" fill="url(#mesh)" stroke="#8a929f" stroke-width="2"/>
+<g stroke="#8a929f" stroke-width="1"><line x1="24" y1="436" x2="60" y2="436"/><line x1="42" y1="418" x2="42" y2="454"/></g>
+${lantern(74, 384)}`;
+
+  // t5 lantern-lit fishing rig: twin booms, lights along the line, glowing floats
+  const lights = [[100, 376], [84, 378], [68, 380], [52, 382], [36, 384]].map(([x, y]) => `<circle cx="${x}" cy="${y + 3}" r="2" fill="var(--lamp)"/><circle cx="${x}" cy="${y + 3}" r="6" fill="url(#glow)" opacity="0.7"/>`).join('');
+  const t5 = `<ellipse cx="50" cy="470" rx="62" ry="14" fill="url(#pool)"/>
+<rect x="106" y="362" width="7" height="70" fill="#5d6270" stroke="#d9b25a" stroke-width="0.8"/>
+<line x1="110" y1="366" x2="22" y2="380" stroke="#6c7482" stroke-width="5" stroke-linecap="round"/>
+<line x1="110" y1="398" x2="34" y2="410" stroke="#6c7482" stroke-width="3" stroke-linecap="round"/>
+<g stroke="#d9b25a" stroke-width="1"><line x1="110" y1="366" x2="22" y2="380"/></g>
+<path d="M110 368 Q66 384 24 380" fill="none" stroke="#3a3044" stroke-width="0.6"/>${lights}
+<line x1="24" y1="382" x2="24" y2="412" stroke="#a8b0bd" stroke-width="1.2"/><line x1="64" y1="388" x2="64" y2="414" stroke="#a8b0bd" stroke-width="1.2"/>
+<path d="M14 412 L74 412 Q70 452 44 462 Q18 452 14 412 Z" fill="url(#mesh)" stroke="#d9b25a" stroke-width="1.6"/>
+${floats([[96, 462], [78, 470], [58, 474], [38, 472], [18, 466]], true)}
+${lantern(110, 352)}`;
+
+  return [t0, t1, t2, t3, t4, t5].map((g, i) => `<g class="net net-t${i}">${g}</g>`).join('\n');
 }
 
 export function sceneSvg(): string {
@@ -105,7 +161,7 @@ export function sceneSvg(): string {
   <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="var(--sky-top)"/>
     <stop offset="0.5" stop-color="var(--sky-mid)"/>
-    <stop offset="0.85" stop-color="#9b5a78"/>
+    <stop offset="0.85" stop-color="var(--sky-low)"/>
     <stop offset="1" stop-color="var(--sky-horizon)"/>
   </linearGradient>
   <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
@@ -117,6 +173,14 @@ export function sceneSvg(): string {
     <stop offset="0" stop-color="#4a3a6e" stop-opacity="0.9"/>
     <stop offset="1" stop-color="#d88a7a" stop-opacity="0.75"/>
   </linearGradient>
+  <linearGradient id="cloudCool" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1c1f3e" stop-opacity="0.9"/>
+    <stop offset="1" stop-color="#4a5078" stop-opacity="0.7"/>
+  </linearGradient>
+  <radialGradient id="moonGlow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#e8f0ff" stop-opacity="0.5"/>
+    <stop offset="1" stop-color="#e8f0ff" stop-opacity="0"/>
+  </radialGradient>
   <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="#e3a08a" stop-opacity="0.35"/>
     <stop offset="1" stop-color="#e3a08a" stop-opacity="0"/>
@@ -150,14 +214,16 @@ export function sceneSvg(): string {
 
 <!-- sky -->
 <rect width="360" height="${HORIZON_Y + 2}" fill="url(#sky)"/>
-<g fill="#f3ecff">${stars}</g>
-<circle cx="270" cy="${HORIZON_Y}" r="90" fill="url(#sunGlow)"/>
+<g class="stars" fill="#f3ecff">${stars}</g>
+<g class="moon"><circle cx="78" cy="178" r="44" fill="url(#moonGlow)"/><circle cx="78" cy="178" r="14" fill="#efe9da"/><circle cx="73" cy="174" r="2.6" fill="#d9d1bf"/><circle cx="83" cy="182" r="3.4" fill="#d9d1bf"/><circle cx="81" cy="170" r="1.6" fill="#d9d1bf"/></g>
+<g class="sun"><circle cx="270" cy="${HORIZON_Y}" r="90" fill="url(#sunGlow)"/><path d="M245 ${HORIZON_Y} A25 25 0 0 1 295 ${HORIZON_Y} Z" fill="#f7a86f"/></g>
 <g class="clouds">
-  <g class="cloud c1"><ellipse cx="70" cy="215" rx="70" ry="9" fill="url(#cloud)"/><ellipse cx="100" cy="207" rx="38" ry="8" fill="url(#cloud)"/></g>
-  <g class="cloud c2"><ellipse cx="300" cy="255" rx="80" ry="7" fill="url(#cloud)" opacity="0.8"/><ellipse cx="270" cy="249" rx="34" ry="6" fill="url(#cloud)" opacity="0.8"/></g>
-  <g class="cloud c3"><ellipse cx="150" cy="292" rx="110" ry="4" fill="url(#cloud)" opacity="0.6"/></g>
+  ${['', '-warm'].map((k) => `<g class="cloudset${k}">
+  <g class="cloud c1"><ellipse cx="70" cy="215" rx="70" ry="9" fill="url(#${k ? 'cloud' : 'cloudCool'})"/><ellipse cx="100" cy="207" rx="38" ry="8" fill="url(#${k ? 'cloud' : 'cloudCool'})"/></g>
+  <g class="cloud c2"><ellipse cx="300" cy="255" rx="80" ry="7" fill="url(#${k ? 'cloud' : 'cloudCool'})" opacity="0.8"/><ellipse cx="270" cy="249" rx="34" ry="6" fill="url(#${k ? 'cloud' : 'cloudCool'})" opacity="0.8"/></g>
+  <g class="cloud c3"><ellipse cx="150" cy="292" rx="110" ry="4" fill="url(#${k ? 'cloud' : 'cloudCool'})" opacity="0.6"/></g>
+  </g>`).join('')}
 </g>
-<path d="M245 ${HORIZON_Y} A25 25 0 0 1 295 ${HORIZON_Y} Z" fill="#f7a86f"/>
 <!-- far islands -->
 <path d="M8 ${HORIZON_Y} Q22 ${HORIZON_Y - 9} 40 ${HORIZON_Y - 6} Q58 ${HORIZON_Y - 12} 78 ${HORIZON_Y} Z" fill="#2c2446" opacity="0.85"/>
 <path d="M318 ${HORIZON_Y} Q328 ${HORIZON_Y - 4} 342 ${HORIZON_Y} Z" fill="#2c2446" opacity="0.7"/>
@@ -165,8 +231,10 @@ export function sceneSvg(): string {
 <!-- sea -->
 <rect y="${HORIZON_Y}" width="360" height="${640 - HORIZON_Y}" fill="#070a1a"/>
 ${sea()}
-<rect y="${HORIZON_Y}" width="360" height="40" fill="url(#haze)"/>
-${sunReflection()}
+<rect y="${HORIZON_Y}" width="360" height="${640 - HORIZON_Y}" fill="var(--sea-tint)" style="opacity:var(--sea-tint-op)"/>
+<rect class="haze" y="${HORIZON_Y}" width="360" height="40" fill="url(#haze)"/>
+<g class="sun-glints">${sunReflection(270, '#f6b27a')}</g>
+<g class="moon-glints">${sunReflection(78, '#dfe6ff')}</g>
 
 <!-- island, light pool, platform -->
 <ellipse cx="180" cy="458" rx="120" ry="22" fill="url(#pool)"/>
@@ -209,29 +277,56 @@ export function itemIcon(m: MaterialId): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${ICONS[m]}</svg>`;
 }
 
-/** Visual tier (0..3) for an upgrade level, so the net and chest visibly grow as they are mended. */
-export function tierFor(level: number): number {
-  return level >= 20 ? 3 : level >= 10 ? 2 : level >= 4 ? 1 : 0;
+/** Chest looks: a different container at each tier. */
+export const CHEST_TIERS = 6;
+const CHEST_AT = [1, 2, 4, 6, 8, 10];
+export function chestTier(level: number): number {
+  let t = 0;
+  for (let i = 0; i < CHEST_AT.length; i++) if (level >= CHEST_AT[i]) t = i;
+  return t;
 }
 
-/**
- * The storage chest. fill is 0..1; contents peek out as it fills.
- * Tier adds iron bands and a brass lock as it is upgraded.
- */
+/** Bits of catch poking out of the top; rises as the chest fills. */
+function peek(fill: number, top: number): string {
+  if (fill <= 0.2) return '';
+  const dy = top - 10 + (1 - Math.min(1, fill)) * 10;
+  return `<g transform="translate(0 ${dy.toFixed(1)})"><rect x="14" y="4" width="16" height="6" rx="2" fill="#9a6a45" transform="rotate(-12 22 7)"/><rect x="33" y="1" width="7" height="11" rx="2" fill="#7fc4c0"/><circle cx="46" cy="7" r="4" fill="none" stroke="#d7b882" stroke-width="2"/>${fill > 0.6 ? '<circle cx="26" cy="2" r="3" fill="#a8b0bd" stroke="#6c7482" stroke-width="0.8"/>' : ''}</g>`;
+}
+
+const CHESTS: ((fill: number) => string)[] = [
+  // 0: battered open crate, one slat broken
+  (f) => `${peek(f, 22)}<g stroke="#3d291f" stroke-width="1.1">
+<rect x="8" y="22" width="48" height="8" fill="#8a6a4a"/><rect x="8" y="31" width="48" height="8" fill="#7a5a3e"/>
+<path d="M8 40 H30 L36 48 H8 Z" fill="#8a6a4a"/><path d="M40 40 H56 V48 H44 Z" fill="#7a5a3e"/>
+<rect x="8" y="20" width="4" height="30" fill="#6a4a32"/><rect x="52" y="20" width="4" height="30" fill="#6a4a32"/></g>`,
+  // 1: barrel
+  (f) => `${peek(f, 14)}<path d="M14 14 Q10 32 14 50 H50 Q54 32 50 14 Z" fill="#94603c" stroke="#3d291f" stroke-width="1.2"/>
+<ellipse cx="32" cy="14" rx="18" ry="3.5" fill="#5a3a26" stroke="#3d291f" stroke-width="1"/>
+<g stroke="#3d291f" stroke-opacity="0.45" stroke-width="1"><path d="M22 15 Q20 32 22 50"/><path d="M32 17 V50"/><path d="M42 15 Q44 32 42 50"/></g>
+<g fill="none" stroke="#5d6270" stroke-width="2.4"><path d="M12.5 22 Q32 26 51.5 22"/><path d="M12.5 42 Q32 46 51.5 42"/></g>`,
+  // 2: lidded crate with rope handles
+  (f) => `${peek(f, 18)}<rect x="7" y="20" width="50" height="28" rx="2" fill="#8a5a3a" stroke="#3d291f" stroke-width="1.2"/>
+<path d="M5 ${f >= 1 ? 12 : 16} L59 ${f >= 1 ? 8 : 16} L59 21 L5 21 Z" fill="#9a6a45" stroke="#3d291f" stroke-width="1.2"/>
+<g stroke="#3d291f" stroke-opacity="0.4"><line x1="7" y1="30" x2="57" y2="30"/><line x1="7" y1="39" x2="57" y2="39"/></g>
+<g fill="none" stroke="#d7b882" stroke-width="2"><path d="M3 28 Q0 33 3 38"/><path d="M61 28 Q64 33 61 38"/></g>`,
+  // 3: domed sea chest with iron bands
+  (f) => `${peek(f, 16)}<path d="M6 18 Q32 ${f >= 1 ? 0 : 4} 58 18 L58 22 L6 22 Z" fill="#7a4e34" stroke="#2b1d14" stroke-width="1.2"/>
+<rect x="6" y="20" width="52" height="28" rx="2.5" fill="#7a4e34" stroke="#2b1d14" stroke-width="1.2"/>
+<g fill="#5d6270" stroke="#3a3f4a" stroke-width="0.6"><rect x="14" y="8" width="4" height="40"/><rect x="46" y="8" width="4" height="40"/><rect x="6" y="20" width="52" height="3"/></g>
+<g fill="#a8b0bd"><circle cx="16" cy="28" r="1"/><circle cx="16" cy="40" r="1"/><circle cx="48" cy="28" r="1"/><circle cx="48" cy="40" r="1"/></g>`,
+  // 4: captain's chest: dark wood, brass corners and lock
+  (f) => `${peek(f, 16)}<path d="M5 18 Q32 ${f >= 1 ? -1 : 3} 59 18 L59 22 L5 22 Z" fill="#4a2e20" stroke="#1d120c" stroke-width="1.2"/>
+<rect x="5" y="20" width="54" height="29" rx="2.5" fill="#4a2e20" stroke="#1d120c" stroke-width="1.2"/>
+<g fill="none" stroke="#d9b25a" stroke-width="2"><path d="M5 26 V20 H11"/><path d="M59 26 V20 H53"/><path d="M5 43 V49 H11"/><path d="M59 43 V49 H53"/><path d="M5 20 H59"/></g>
+<rect x="28" y="22" width="8" height="10" rx="1.5" fill="#d9b25a" stroke="#8a6a2a" stroke-width="1"/><circle cx="32" cy="27" r="1.2" fill="#3d291f"/>`,
+  // 5: lantern chest: captain's chest crowned with a little lamp, glowing seams
+  (f) => `<circle cx="32" cy="24" r="30" fill="url(#chestGlow)"/>${CHESTS[4](f)}
+<g stroke="var(--lamp)" stroke-opacity="0.8" stroke-width="0.8"><line x1="8" y1="34" x2="56" y2="34"/></g>
+<line x1="32" y1="2" x2="32" y2="6" stroke="#3a3044" stroke-width="1"/><rect x="28.5" y="5" width="7" height="9" rx="1.5" fill="var(--lamp)" stroke="#8a6a2a" stroke-width="1"/>`,
+];
+
+/** The storage chest. fill is 0..1; a different container per tier. */
 export function chestSvg(fill: number, tier: number): string {
-  const wood = ['#8a5a3a', '#94603c', '#7a4e34', '#6a4430'][tier] ?? '#8a5a3a';
-  const band = tier >= 1 ? `<rect x="6" y="20" width="52" height="3" fill="#5d6270"/><rect x="6" y="34" width="52" height="3" fill="#5d6270"/>` : '';
-  const lock = tier >= 2 ? `<rect x="28" y="22" width="8" height="9" rx="1.5" fill="#d9b25a" stroke="#8a6a2a" stroke-width="1"/>` : '';
-  const corners = tier >= 3 ? `<path d="M6 16 h6 v6 M58 16 h-6 v6 M6 46 h6 v-6 M58 46 h-6 v-6" stroke="#d9b25a" stroke-width="2" fill="none"/>` : '';
-  const peek =
-    fill > 0.25
-      ? `<g transform="translate(0 ${(1 - Math.min(1, fill)) * 8})"><rect x="14" y="8" width="16" height="6" rx="2" fill="#9a6a45" transform="rotate(-10 22 11)"/><rect x="34" y="6" width="7" height="10" rx="2" fill="#7fc4c0"/><circle cx="46" cy="12" r="4" fill="none" stroke="#d7b882" stroke-width="2"/></g>`
-      : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 52" aria-hidden="true">
-${peek}
-<path d="M6 16 Q32 4 58 16 L58 20 L6 20 Z" fill="${wood}" stroke="#3d291f" stroke-width="1.2" transform="rotate(${fill >= 1 ? -8 : 0} 6 18)"/>
-<rect x="6" y="18" width="52" height="30" rx="3" fill="${wood}" stroke="#3d291f" stroke-width="1.2"/>
-<g stroke="#3d291f" stroke-opacity="0.4" stroke-width="1"><line x1="6" y1="28" x2="58" y2="28"/><line x1="6" y1="40" x2="58" y2="40"/></g>
-${band}${lock}${corners}
-</svg>`;
+  const draw = CHESTS[Math.max(0, Math.min(CHEST_TIERS - 1, tier))];
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 64 56" aria-hidden="true"><defs><radialGradient id="chestGlow"><stop offset="0" stop-color="#ffd98a" stop-opacity="0.45"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient></defs>${draw(fill)}</svg>`;
 }

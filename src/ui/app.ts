@@ -5,7 +5,10 @@ import { loadGame, saveGame, type KV } from '../core/save';
 import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } from '../core/sim';
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
-import { CHEST_POS, SEA_BAND, chestSvg, itemIcon, sceneSvg, tierFor } from './art';
+import { allowedEvents, ambientLayer, playAmbient } from './ambient';
+import { CHEST_POS, SEA_BAND, chestSvg, chestTier, itemIcon, netTier, sceneSvg } from './art';
+import { SoundEngine } from './audio';
+import { SKY_CYCLE_MS, applySky, skyAt } from './sky';
 import { createDebug } from './debug';
 import { el } from './dom';
 import { createHud, type Hud } from './hud';
@@ -37,6 +40,17 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let infinite = opts.debug;
   const INFINITE_AMOUNT = 1e12;
   const resizeObserver = new ResizeObserver(() => onStageResize());
+  const sound = new SoundEngine(state.settings.sound);
+  let ambient!: SVGSVGElement;
+  /** Debug only: shifts the sky clock forward. */
+  let skyOffset = 0;
+  let nextSkyAt = 0;
+  let nextAmbientAt = opts.now() + 8000;
+  const currentSky = () => skyAt(opts.now() + skyOffset);
+  function triggerAmbient() {
+    const kinds = allowedEvents(currentSky());
+    playAmbient(ambient, kinds[Math.floor(Math.random() * kinds.length)]);
+  }
 
   // An open popup accumulates further time away instead of stacking dialogs.
   let pending: OfflineReport | null = null;
@@ -64,6 +78,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   /** Empty the chest into the inventory with a little "+N" for each material. */
   function takeChest(): Materials {
     const moved = collectChest(state);
+    if (chestTotal(moved) >= 1) sound.play('chest');
     const lang = state.settings.lang;
     let i = 0;
     for (const m of MATERIALS) {
@@ -93,6 +108,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   function onBuy(id: UpgradeId) {
     if (!buyUpgrade(state, id)) return;
     save();
+    sound.play('upgrade');
     const lang = state.settings.lang;
     toast(t(lang, 'toast.upgraded', { name: t(lang, `upg.${id}.name`), level: state.levels[id] }));
     panel.flash(id);
@@ -110,6 +126,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     game = el('div', 'game');
     stage = el('div', 'stage');
     stage.append(el('div', 'scene', sceneSvg()));
+    ambient = ambientLayer();
+    stage.append(ambient);
+    nextSkyAt = 0;
     flotsamLayer = el('div', 'flotsam');
     chestBtn = el('button', 'chest');
     chestBtn.setAttribute('aria-label', t(lang, 'chest.label'));
@@ -122,11 +141,21 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     });
     chestKey = '';
     stage.append(chestBtn, flotsamLayer);
-    hud = createHud(lang, () => {
-      state.settings.lang = lang === 'zh' ? 'en' : 'zh';
-      save();
-      build();
-    });
+    hud = createHud(
+      lang,
+      () => {
+        state.settings.lang = lang === 'zh' ? 'en' : 'zh';
+        save();
+        build();
+      },
+      state.settings.sound,
+      (on) => {
+        state.settings.sound = on;
+        sound.start();
+        sound.setEnabled(on);
+        save();
+      },
+    );
     panel = createPanel(lang, onBuy);
     game.append(hud.el, stage, panel.el);
     if (opts.debug) {
@@ -135,6 +164,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
           skip: (h) => (state.lastActiveAt -= h * 3600 * 1000),
           addAll: (n) => MATERIALS.forEach((m) => (state.materials[m] += n)),
           setInfinite: (on) => (infinite = on),
+          skySkip: () => {
+            skyOffset += SKY_CYCLE_MS / 5;
+            nextSkyAt = 0;
+          },
+          ambient: () => triggerAmbient(),
           reset: () => {
             Object.assign(state, newGame(opts.now(), state.settings.lang));
             pending = null;
@@ -206,6 +240,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         const srect = stage.getBoundingClientRect();
         const got = collect(field, state, item.id);
         if (!got) return;
+        sound.play('tap');
         b.remove();
         itemEls.delete(item.id);
         floatText(`+${formatNumber(got.amount, state.settings.lang)}`, rect.left - srect.left + 8, rect.top - srect.top - 4);
@@ -217,7 +252,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   function renderChest() {
     const fill = Math.min(1, chestTotal(state.chest) / chestCapacity(state));
-    const tier = tierFor(state.levels.storage);
+    const tier = chestTier(state.levels.storage);
     // Redraw only when the picture would change (fill in 5% steps).
     const key = `${tier}:${Math.floor(fill * 20)}`;
     if (key === chestKey) return;
@@ -227,7 +262,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   function refresh() {
-    stage.dataset.net = String(tierFor(state.levels.net));
+    stage.dataset.net = String(netTier(state.levels.net));
     renderChest();
     hud.update(state);
     panel.update(state);
@@ -240,6 +275,14 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (report) showReport(report);
     updateField(field, now, Math.random);
     syncFlotsam(now);
+    if (now >= nextSkyAt) {
+      applySky(stage, currentSky());
+      nextSkyAt = now + 1000;
+    }
+    if (now >= nextAmbientAt) {
+      triggerAmbient();
+      nextAmbientAt = now + 20000 + Math.random() * 30000;
+    }
     refresh();
     requestAnimationFrame(frame);
   }
@@ -268,8 +311,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   setInterval(save, AUTOSAVE_MS);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') save();
+    const visible = document.visibilityState === 'visible';
+    if (!visible) save();
+    sound.setVisible(visible);
   });
+  // Browsers only allow sound after the player touches the page.
+  root.addEventListener('pointerdown', () => sound.start(), { capture: true });
   window.addEventListener('pagehide', save);
   requestAnimationFrame(frame);
 }

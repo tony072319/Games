@@ -32,5 +32,8 @@
   "debug.infiniteOff": "Infinite materials: off",
   "debug.plusMillion": "+1M all materials",
   "debug.reset": "Reset test save",
-  "debug.resetConfirm": "Wipe the test save and start over? (Your real save is untouched.)"
+  "debug.resetConfirm": "Wipe the test save and start over? (Your real save is untouched.)",
+  "settings.sound": "Sound",
+  "debug.skyPlus": "Sky +4 min",
+  "debug.event": "Random sea event"
 }

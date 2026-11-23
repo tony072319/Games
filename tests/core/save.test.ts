@@ -89,3 +89,19 @@ describe('test-mode storage', () => {
     expect(kv.map.get('test:' + SAVE_KEY)).toBe('pretend');
   });
 });
+
+describe('sound setting', () => {
+  test('defaults on, persists off, and old saves without it load cleanly', () => {
+    const s = newGame(0, 'zh');
+    expect(s.settings.sound).toBe(true);
+    s.settings.sound = false;
+    const kv = memKV();
+    saveGame(kv, s);
+    expect(loadGame(kv, 1, 'zh').state.settings.sound).toBe(false);
+    const old = JSON.parse(JSON.stringify(newGame(0, 'zh')));
+    delete old.settings.sound;
+    const r = loadGame(memKV({ [SAVE_KEY]: JSON.stringify(old) }), 1, 'zh');
+    expect(r.status).toBe('loaded');
+    expect(r.state.settings.sound).toBe(true);
+  });
+});

@@ -7,6 +7,8 @@ export interface DebugActions {
   addAll(n: number): void;
   setInfinite(on: boolean): void;
   reset(): void;
+  skySkip(): void;
+  ambient(): void;
 }
 
 /** Test-build panel. Infinite materials start switched on. */
@@ -33,6 +35,8 @@ export function createDebug(lang: Lang, infinite: boolean, actions: DebugActions
   add(t(lang, 'debug.plusMillion'), () => actions.addAll(1_000_000));
   add(t(lang, 'debug.plus1h'), () => actions.skip(1));
   add(t(lang, 'debug.plus8h'), () => actions.skip(8));
+  add(t(lang, 'debug.skyPlus'), () => actions.skySkip());
+  add(t(lang, 'debug.event'), () => actions.ambient());
   add(t(lang, 'debug.reset'), () => {
     if (confirm(t(lang, 'debug.resetConfirm'))) actions.reset();
   });
