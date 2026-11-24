@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>样张 C · 像素</title>
+<style>html,body{margin:0;height:100%;background:#120c22;overflow:hidden}canvas{width:100%;height:100%;display:block;image-rendering:pixelated;object-fit:cover}
+.tag{position:fixed;left:12px;top:12px;font:600 13px system-ui;color:#fff;background:#0008;padding:6px 10px;border-radius:8px;text-decoration:none}</style></head>
+<body><canvas id="c" width="130" height="282"></canvas><a class="tag" href="./">← 样张 C · 柔和像素</a>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d');const W=130,H=282,HZ=150;
+const P={sky:['#1b1437','#2c1d4f','#4a2a63','#7a3a6e','#b5506b','#e7775e','#f7a462','#ffd38a'],
+ sea:['#120f2a','#1a1a3c','#25285a','#344077','#4d5e9a'],glit:['#ffd38a','#ffeab8','#f7a462'],
+ rock:['#1c1528','#2b2038','#3d2c48','#57405a'],grass:['#2d4a3a','#3f6448','#5b8456'],
+ tw:['#efe6d6','#c9bfb0','#b73b45','#8a2a3a'],dark:'#120c1e',lamp:'#ffe9a8',warm:'#ffb04a'};
+const B=[[0,0,1,0],[0,0,0,0],[1,0,0,0],[0,0,0,0]]; // 2x2 bayer-ish
+const bayer=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+function px(x,y,col){g.fillStyle=col;g.fillRect(x|0,y|0,1,1)}
+function rect(x,y,w,h,col){g.fillStyle=col;g.fillRect(x|0,y|0,w|0,h|0)}
+let rnd=s=>{s=Math.sin(s*12.9898)*43758.5453;return s-Math.floor(s)};
+function sky(t){
+  for(let y=0;y<HZ;y++){const f=1-y/HZ;const k=Math.pow(f,1.25)*(P.sky.length-1);const i=Math.floor(k),fr=k-i;
+    for(let x=0;x<W;x++){const th=bayer[y%4][x%4]/16;px(x,y,P.sky[Math.max(0,Math.min(P.sky.length-1,(P.sky.length-1)-(i+(fr>th?1:0))))])}}
+  // stars
+  for(let i=0;i<60;i++){const x=rnd(i)*W|0,y=rnd(i+99)*70|0;if((t*2+i)%7>.6)px(x,y,i%5?'#c8c0ff':'#ffffff')}
+  // sun half set
+  const sx=88,sy=HZ-6;for(let y=-14;y<=0;y++)for(let x=-14;x<=14;x++)if(x*x+y*y<196)px(sx+x,sy+y,y>-4?'#ffe7a0':'#ffd07a');
+  // clouds: stacked pixel puffs drifting
+  const cl=[[18,92,26],[70,104,34],[100,70,22],[40,58,18]];
+  cl.forEach(([x0,y0,w],i)=>{const x=((x0+t*(1.5+i*.4))%(W+40))-20;for(let k=0;k<w;k+=3){const hh=3+((k*7+i)%5);rect(x+k,y0-hh,4,hh,i%2?'#c2607a':'#9a4a74');rect(x+k,y0-hh,4,1,'#f29a86')}rect(x,y0,w+2,2,'#6e3a6a')});
+  // moon
+  const mx=26,my=36;for(let y=-6;y<=6;y++)for(let x=-6;x<=6;x++)if(x*x+y*y<36&&!((x+3)*(x+3)+(y-1)*(y-1)<30))px(mx+x,my+y,'#fff4d8');
+}
+function sea(t){
+  for(let y=HZ;y<H;y++){const d=(y-HZ)/(H-HZ);const k=Math.pow(1-d,2.2)*3.6;const i=Math.floor(k),fr=k-i;
+    for(let x=0;x<W;x++){const th=bayer[y%4][x%4]/16;px(x,y,P.sea[Math.min(4,i+(fr>th?1:0))])}}
+  // horizon light bands
+  for(let y=HZ;y<HZ+40;y++){const d=(y-HZ);const n=Math.floor(12-d*.25);for(let i=0;i<n;i++){const ph=rnd(i*31+y)*W+Math.sin(t*1.5+y)*3;const len=2+(rnd(i+y*7)*6|0);if(((t*4+i+y)|0)%3)rect(ph,y,len,1,d<8?'#7a5aa0':'#4d5e9a')}}
+  // sun glitter column
+  for(let y=HZ;y<H;y++){const d=(y-HZ)/(H-HZ);const wdt=10+d*40;const cnt=3+d*4;for(let i=0;i<cnt;i++){const s=rnd(i*13+y+Math.floor(t*6)*.37);if(s<.55){const x=88+(rnd(i+y*3)-.5)*wdt*2;rect(x,y,1+(d*4|0)*(s<.2?1:0)+1,1,P.glit[(i+y)%3])}}}
+  // lamp glitter (under lighthouse)
+  for(let y=HZ+2;y<H;y+=2){const d=(y-HZ)/(H-HZ);if(rnd(y+Math.floor(t*5))<.6-d*.5)rect(36+(rnd(y*5)-.5)*14*(1+d),y,2,1,P.warm)}
+  // foam lines near
+  for(let i=0;i<14;i++){const y=HZ+20+(rnd(i)*110|0);const x=((rnd(i+5)*W+t*(4+i%3))%(W+20))-10;rect(x,y,4+(i%4)*2,1,'#5d70ac')}
+}
+function island(t){
+  // rock mass
+  const base=HZ+4;for(let x=6;x<80;x++){const hgt=Math.round(10+14*Math.exp(-Math.pow((x-38)/22,2))+Math.sin(x*.9)*1.5);for(let y=0;y<hgt;y++){const sh=x<38?1:2;rect(x,base-y,1,1,y>hgt-3?P.grass[(x+y)%2?1:2]:(y%5==0&&x%3==0?P.rock[0]:P.rock[sh+(x>58?-1:0)]))}}
+  // reflection of rock
+  for(let x=6;x<80;x+=1){const hgt=Math.round(4+8*Math.exp(-Math.pow((x-38)/22,2)));for(let y=0;y<hgt;y++)if((y+x)%2==0)rect(x+Math.sin(t*2+y)*1,base+1+y,1,1,'#191432')}
+  // lighthouse at x=38
+  const tx=38,ty=base-21;
+  for(let y=0;y<54;y++){const w=Math.round(7-y*.06);const stripe=Math.floor(y/8)%2;for(let x=-w;x<=w;x++){const lit=x>1?1:0;rect(tx+x,ty-y,1,1,stripe?(lit?P.tw[2]:P.tw[3]):(lit?P.tw[0]:P.tw[1]))}}
+  // windows
+  rect(tx+1,ty-20,2,3,'#ffcc6a');rect(tx+1,ty-36,2,3,'#ffcc6a');
+  // gallery + lamp + roof
+  rect(tx-7,ty-55,15,2,P.dark);const on=Math.floor(t*2)%2;rect(tx-4,ty-61,9,6,P.lamp);rect(tx-4,ty-61,9,1,'#fff');
+  for(let i=0;i<5;i++)rect(tx-4+i,ty-62-i,9-i*2,1,i<2?'#2a1f3a':'#3a2a4a');rect(tx,ty-68,1,2,P.dark);
+  // beam
+  const a=t*.9;const dir=Math.cos(a);g.globalAlpha=.22+.25*Math.abs(dir);
+  const L=dir>0?1:-1;for(let i=0;i<90;i++){const spread=1+i*.16;rect(tx+L*(5+i),ty-58-spread/2,1,spread,P.lamp)}g.globalAlpha=1;
+  // cottage
+  const hx=54,hy=base-14;rect(hx,hy-8,14,8,'#d9c7a6');rect(hx,hy-8,14,1,'#efe0c0');rect(hx+8,hy-6,3,3,'#ffcc6a');rect(hx+3,hy-5,3,5,'#5a3a3a');
+  for(let i=0;i<6;i++)rect(hx-1+i,hy-9-i,16-i*2,1,i%2?'#8a3a44':'#6a2a3a');
+  // chimney smoke
+  for(let i=0;i<6;i++){const sy=hy-16-i*4-((t*6)%4);px(hx+11+Math.sin(t+i)*2+i*.6,sy,i<3?'#8a7a9a':'#6a5a8a')}
+  // cat silhouette
+  rect(hx-6,hy-3,3,3,P.dark);px(hx-6,hy-4,P.dark);px(hx-4,hy-4,P.dark);px(hx-3,hy-2+Math.round(Math.sin(t*3)),P.dark);
+}
+function boat(t){const bx=94+Math.sin(t*.3)*3,by=HZ+64+Math.round(Math.sin(t*1.5));
+  rect(bx,by,18,3,'#6a3a2a');rect(bx+2,by+3,14,2,'#4a2a20');rect(bx,by,18,1,'#9a5a3a');rect(bx+8,by-16,1,16,'#3a2a20');
+  for(let i=0;i<14;i++)rect(bx+9,by-15+i,Math.round(i*.6),1,i%3?'#efe2c8':'#d4c4a8');
+  rect(bx+14,by-4,2,2,'#ffcc6a');for(let i=0;i<5;i++)if((i+Math.floor(t*4))%2)rect(bx-2+i*5,by+6+i%2,3,1,'#5d70ac');
+  // flotsam
+  for(let i=0;i<4;i++){const fx=((i*37+t*5)%(W+10))-5,fy=HZ+30+i*24+Math.round(Math.sin(t*2+i));rect(fx,fy,4,3,['#8a6a4a','#4a8aa0','#b08a4a','#7a5a8a'][i]);rect(fx,fy,4,1,'#ffe2a0')}}
+const T0=performance.now()-(+new URLSearchParams(location.search).get('t')||3)*1000;
+function f(){const t=(performance.now()-T0)/1000;sky(t);sea(t);island(t);boat(t);setTimeout(()=>requestAnimationFrame(f),83)}f();
+</script></body></html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>样张 A · 光影</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{width:100%;height:100%;display:block}
+.tag{position:fixed;left:12px;top:12px;font:600 13px system-ui;color:#fff;background:#0008;padding:6px 10px;border-radius:8px}</style></head>
+<body><canvas id="c"></canvas><a class="tag" href="./" style="text-decoration:none">← 样张 A · 光影（WebGL）</a>
+<script>
+const c=document.getElementById('c');const gl=c.getContext('webgl');
+const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+const fs=`precision highp float;uniform vec2 R;uniform float T;
+float h(vec2 p){p=50.*fract(p*0.3183099+vec2(.71,.113));return fract(p.x*p.y*(p.x+p.y));}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+float box(vec2 p,vec2 b){vec2 d=abs(p)-b;return length(max(d,0.))+min(max(d.x,d.y),0.);}
+// tower in uv space (x centred, y up). returns distance
+float tower(vec2 p){
+  vec2 q=p-vec2(-.18,.0);
+  float w=mix(.055,.035,clamp(q.y/.42,0.,1.));
+  float body=max(abs(q.x)-w,max(-q.y,q.y-.42));
+  float gal=box(q-vec2(0,.43),vec2(.055,.008));
+  float lamp=box(q-vec2(0,.465),vec2(.032,.03));
+  float roof=max(abs(q.x)*1.4+(q.y-.52),-(q.y-.495));
+  return min(min(body,gal),min(lamp,roof));
+}
+float rock(vec2 p){ // island
+  float y=-.05+.12*exp(-pow((p.x+.18)/.2,2.))+.03*fbm(p*vec2(6.,1.));
+  return max(p.y-y,-p.y-.025);
+}
+vec3 sky(vec2 p,vec3 sun){
+  float t=clamp(p.y*1.4,0.,1.);
+  vec3 top=vec3(.03,.05,.16),mid=vec3(.32,.18,.38),low=vec3(1.,.52,.28);
+  vec3 col=mix(low,mid,smoothstep(0.,.35,t));col=mix(col,top,smoothstep(.3,1.,t));
+  // clouds
+  float cl=fbm(vec2(p.x*2.2+T*.01,p.y*7.));cl=smoothstep(.45,.8,cl)*smoothstep(.05,.2,p.y)*smoothstep(.75,.3,p.y);
+  vec3 cc=mix(vec3(1.,.55,.45),vec3(.35,.2,.4),smoothstep(.1,.5,p.y));
+  col=mix(col,cc,cl*.75);
+  // stars
+  vec2 g=floor(p*vec2(300.,300.));float s=step(.996,h(g))*smoothstep(.25,.7,p.y)*(.6+.4*sin(T*2.+h(g)*40.));
+  col+=s*vec3(.9,.9,1.);
+  // moon
+  float m=length(p-vec2(.12,.40));col+=vec3(1.,.95,.85)*(smoothstep(.034,.03,m)+.25*exp(-m*14.));
+  // sun glow at horizon
+  col+=vec3(1.,.45,.2)*.6*exp(-length((p-sun.xy)*vec2(1.,4.))*5.);
+  return col;
+}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-vec2(.5*R.x,.42*R.y))/R.y; // horizon at 42%
+  vec3 sun=vec3(.15,0.,0.);
+  vec2 P=uv*2.4; vec2 lampP=vec2(-.18,.465)/2.4;
+  float ang=T*.6; vec2 dir=vec2(cos(ang),.0); // sweeping beam
+  float sweep=cos(ang); // -1..1 (left-right), sin -> toward/away
+  vec3 col;
+  if(uv.y>0.){
+    col=sky(uv,sun);
+  } else {
+    // ocean
+    float d=-uv.y; float z=1./(d+.04);
+    vec2 wp=vec2(uv.x*z,z)*.6;
+    float w=fbm(wp*vec2(3.,1.2)+vec2(T*.1,T*.35))*.5+fbm(wp*vec2(9.,3.5)-vec2(T*.25,T*.6))*.5;
+    float dx=fbm(wp*vec2(9.,3.5)-vec2(T*.25+.03,T*.6))-fbm(wp*vec2(9.,3.5)-vec2(T*.25,T*.6));
+    vec2 r=vec2(uv.x+dx*.6*d,-uv.y*(1.+.25*(w-.5)));
+    vec3 refl=sky(vec2(r.x,clamp(r.y,.001,.3)),sun);
+    float fres=.12+.88*exp(-d*6.);
+    vec3 deep=mix(vec3(.04,.08,.18),vec3(.12,.18,.32),w);
+    col=mix(deep,refl,fres);
+    // sun glitter path
+    float path=exp(-pow((uv.x-sun.x)*(4.+14.*d),2.));
+    col+=vec3(1.,.6,.3)*path*smoothstep(1.05,1.35,w+n(wp*vec2(30.,10.)+T*1.5))*.9*exp(-d*6.);
+    // lamp reflection
+    float lp=exp(-pow((uv.x-lampP.x)*(10.+30.*d),2.));
+    col+=vec3(1.,.8,.4)*lp*smoothstep(.7,.95,n(wp*vec2(30.,10.)+T*1.3))*1.2*exp(-d*2.);
+    float mp=exp(-pow((uv.x-.12)*(14.+30.*d),2.));col+=vec3(.8,.8,.9)*mp*smoothstep(.75,.95,n(wp*vec2(28.,9.)-T))*.6;
+    // horizon haze
+    col=mix(col,vec3(.6,.35,.35),exp(-d*40.)*.6);
+  }
+  // beam (volumetric cone from lamp)
+  vec2 lp=uv-lampP; float side=sign(sweep+.0001);
+  float bl=abs(sweep); vec2 bd=normalize(vec2(side*1.,-.03));
+  float along=dot(lp,bd); float across=abs(dot(lp,vec2(-bd.y,bd.x)));
+  float cone=smoothstep(.006+along*.14*(1.15-bl*.3),0.,across)*step(0.,along)*exp(-along*1.6);
+  float flick=.75+.25*fbm(vec2(along*6.-T*.5,across*20.));
+  col+=vec3(1.,.85,.55)*cone*flick*(.25+.75*bl)*.8;
+  // lamp glow
+  float lg=length(lp);col+=vec3(1.,.8,.45)*(.05/(lg*lg*400.+.05))*(.7+.3*bl);
+  // island + tower silhouettes with rim light
+  float ri=rock(P); float tw=tower(P);
+  float sil=min(ri,tw);
+  vec3 silc=vec3(.05,.04,.09)+vec3(.25,.12,.1)*smoothstep(-.06,.0,uv.x-.0)*0.;
+  if(sil<0.){
+    float rim=smoothstep(-.006,0.,sil)*1.;
+    col=mix(vec3(.05,.04,.08),vec3(.12,.08,.12),fbm(P*12.));
+    // tower stripes + window lights
+    if(tw<0.){
+      vec2 q=P-vec2(-.18,0.);
+      float stripe=step(.5,fract(q.y*9.));
+      col=mix(vec3(.13,.1,.14),vec3(.2,.08,.09),stripe*step(q.y,.42));
+      col*=.7+.6*smoothstep(-.05,.05,q.x); // light from right (sunset)
+      float win=step(box(q-vec2(0.,.2),vec2(.008,.014)),0.)+step(box(q-vec2(0.,.31),vec2(.007,.012)),0.);
+      col=mix(col,vec3(1.,.75,.35),win);
+      if(q.y>.435&&q.y<.495&&abs(q.x)<.03) col=vec3(1.,.9,.6);
+    }
+    col+=vec3(1.,.5,.3)*rim*.5;
+  }
+  // water line foam around island
+  if(uv.y<0.&&uv.y>-.03){float f=exp(-pow((P.x+.18)/.24,2.));col+=vec3(.9,.7,.6)*f*smoothstep(.6,.9,n(vec2(uv.x*60.,T*2.)))*smoothstep(-.03,0.,uv.y)*.5;}
+  // fireflies/plankton
+  vec2 g=floor(gl_FragCoord.xy/6.);float pl=step(.997,h(g+floor(T*.5)))*step(uv.y,-.05);col+=vec3(.4,1.,.9)*pl*.8;
+  // vignette + grade
+  vec2 v=gl_FragCoord.xy/R-.5;col*=1.-.55*dot(v,v)*1.6;
+  col=pow(col,vec3(.92));col=col/(1.+col*.15);
+  gl_FragColor=vec4(col,1.);
+}`;
+function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o}
+const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+const uR=gl.getUniformLocation(pr,'R'),uT=gl.getUniformLocation(pr,'T');
+const T0=performance.now()-(+new URLSearchParams(location.search).get('t')||3)*1000;
+function f(){const d=Math.min(devicePixelRatio,2);c.width=innerWidth*d;c.height=innerHeight*d;gl.viewport(0,0,c.width,c.height);
+gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,(performance.now()-T0)/1000);gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(f)}f();
+</script></body></html>

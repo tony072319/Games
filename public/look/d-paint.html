@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>样张 D · 水彩绘本</title>
+<style>html,body{margin:0;height:100%;background:#2a2238;overflow:hidden}canvas{position:fixed;inset:0;width:100%;height:100%;display:block;object-fit:cover}
+.tag{position:fixed;left:12px;top:12px;font:600 13px system-ui;color:#fff;background:#0008;padding:6px 10px;border-radius:8px;text-decoration:none;z-index:2}</style></head>
+<body><canvas id="bg"></canvas><canvas id="fx"></canvas><a class="tag" href="./">← 样张 D · 水彩绘本</a>
+<script>
+// Watercolor: layered, deformed translucent polygons (many passes at low alpha) on paper texture.
+const W=390,H=844,HZ=470,dpr=Math.min(devicePixelRatio,2);
+const bg=document.getElementById('bg'),fx=document.getElementById('fx');
+for(const cv of [bg,fx]){cv.width=W*dpr;cv.height=H*dpr}
+const g=bg.getContext('2d'),f=fx.getContext('2d');g.scale(dpr,dpr);f.scale(dpr,dpr);
+let seed=7;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+const gauss=()=>{let u=0;for(let i=0;i<6;i++)u+=R();return u/6-.5};
+function deform(pts,depth,v){if(!depth)return pts;const out=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];
+  const len=Math.hypot(b[0]-a[0],b[1]-a[1]);const mx=(a[0]+b[0])/2+gauss()*len*v,my=(a[1]+b[1])/2+gauss()*len*v;out.push(a,[mx,my])}
+  return deform(out,depth-1,v)}
+function poly(ctx,pts){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill()}
+function wash(ctx,pts,color,layers=24,v=.9,alpha=.045){const base=deform(pts,3,v*.6);ctx.fillStyle=color;
+  for(let l=0;l<layers;l++){ctx.globalAlpha=alpha;poly(ctx,deform(base,3,v))}ctx.globalAlpha=1}
+const rectPts=(x,y,w,h)=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+const blob=(cx,cy,rx,ry,n=10)=>Array.from({length:n},(_,i)=>{const a=i/n*Math.PI*2;return[cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]});
+// --- sky: wet-in-wet bands
+const sg=g.createLinearGradient(0,0,0,HZ);sg.addColorStop(0,'#2b2a55');sg.addColorStop(.45,'#7a5b8e');sg.addColorStop(.78,'#e59a86');sg.addColorStop(1,'#f6c98e');
+g.fillStyle=sg;g.fillRect(0,0,W,HZ);
+wash(g,rectPts(-40,20,470,130),'#3a3a6e',30,.5);
+wash(g,rectPts(-40,200,470,120),'#c27a95',26,.6);
+wash(g,rectPts(-40,330,470,110),'#f3a77c',26,.6);
+wash(g,blob(270,420,110,40),'#ffd9a0',30,.7,.05); // sun glow
+wash(g,blob(270,452,26,26,12),'#fff0c8',28,.25,.08); // sun
+// clouds
+for(const [x,y,w,h,c] of [[70,230,120,22,'#a46a92'],[260,290,140,26,'#b9768d'],[150,360,170,18,'#e8937e'],[40,150,90,16,'#6e5a8e']])wash(g,blob(x,y,w,h,12),c,26,.6,.05);
+// moon
+wash(g,blob(300,120,22,22,12),'#fff6e0',24,.2,.09);
+// stars (painted dots)
+for(let i=0;i<70;i++){g.globalAlpha=.4+R()*.5;g.fillStyle='#fff7e8';g.beginPath();g.arc(R()*W,R()*200,R()*1.3+.3,0,7);g.fill()}g.globalAlpha=1;
+// --- sea
+const wg=g.createLinearGradient(0,HZ,0,H);wg.addColorStop(0,'#c58a96');wg.addColorStop(.12,'#6a6a9a');wg.addColorStop(.5,'#36406e');wg.addColorStop(1,'#1d2246');
+g.fillStyle=wg;g.fillRect(0,HZ,W,H-HZ);
+for(let i=0;i<14;i++){const y=HZ+10+i*i*2.2;wash(g,rectPts(-30,y,450,6+i*1.5),i%2?'#2a3260':'#8a7aa8',10,.8,.05)}
+for(let i=0;i<40;i++){const d=Math.pow(i/40,1.5),y=HZ+6+d*(H-HZ-20),w=14+d*90;wash(g,rectPts(270-w/2+gauss()*w*.6,y,w*(.4+R()*.6),2+d*5),'#ffcf96',6,.5,.06*(1-d*.6))} // sun path dabs
+// distant islands
+wash(g,[[0,HZ],[40,HZ-14],[90,HZ-8],[120,HZ]],'#6a5478',20,.4,.08);
+wash(g,[[330,HZ],[360,HZ-10],[400,HZ-4],[400,HZ]],'#7a5f82',20,.4,.08);
+// --- island
+const ix=150;
+wash(g,[[30,HZ+30],[60,HZ-20],[110,HZ-50],[200,HZ-58],[250,HZ-28],[280,HZ+28],[150,HZ+46]],'#3c2c48',34,.5,.07);
+wash(g,[[70,HZ-26],[120,HZ-52],[200,HZ-60],[240,HZ-34],[160,HZ-30]],'#4f6a58',26,.5,.07); // grass
+wash(g,[[40,HZ+26],[120,HZ+38],[270,HZ+26],[150,HZ+60]],'#2a1f38',20,.5,.06); // shadow base
+// reflection
+wash(g,[[40,HZ+36],[260,HZ+36],[230,HZ+110],[80,HZ+110]],'#2a2448',16,.6,.04);
+// --- lighthouse (crisp-ish with soft edges: fewer deform layers)
+const tb=HZ-48,th=230;
+function towerPts(y0,y1){const w0=26-(tb-y0)*.04,w1=26-(tb-y1)*.04;return[[ix-w0,y0],[ix+w0,y0],[ix+w1,y1],[ix-w1,y1]]}
+wash(g,towerPts(tb,tb-th),'#efe4d2',18,.12,.11);
+for(let k=0;k<4;k++){const y0=tb-20-k*55;wash(g,towerPts(y0,y0-26),'#b2404c',14,.12,.1)}
+wash(g,[[ix+4,tb],[ix+26,tb],[ix+17,tb-th],[ix+4,tb-th]],'#7b3e6a',14,.1,.04); // shade side
+wash(g,[[ix-26,tb],[ix-14,tb],[ix-12,tb-th],[ix-17,tb-th]],'#ffcfa0',14,.1,.05); // rim light
+// gallery, lamp, roof
+wash(g,rectPts(ix-24,tb-th-6,48,8),'#2b2236',12,.08,.15);
+wash(g,rectPts(ix-15,tb-th-38,30,32),'#fff2c0',16,.1,.12);
+wash(g,[[ix-20,tb-th-38],[ix+20,tb-th-38],[ix,tb-th-66]],'#2b2236',14,.08,.14);
+// windows
+for(const y of [tb-80,tb-150])wash(g,rectPts(ix-4,y,9,14),'#ffc66a',12,.1,.15);
+// cottage
+const hx=208,hy=HZ-38;wash(g,rectPts(hx,hy-30,48,30),'#e6d2b2',16,.12,.1);wash(g,[[hx-6,hy-30],[hx+54,hy-30],[hx+24,hy-56]],'#8a3e4c',16,.12,.1);
+wash(g,rectPts(hx+30,hy-22,10,10),'#ffc66a',12,.1,.18);
+// paper texture
+const pt=g.createImageData(W*dpr,H*dpr);for(let i=0;i<pt.data.length;i+=4){const v=R()*255;pt.data[i]=pt.data[i+1]=pt.data[i+2]=v;pt.data[i+3]=14}
+const tc=document.createElement('canvas');tc.width=W*dpr;tc.height=H*dpr;tc.getContext('2d').putImageData(pt,0,0);
+g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='overlay';g.drawImage(tc,0,0);g.globalCompositeOperation='source-over';
+// vignette
+const vg=g.createRadialGradient(W*dpr/2,H*dpr*.45,H*dpr*.2,W*dpr/2,H*dpr*.5,H*dpr*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(20,10,30,.45)');g.fillStyle=vg;g.fillRect(0,0,W*dpr,H*dpr);
+// --- animated layer: beam, shimmer strokes, boat, fireflies
+const strokes=Array.from({length:60},()=>({x:R()*W,y:HZ+8+Math.pow(R(),1.6)*(H-HZ-10),l:8+R()*30,s:.2+R()*.6,p:R()*7}));
+const T0=performance.now()-(+new URLSearchParams(location.search).get('t')||3)*1000;
+function frame(){const t=(performance.now()-T0)/1000;f.clearRect(0,0,W,H);
+  // beam
+  const a=Math.cos(t*.6),side=a>=0?1:-1,ly=tb-th-22;f.save();f.globalCompositeOperation='screen';
+  const bgd=f.createLinearGradient(ix,0,ix+side*320,0);bgd.addColorStop(0,'rgba(255,230,170,.55)');bgd.addColorStop(1,'rgba(255,230,170,0)');f.fillStyle=bgd;f.globalAlpha=.35+.65*Math.abs(a);
+  f.beginPath();f.moveTo(ix,ly-6);f.lineTo(ix+side*340,ly-60);f.lineTo(ix+side*340,ly+40);f.lineTo(ix,ly+6);f.fill();
+  const glow=f.createRadialGradient(ix,ly,2,ix,ly,60);glow.addColorStop(0,'rgba(255,240,200,.9)');glow.addColorStop(1,'rgba(255,200,120,0)');f.globalAlpha=1;f.fillStyle=glow;f.fillRect(ix-60,ly-60,120,120);f.restore();
+  // shimmer strokes
+  for(const s of strokes){const d=(s.y-HZ)/(H-HZ);const x=(s.x+t*8*s.s)%(W+40)-20;const al=(Math.sin(t*1.5+s.p)*.5+.5)*.5;
+    f.strokeStyle=Math.abs(x-270)<40+d*80?`rgba(255,215,160,${al})`:`rgba(200,190,240,${al*.6})`;f.lineWidth=1+d*2;f.lineCap='round';f.beginPath();f.moveTo(x,s.y);f.quadraticCurveTo(x+s.l/2,s.y-1.5,x+s.l,s.y);f.stroke()}
+  // boat
+  const bx=270+Math.sin(t*.25)*10,by=HZ+170+Math.sin(t*1.2)*3;f.save();f.translate(bx,by);f.rotate(Math.sin(t)*.04);
+  f.fillStyle='#4a2c2e';f.beginPath();f.moveTo(-34,0);f.quadraticCurveTo(0,16,34,0);f.lineTo(-34,0);f.fill();
+  f.fillStyle='#3a2426';f.fillRect(-1,-52,2.5,52);f.fillStyle='#f3e6cc';f.beginPath();f.moveTo(2,-50);f.quadraticCurveTo(24,-28,26,-4);f.lineTo(2,-4);f.fill();
+  f.fillStyle='rgba(255,200,110,.9)';f.beginPath();f.arc(-20,-6,3,0,7);f.fill();f.restore();
+  // fireflies over island
+  for(let i=0;i<10;i++){const x=110+Math.sin(t*.4+i*2)*90,y=HZ-70+Math.cos(t*.5+i)*30;const al=Math.max(0,Math.sin(t*2+i*1.7));f.fillStyle=`rgba(200,255,180,${al*.8})`;f.beginPath();f.arc(x,y,1.8,0,7);f.fill()}
+  requestAnimationFrame(frame)}
+frame();
+</script></body></html>
