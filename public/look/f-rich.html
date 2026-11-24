@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>样张 F · 更多素材 + 真实天空</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none}canvas{display:block}
+.tag{position:fixed;left:12px;top:12px;font:600 13px system-ui;color:#fff;background:#0008;padding:6px 10px;border-radius:8px;text-decoration:none;z-index:2}
+.hint{position:fixed;left:0;right:0;bottom:16px;text-align:center;font:13px system-ui;color:#fffc;text-shadow:0 1px 3px #000}
+.load{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:15px system-ui;background:#141022;z-index:5;transition:opacity .6s}
+.lbl{position:fixed;font:600 12px system-ui;color:#fff;background:#1a1430cc;border:1px solid #fff3;padding:3px 8px;border-radius:10px;transform:translate(-50%,-100%);pointer-events:none;white-space:nowrap}</style>
+<script type="importmap">{"imports":{"three":"./three.module.min.js"}}</script></head>
+<body><div class="load" id="load">正在把灯点亮…</div>
+<a class="tag" href="./">← 样张 F · 更多素材 + 真实天空</a><div class="hint">拖动转视角 · 双指缩放</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './f/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from './f/jsm/loaders/FBXLoader.js';
+import { RGBELoader } from './f/jsm/loaders/RGBELoader.js';
+import { OrbitControls } from './f/jsm/controls/OrbitControls.js';
+const qs=new URLSearchParams(location.search);
+const r=new THREE.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(innerWidth,innerHeight);
+r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=.85;
+document.body.appendChild(r.domElement);
+const scene=new THREE.Scene();
+const portrait=innerHeight>innerWidth;
+const cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,800);cam.position.set(19,portrait?13:10,portrait?40:28);
+const ctl=new OrbitControls(cam,r.domElement);ctl.target.set(0,2.6,1);ctl.enableDamping=true;ctl.autoRotate=!qs.has('still');ctl.autoRotateSpeed=.3;
+ctl.minDistance=9;ctl.maxDistance=90;ctl.maxPolarAngle=1.38;ctl.enablePan=false;ctl.update();
+// sky: real HDRI (Poly Haven, CC0)
+const sky=qs.get('sky')||'kloppenheim_06_puresky';
+const hdr=await new RGBELoader().loadAsync(`f/sky/${sky}_1k.hdr`);hdr.mapping=THREE.EquirectangularReflectionMapping;
+scene.background=hdr;scene.environment=hdr;scene.backgroundIntensity=+(qs.get('bi')||.7);scene.environmentIntensity=.55;scene.backgroundRotation.y=scene.environmentRotation.y=+(qs.get('rot')||4);
+scene.fog=new THREE.Fog(0x8a6a7a,80,260);
+const sun=new THREE.DirectionalLight(0xffa36b,2.2);sun.position.set(-30,12,-34);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:1,far:140});sun.shadow.bias=-.0004;scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x9a8ad0,0x302838,.6));
+// water: reflective plane with moving waves; dark beyond the lighthouse's reach, faint hex grid inside it
+const LIT=12.;
+const wg=new THREE.PlaneGeometry(600,600,220,220);wg.rotateX(-Math.PI/2);
+const wm=new THREE.MeshPhysicalMaterial({color:0x0e2a4a,roughness:.22,metalness:0,envMapIntensity:.55,clearcoat:.15});
+const U={uT:{value:0},uLit:{value:LIT}};
+wm.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
+ sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;varying vec3 vW;\nfloat wv(vec2 p){return sin(p.x*.35+uT*1.1)*.10+sin(p.y*.42-uT*.9)*.10+sin((p.x+p.y)*.9+uT*1.7)*.04;}')
+  .replace('#include <beginnormal_vertex>','vec2 pp=(modelMatrix*vec4(position,1.)).xz;float e=.15;vec3 objectNormal=normalize(vec3(-(wv(pp+vec2(e,0))-wv(pp-vec2(e,0)))/(2.*e),1.,-(wv(pp+vec2(0,e))-wv(pp-vec2(0,e)))/(2.*e)));\n#ifdef USE_TANGENT\nvec3 objectTangent=vec3(tangent.xyz);\n#endif')
+  .replace('#include <begin_vertex>','vec3 transformed=position;transformed.y+=wv(pp);vW=(modelMatrix*vec4(transformed,1.)).xyz;');
+ sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uT;uniform float uLit;varying vec3 vW;\nfloat hexd(vec2 p){p/=1.732;vec2 q=vec2(p.x*1.1547,p.y+p.x*.57735);vec2 i=floor(q);vec2 f=fract(q);float v=mod(i.x+i.y,3.);float ca=step(1.,v),cb=step(2.,v);vec2 ma=step(f.xy,f.yx);float e=dot(ma,1.-f.yx+ca*(f.x+f.y-1.)+cb*(f.yx-2.*f.xy));return e;}')
+  .replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat d=length(vW.xz);float lit=1.-smoothstep(uLit-1.5,uLit+1.5,d);\ngl_FragColor.rgb*=mix(.35,1.,lit);\nfloat ring=exp(-pow((d-uLit)*1.4,2.))*(.6+.4*sin(uT*1.5));gl_FragColor.rgb+=vec3(1.,.8,.5)*ring*.18;\nfloat g=1.-smoothstep(.0,.06,abs(hexd(vW.xz*.58)-.0));gl_FragColor.rgb+=vec3(.6,.75,1.)*g*.025*lit*smoothstep(3.,6.,d);');};
+const water=new THREE.Mesh(wg,wm);water.position.y=-.28;water.receiveShadow=true;scene.add(water);
+// loaders
+const gl=new GLTFLoader(),fl=new FBXLoader();const cache={};
+const load=u=>cache[u]||(cache[u]=(u.endsWith('.fbx')?fl.loadAsync('f/m/'+u):gl.loadAsync('f/m/'+u).then(g=>g.scene)));
+const grade=new THREE.Color(1,.93,.86);
+async function put(u,x,y,z,o={}){const src=await load(u);const m=src.clone(true);
+ m.traverse(c=>{if(c.isMesh){c.castShadow=o.shadow!==false;c.receiveShadow=true;const mats=[].concat(c.material).map(mt=>{mt=mt.clone();if(mt.color)mt.color.multiply(grade);if(o.tint&&mt.color)mt.color.multiply(new THREE.Color(o.tint));return mt});c.material=mats.length>1?mats:mats[0]}});
+ if(o.height){const b=new THREE.Box3().setFromObject(m);m.scale.setScalar(o.height/(b.max.y-b.min.y))}else if(o.len){const b=new THREE.Box3().setFromObject(m);m.scale.setScalar(o.len/Math.max(b.max.x-b.min.x,b.max.z-b.min.z))}
+ m.position.set(x,y,z);if(o.rot!==undefined)m.rotation.y=o.rot;scene.add(m);return m}
+// hex land
+const tile=await load('hex_grass.gltf');const tb=new THREE.Box3().setFromObject(tile);const tw=tb.max.x-tb.min.x,td=tb.max.z-tb.min.z;
+const hp=(q,rr)=>[tw*(q+rr/2),td*.75*rr];
+const land=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1],[2,-1],[-2,1],[1,1],[-1,-1],[2,0],[-2,2],[0,2],[-1,2],[-2,0]];
+for(const [q,rr] of land){const [x,z]=hp(q,rr);put((q===-1&&rr===-1)||(q===2&&rr===-1)?'hex_grass_sloped_high.gltf':'hex_grass.gltf',x,0,z,{rot:Math.PI/3*((q*5+rr*7+12)%6)})}
+const at=(q,rr,dx=0,dz=0)=>{const [x,z]=hp(q,rr);return[x+dx,0,z+dz]};
+// home island
+const lh=await put('l_lighthouse_tall.glb',...at(0,0),{height:6.8});
+put('l_keeper_house.glb',...at(1,0,.1,.1),{height:1.9,rot:-.7});
+put('v_storehouse.glb',...at(-1,1,.1,.2),{height:1.5,rot:.6});
+put('v_fish_drying_rack.glb',...at(0,1,.1,.3),{height:1.1,rot:.2});
+put('v_firepit.glb',...at(-1,0,.4,.5),{height:.5});
+put('l_fishing_net_pile.glb',...at(1,1,-.3,0),{height:.45});put('k_crate-bottles.glb',...at(1,1,.4,-.3),{height:.5});put('k_barrel.glb',...at(1,1,.3,.4),{height:.6});
+put('l_telescope_stand.glb',...at(0,-1,.4,-.2),{height:.9,rot:2});
+for(const [q,rr,u,h,dx,dz] of [[-1,-1,'n_pine_tree.glb',2.6,0,0],[-2,0,'n_pine_tree.glb',2.1,.2,.2],[-2,1,'n_round_tree.glb',1.8,0,0],[2,-1,'n_pine_tree.glb',2.3,0,0],[-1,2,'n_bush_round.glb',.6,0,0],[0,2,'n_flower_yellow.glb',.5,.3,0],[0,2,'n_flower_red.glb',.5,-.3,.2],[1,-1,'n_rock_large.glb',.8,.3,-.4],[2,0,'n_grass_tuft.glb',.5,-.3,.3]])put(u,...at(q,rr,dx,dz),{height:h,rot:q*1.3+rr});
+put('k_flag-high-pennant.glb',...at(2,0,.4,-.2),{height:2.4});
+// harbour: plank pier toward the camera side, crane, market stall, lanterns
+const pierBase=hp(1,2);const pierDir=new THREE.Vector3(.55,0,1).normalize();
+for(let i=0;i<4;i++){const x=pierBase[0]+pierDir.x*i*1.6,z=pierBase[1]+pierDir.z*i*1.6;put('h_dock_plank_section.glb',x,-.15,z,{len:1.7,rot:Math.atan2(pierDir.x,pierDir.z)})}
+const pend=[pierBase[0]+pierDir.x*6.4,pierBase[1]+pierDir.z*6.4];
+put('h_harbor_crane.glb',pend[0]+.6,-.1,pend[1]-.2,{height:2.6,rot:-.6});
+put('h_dock_post_lantern.glb',pierBase[0]+pierDir.x*2.4+.7,-.1,pierBase[1]+pierDir.z*2.4,{height:1.3});
+put('h_dock_post_lantern.glb',pend[0]-.7,-.1,pend[1],{height:1.3});
+put('h_fish_market_stall.glb',...at(2,1,-.2,.2),{height:1.5,rot:-1.2});put('h_fish_barrel_stack.glb',...at(2,1,.5,-.5),{height:.8});
+put('h_mooring_bollard.glb',pend[0]-.4,-.05,pend[1]+.7,{height:.35});
+const ship=await put('k_ship-small.glb',pend[0]+2.2,-.25,pend[1]+.4,{height:2.6,rot:.9});
+const row=await put('k_boat-row-small.glb',pierBase[0]-1.2,-.25,pierBase[1]+2.4,{len:1.4,rot:2.4});
+// shipwreck reef (a discovered island) and a dark unknown stack
+const reef=[-9.5,-6];put('u_sea_rock_big.glb',reef[0],-.3,reef[1],{height:1.6});put('u_shipwreck_hull.glb',reef[0]+1.6,-.4,reef[1]+.6,{len:3.2,rot:.7});put('n_rock_large.glb',reef[0]-1.2,-.3,reef[1]+1,{height:.9});
+put('l_sea_stack.glb',-5,-.3,-17,{height:5,tint:0x555566});put('l_sea_stack.glb',11,-.3,-19,{height:3.5,tint:0x555566});
+// sailing boat on a loop inside the lit sea
+const sail=await put('h_sailboat.glb',0,-.2,0,{height:2.2});
+const buoys=[];for(const [x,z] of [[6,-5],[-6,5],[9,4]])buoys.push(await put('l_buoy.glb',x,-.3,z,{height:.9}));
+// animated whale + dolphins (Quaternius, CC0)
+const mixers=[];
+async function animal(u,h){const src=await load(u);const m=src;const b=new THREE.Box3().setFromObject(m);m.scale.multiplyScalar(h/Math.max(b.max.x-b.min.x,b.max.z-b.min.z));
+ m.traverse(c=>{if(c.isMesh){c.castShadow=true;c.frustumCulled=false}});scene.add(m);if(src.animations&&src.animations.length){const mx=new THREE.AnimationMixer(m);const clip=src.animations.find(a=>/swim/i.test(a.name))||src.animations[0];mx.clipAction(clip).play();mixers.push(mx)}return m}
+const whale=await animal('q_whale.fbx',5.5);
+const dol=[await animal('q_dolphin.fbx',1.4)];dol.push(await animal('q_dolphin.fbx',1.2).catch(()=>null));
+const gulls=[];for(let i=0;i<3;i++)gulls.push(await put('l_seagull.glb',0,0,0,{height:.35,shadow:false}));
+// lamp glow + sweeping beam
+const lb=new THREE.Box3().setFromObject(lh);const lampY=lb.min.y+(lb.max.y-lb.min.y)*.86;
+const pl=new THREE.PointLight(0xffc070,45,16,1.5);pl.position.set(0,lampY,0);scene.add(pl);
+const gt=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,240,200,1)');gr.addColorStop(.25,'rgba(255,200,120,.5)');gr.addColorStop(1,'rgba(255,160,80,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c)})();
+const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:gt,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false}));glow.scale.setScalar(3.6);glow.position.set(0,lampY,0);scene.add(glow);
+const bm=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+vertexShader:`varying float vy;varying vec3 vn;varying vec3 vp;void main(){vy=uv.y;vn=normalize(normalMatrix*normal);vp=(modelViewMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+fragmentShader:`varying float vy;varying vec3 vn;varying vec3 vp;void main(){float e=pow(abs(dot(vn,normalize(-vp))),2.);gl_FragColor=vec4(vec3(1.,.82,.5)*pow(vy,2.5)*e*.55,1.);}`});
+const bg=new THREE.ConeGeometry(1.7,24,24,1,true);bg.translate(0,-12,0);bg.rotateZ(Math.PI/2);
+const beam=new THREE.Group();const b1=new THREE.Mesh(bg,bm);b1.rotation.z=-.05;beam.add(b1);const b2=b1.clone();b2.rotation.set(0,Math.PI,-.05);beam.add(b2);beam.position.set(0,lampY,0);scene.add(beam);
+// labels
+const labels=[['灯塔 Lv7',()=>new THREE.Vector3(0,lb.max.y+.4,0)],['沉船礁 · 已发现',()=>new THREE.Vector3(reef[0],2.4,reef[1])],['未知海域',()=>new THREE.Vector3(-5,5.6,-17)]].map(([t,p])=>{const d=document.createElement('div');d.className='lbl';d.textContent=t;document.body.appendChild(d);return[d,p]});
+document.getElementById('load').style.opacity=0;setTimeout(()=>document.getElementById('load').remove(),700);
+const clock=new THREE.Clock();const T0=(+qs.get('t')||3);const v=new THREE.Vector3();
+function loop(){const dt=Math.min(clock.getDelta(),.05);const t=clock.elapsedTime+T0;U.uT.value=t;
+ mixers.forEach(m=>m.update(dt));
+ beam.rotation.y=t*.55;pl.intensity=40+Math.sin(t*3)*5;glow.material.opacity=.85+Math.sin(t*3)*.15;
+ ship.position.y=-.25+Math.sin(t*1.1)*.06;ship.rotation.z=Math.sin(t*.8)*.03;row.position.y=-.25+Math.sin(t*1.4+1)*.05;
+ {const a=t*.06;const R=9.5;sail.position.set(Math.cos(a)*R,-.2+Math.sin(t*1.2)*.05,Math.sin(a)*R);sail.rotation.y=-a;sail.rotation.z=Math.sin(t)*.05}
+ buoys.forEach((b,i)=>{b.position.y=-.3+Math.sin(t*1.6+i)*.08;b.rotation.z=Math.sin(t*1.3+i)*.08});
+ {const a=t*.045+2;const R=17;whale.position.set(Math.cos(a)*R,-1.1+Math.max(0,Math.sin(t*.35))*.9,Math.sin(a)*R);whale.rotation.y=-a;whale.rotation.z=0}
+ dol.forEach((d,i)=>{if(!d)return;const a=t*.16+i*.5+4;const R=11+i;const ph=(t*.9+i*.7)%3.2;const jump=ph<1.2?Math.sin(ph/1.2*Math.PI)*1.3:-1.5;d.position.set(Math.cos(a)*R,-.3+jump,Math.sin(a)*R);d.rotation.set(0,-a,ph<1.2?Math.cos(ph/1.2*Math.PI)*.6:0)});
+ gulls.forEach((g,i)=>{const a=t*.4+i*2.1;const R=4+i;g.position.set(Math.cos(a)*R,5.5+i*.6+Math.sin(t+i)*.3,Math.sin(a)*R);g.rotation.y=-a});
+ ctl.update();r.render(scene,cam);
+ for(const [d,p] of labels){v.copy(p()).project(cam);d.style.left=(v.x*.5+.5)*innerWidth+'px';d.style.top=(-v.y*.5+.5)*innerHeight+'px';d.style.display=v.z<1?'':'none'}
+ requestAnimationFrame(loop)}
+loop();
+addEventListener('resize',()=>{r.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+</script></body></html>
