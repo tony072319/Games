@@ -517,5 +517,5 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 
 /* ---------- credits ---------- */
 .credits-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; text-align: left; }
-.credits-list li { display: grid; gap: var(--sp-1); padding: var(--sp-2) 0; border-bottom: 1px solid var(--c-track); }
+.credits-list li { display: grid; gap: var(--sp-1); padding: var(--sp-2) 0; border-bottom: 1px solid var(--c-line); }
 .credits-list span { color: var(--c-ink-dim); font-size: var(--fs-caption); }

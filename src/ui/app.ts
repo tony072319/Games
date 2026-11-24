@@ -559,7 +559,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       const b = el('button', 'btn-quiet view-btn');
       b.type = 'button';
       b.dataset.view = v;
-      b.textContent = `${v === 'home' ? '🏠' : '🌊'} ${t(lang, `view.${v}`)}`;
+      b.innerHTML =
+        v === 'home'
+          ? `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8l6-5.5L14 8M4 6.5V14h8V6.5M6.5 14v-4h3v4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`
+          : `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 7q2-2 4 0t4 0 4 0 2 0M1 11q2-2 4 0t4 0 4 0 2 0" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+      b.append(t(lang, `view.${v}`));
       b.addEventListener('click', () => world?.focus(v));
       viewBtns.append(b);
     }
