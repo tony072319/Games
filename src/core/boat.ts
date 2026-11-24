@@ -1,6 +1,7 @@
 import { MATERIALS, type DestId, type Materials } from './data';
 import { addMaterials, netRate } from './economy';
 import { takeIslandStore } from './islands';
+import { curioChance, foundCurio, pickCurio } from './curios';
 import { seaView } from './seas';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
@@ -73,7 +74,7 @@ export function startVoyage(s: GameState, d: DestId, nowMs: number): boolean {
 }
 
 /** If the boat is due back, put its haul on the dock. Returns the new cargo, if any. */
-export function settleVoyage(s: GameState, nowMs: number): Cargo | null {
+export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Math.random): Cargo | null {
   const v = s.boat.voyage;
   if (!v || nowMs < v.returnAt) return null;
   // The boat may have sailed at a sea you've since left.
@@ -86,6 +87,10 @@ export function settleVoyage(s: GameState, nowMs: number): Cargo | null {
   for (const m of MATERIALS) haul[m] += fromIsland[m];
   s.boat.voyage = null;
   s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland };
+  if (rng() < curioChance(at, 'boat')) {
+    const c = pickCurio(at, 'boat', rng, v.dest);
+    if (c) s.boat.cargo.curio = c;
+  }
   return s.boat.cargo;
 }
 
@@ -96,6 +101,7 @@ export function unloadBoat(s: GameState): Cargo | null {
   addMaterials(s, c.haul);
   const at = seaView(s, c.sea) ?? s;
   if (!at.discovered.includes(c.dest)) at.discovered.push(c.dest);
+  if (c.curio) foundCurio(s, c.curio);
   s.boat.cargo = null;
   return c;
 }

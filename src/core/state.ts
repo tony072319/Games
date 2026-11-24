@@ -18,6 +18,8 @@ export interface Cargo {
   discovery: boolean;
   /** Part of the haul that the island's own buildings made. */
   fromIsland: Materials;
+  /** A curio the boat found, if any. */
+  curio?: string;
 }
 
 /** Everything that belongs to one sea. The sea you're at lives in the top-level fields; the others are kept here. */
@@ -59,6 +61,8 @@ export interface GameState {
   /** Seas you're not at right now, still lit and still producing. */
   seas: Partial<Record<SeaId, SeaState>>;
   starlight: number;
+  /** Curios in the book (ids like "dusk:3"). */
+  curios: string[];
 }
 
 export function emptyMaterials(): Materials {
@@ -85,5 +89,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     reached: ['dusk'],
     seas: {},
     starlight: 0,
+    curios: [],
   };
 }
