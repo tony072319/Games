@@ -136,6 +136,11 @@
 | Lighthouse & Coast、Harbor、Island Huts、Nature、Pirate & Beach 1/2、Tiki Beach、Underwater、Ship Deck、Volcano Island、Winter、Viking Village（12 个包） | reodesuxz（itch.io） | 约 330 个 .glb | 免费商用，不用署名；不能把模型文件单独转卖或转发；不能拿去训练 AI |
 | Medieval Hexagon、Resource Bits | KayKit / Kay Lousberg | 约 250 个 .gltf | CC0 |
 | Animated Fish（鲸鱼、海豚、蝠鲼、鲨鱼、3 种鱼，带游动动画）、Farm Animals | Quaternius | 约 20 个 .fbx | CC0 |
+| Pirate Kit（大小帆船、沉船、可拼接的塔、码头平台、旗子）、Watercraft Kit、Fantasy Town Kit、Nature Kit、Hexagon Kit、Holiday Kit、Graveyard Kit（适合雾海） | Kenney（经 OpenGameArt） | 约 880 个 .glb | CC0 |
+| 天空：黄昏 4 张、夜晚 3 张、阴天 1 张（HDR，也用来照亮场景和让海面反光） | Poly Haven | 8 张 | CC0 |
+| 声音：海浪、海鸥、风声；4 首安静的钢琴和氛围音乐；3 套按钮和升级音效 | OpenGameArt（含 Kenney） | 约 100 个 | CC0 |
+
+2026-11-24 作者决定：仓库保持公开，模型放进仓库，游戏里写明素材来源（选项 A）。作者强调"美术对于这个游戏十分重要"，要求继续多找素材。原则不变：只用授权写明可商用的；别的游戏的美术即使代码公开也不能直接用。
 
 下载的原始文件目前在临时目录。开始实现时，第一件事是把用到的模型复制进仓库；临时目录被清掉也能用下载脚本重新下载（需要登录的两个包除外）。
 
