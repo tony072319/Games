@@ -2,7 +2,8 @@ import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageM
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, type DestId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
-import { islandIcon, itemIcon } from './art';
+import { boatSvg, islandIcon, itemIcon } from './art';
+import { upgradeCard } from './card';
 import { el } from './dom';
 import { formatDuration } from './offlinePopup';
 import { createPanel } from './upgrades';
@@ -38,12 +39,14 @@ export interface SeaMap {
 }
 
 export function createSeaMap(lang: Lang, state: GameState, act: SeaMapActions): SeaMap {
-  const overlay = el('div', 'overlay map-overlay');
+  const overlay = el('div', 'overlay sheet-overlay');
   const box = el('div', 'seamap');
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
   const head = el('div', 'map-head');
   const title = el('h2');
   title.textContent = `${t(lang, 'map.title')} · ${t(lang, `sea.${state.sea}`)}`;
-  const close = el('button', 'map-close');
+  const close = el('button', 'btn-ghost map-close');
   close.textContent = t(lang, 'map.close');
   close.addEventListener('click', act.close);
   head.append(title, close);
@@ -100,7 +103,14 @@ ${path}
         const label = el('span');
         label.textContent = destName(lang, s.sea, d);
         b.append(label);
-      } else if (lit) b.textContent = '?';
+      } else if (lit) {
+        b.textContent = '?';
+        b.setAttribute('aria-label', t(lang, 'map.unknown'));
+      } else {
+        // Out of the light: a hint on the chart, nothing to press.
+        b.tabIndex = -1;
+        b.setAttribute('aria-hidden', 'true');
+      }
       b.addEventListener('click', () => {
         selected = d;
         lastKey = '';
@@ -147,7 +157,7 @@ ${path}
     if (!reachable(s, d)) return;
     const row = el('div', 'sail-row');
     if (found) {
-      const land = el('button', 'land');
+      const land = el('button', 'btn-ghost land');
       land.textContent = t(lang, 'island.land');
       land.addEventListener('click', () => act.land(d));
       row.append(land);
@@ -188,22 +198,21 @@ ${path}
     bottomKey = key;
     bottom.replaceChildren();
     if (s.levels.light < 3) return;
-    const card = el('div', 'card');
-    const h = el('h3');
-    h.textContent = t(lang, 'map.build');
-    const cost = el('div', 'cost');
-    for (const m of MATERIALS) {
-      if (!BOAT_COST[m]) continue;
-      const c = el('span', s.materials[m] >= BOAT_COST[m] ? '' : 'short', itemIcon(m));
-      c.append(formatNumber(BOAT_COST[m], lang));
-      cost.append(c);
-    }
-    const btn = el('button', 'buy');
-    btn.textContent = t(lang, 'ui.buy');
-    btn.disabled = !canBuildBoat(s);
-    btn.addEventListener('click', act.build);
-    card.append(h, cost, btn);
-    bottom.append(card);
+    bottom.append(
+      upgradeCard(lang, {
+        data: ['card', 'build-boat'],
+        thumb: boatSvg(false, 1),
+        title: t(lang, 'map.build'),
+        desc: t(lang, 'map.buildDesc'),
+        cost: BOAT_COST,
+        have: s.materials,
+        buyLabel: t(lang, 'ui.buy'),
+        canBuy: canBuildBoat(s),
+        onBuy: act.build,
+        open: true,
+        alwaysOpen: true,
+      }),
+    );
   }
 
   function render(s: GameState) {

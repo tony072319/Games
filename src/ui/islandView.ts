@@ -4,6 +4,7 @@ import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { PLOTS, buildingSvg, islandSceneSvg, itemIcon } from './art';
 import { el } from './dom';
+import { upgradeCard } from './card';
 import { destName } from './names';
 
 export interface IslandActions {
@@ -21,12 +22,14 @@ export interface IslandView {
 const PERK_STEP: Record<string, [number, boolean]> = { speed: [4, false], net: [5, false], light: [3, true], chest: [10, false] };
 
 export function createIslandView(lang: Lang, state: GameState, d: DestId, act: IslandActions): IslandView {
-  const overlay = el('div', 'overlay map-overlay');
+  const overlay = el('div', 'overlay sheet-overlay');
   const box = el('div', 'seamap island');
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
   const head = el('div', 'map-head');
   const title = el('h2');
   title.textContent = destName(lang, state.sea, d);
-  const back = el('button', 'map-close');
+  const back = el('button', 'btn-ghost map-close');
   back.textContent = t(lang, 'island.back');
   back.addEventListener('click', act.back);
   head.append(title, back);
@@ -90,45 +93,30 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
     }
     const b = selected;
     const lvl = buildingLevel(s, b);
-    const card = el('div', 'card');
-    card.dataset.building = b;
-    const h = el('h3');
-    h.textContent = t(lang, `bld.${b}.name`);
-    if (lvl > 0) {
-      const sm = el('small', 'level');
-      sm.textContent = t(lang, 'ui.level', { level: lvl });
-      h.append(sm);
-    }
-    const p = el('p');
-    p.textContent = t(lang, `bld.${b}.desc`);
-    card.append(h, p);
     const perk = BUILDINGS[b].perk;
+    let note: string | undefined;
     if (perk && lvl > 0) {
       const [step, minus] = PERK_STEP[perk];
-      const now = el('p', 'perk');
-      now.textContent = t(lang, minus ? 'island.perkNowMinus' : 'island.perkNow', { n: step * lvl });
-      card.append(now);
+      note = t(lang, minus ? 'island.perkNowMinus' : 'island.perkNow', { n: step * lvl });
     }
-    const btn = el('button', 'buy');
-    if (lvl >= BUILDING_MAX) {
-      btn.textContent = t(lang, 'ui.max');
-      btn.disabled = true;
-    } else {
-      const cost = buildCost(b, lvl, s);
-      const costEl = el('div', 'cost');
-      for (const m of MATERIALS) {
-        if (cost[m] <= 0) continue;
-        const c = el('span', s.materials[m] >= cost[m] ? '' : 'short', itemIcon(m));
-        c.append(formatNumber(cost[m], lang));
-        costEl.append(c);
-      }
-      card.append(costEl);
-      btn.textContent = t(lang, lvl === 0 ? 'island.build' : 'ui.buy');
-      btn.disabled = !canBuild(s, b);
-      btn.addEventListener('click', () => act.build(b));
-    }
-    card.append(btn);
-    info.append(card);
+    info.append(
+      upgradeCard(lang, {
+        data: ['building', b],
+        // Not built yet: a faint preview of the first level.
+        thumb: `<svg viewBox="-48 -88 96 96" aria-hidden="true" style="${lvl === 0 ? 'opacity:.5' : ''}">${buildingSvg(b, Math.max(1, lvl))}</svg>`,
+        title: t(lang, `bld.${b}.name`),
+        level: lvl,
+        desc: t(lang, `bld.${b}.desc`),
+        note,
+        cost: lvl >= BUILDING_MAX ? null : buildCost(b, lvl, s),
+        have: s.materials,
+        buyLabel: t(lang, lvl === 0 ? 'island.build' : 'ui.buy'),
+        canBuy: canBuild(s, b),
+        onBuy: () => act.build(b),
+        open: true,
+        alwaysOpen: true,
+      }),
+    );
   }
 
   function render(s: GameState) {

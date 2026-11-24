@@ -1,4 +1,6 @@
+import './ui/theme.css';
 import './ui/style.css';
+import './ui/ui.css';
 import { prefixedKV, type KV } from './core/save';
 import { startApp } from './ui/app';
 

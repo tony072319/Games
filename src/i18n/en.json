@@ -143,5 +143,12 @@
   "dest.aurora.oldlight.name": "The Aurora Light",
   "dest.aurora.oldlight.desc": "The northernmost lighthouse of the old stories. Its light is the colour of the aurora.",
   "dest.aurora.firefly.name": "Icefly Grotto",
-  "dest.aurora.firefly.desc": "Deep in the ice cave, small glowing creatures stay awake all winter."
+  "dest.aurora.firefly.desc": "Deep in the ice cave, small glowing creatures stay awake all winter.",
+  "settings.title": "Settings",
+  "ui.on": "On",
+  "ui.off": "Off",
+  "lang.name": "English",
+  "seas.label": "Seas",
+  "bubble.unload": "Unload",
+  "bubble.collect": "Collect +{n}"
 }

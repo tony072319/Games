@@ -143,5 +143,12 @@
   "dest.aurora.oldlight.name": "极光灯塔",
   "dest.aurora.oldlight.desc": "传说中最北的灯塔。它的光和极光是同一种颜色。",
   "dest.aurora.firefly.name": "冰萤洞",
-  "dest.aurora.firefly.desc": "冰洞深处有会发光的小虫，冬天也不睡。"
+  "dest.aurora.firefly.desc": "冰洞深处有会发光的小虫，冬天也不睡。",
+  "settings.title": "设置",
+  "ui.on": "开",
+  "ui.off": "关",
+  "lang.name": "中文",
+  "seas.label": "海域",
+  "bubble.unload": "卸货",
+  "bubble.collect": "收下 +{n}"
 }

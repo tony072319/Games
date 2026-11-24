@@ -1,0 +1,102 @@
+/*
+ * The one place for shared values (see DESIGN.md). Interface styles use these
+ * names only; no literal sizes, colours or durations in ui.css.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Scene (driven at runtime by the sky cycle) */
+  --sky-top: #12112b;
+  --sky-mid: #3a2c5a;
+  --sky-low: #9b5a78;
+  --sky-horizon: #b8677a;
+  --sea-tint: #000000;
+  --sea-tint-op: 0;
+  --sea-top: #2a2f55;
+  --sea: #0b0f22;
+  --lamp: #ffd98a;
+
+  /* Colour roles */
+  --c-ink: #ece6f5;            /* main text */
+  --c-ink-dim: #b9b2cf;        /* secondary text: descriptions, captions */
+  --c-ink-faint: #8a83a3;      /* disabled text, quiet labels */
+  --c-gold: var(--lamp);       /* light: highlights, focus, titles in dialogs */
+  --c-accent: #f2a46a;         /* the one action colour */
+  --c-on-accent: #241a2e;      /* text on the action colour */
+  --c-page: #07081a;           /* behind everything */
+  --c-surface-0: rgba(12, 11, 30, 0.88);   /* bars and panels over the scene */
+  --c-surface-1: #211d3e;      /* cards */
+  --c-surface-2: #2a2550;      /* card open / hover */
+  --c-surface-dialog: #1a1735; /* dialogs and sheets */
+  --c-line: rgba(255, 255, 255, 0.08);
+  --c-scrim: rgba(5, 6, 18, 0.66);
+  --c-disabled: #36314f;
+  --c-ok: #7fd18a;
+
+  /* Type roles: size / line height (weight below) */
+  --fs-caption: 12px;          /* costs, small labels */
+  --fs-body: 13px;             /* descriptions, dialog text, HUD numbers (so five fit in one row) */
+  --fs-label: 15px;            /* card titles, buttons */
+  --fs-title: 18px;            /* dialog titles */
+  --fs-display: 22px;          /* the voyage between seas */
+  --lh-tight: 1.2;
+  --lh-body: 1.45;
+  --fw-regular: 400;
+  --fw-bold: 600;
+  --font: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* Spacing: base 4 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+
+  /* Elevation: dark UI uses tone first; one soft shadow for dialogs */
+  --shadow-dialog: 0 12px 32px rgba(3, 2, 14, 0.55);
+  --glow-gold: 0 0 16px rgba(255, 217, 138, 0.45);
+
+  /* Sizes */
+  --tap: 44px;                 /* smallest thing you can tap */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --thumb: 56px;               /* card picture */
+
+  /* Layout widths */
+  --w-phone: 480px;            /* the game column on phones and narrow windows */
+  --w-wide: 1440px;            /* the whole game on wide screens */
+  --w-side: 400px;             /* the controls column on wide screens */
+  --w-dialog: 360px;
+  --w-sheet: 460px;
+
+  /* More light */
+  --c-gold-soft: #fff0b8;
+  --c-spark: #fff6d8;
+  --c-hint: rgba(140, 150, 200, 0.35);   /* something far away in the dark */
+  --c-gold-wash: rgba(255, 217, 138, 0.12);
+  --ring-gold: 0 0 0 2px var(--c-gold);
+  --shadow-text: 0 1px 3px rgba(0, 0, 0, 0.9);
+  --drop-gold: drop-shadow(0 0 6px rgba(255, 217, 138, 0.7));
+  --blur-bar: blur(6px);
+  --lh-display: 1.8;
+
+  /* Motion */
+  --t-micro: 100ms;
+  --t-small: 200ms;
+  --t-medium: 300ms;
+  --t-flash: 900ms;            /* a card lights up after mending */
+  --t-float: 1.2s;             /* "+N" rising, a full bubble bouncing */
+  --t-toast: 2.2s;
+  --t-breathe: 2.4s;           /* slow pulses that say "look here" */
+  --t-voyage: 1.6s;            /* fading between seas */
+  --ease-inout: ease-in-out;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}

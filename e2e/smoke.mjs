@@ -25,6 +25,14 @@ async function waitForServer() {
   fail('preview server did not start');
 }
 
+// The test panel stays folded so it never covers the game; open it for one click.
+let page;
+const dbg = async (label) => {
+  if (await page.locator('.debug.collapsed').count()) await page.locator('.debug-badge').click();
+  await page.getByText(label).click();
+  await page.locator('.debug-badge').click();
+};
+
 const total = (page) =>
   page.$$eval('.hud .mat span', (els) => els.reduce((a, e) => a + Number(e.textContent || 0), 0));
 
@@ -32,15 +40,18 @@ try {
   await waitForServer();
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: SHOTS ? 2 : 1, locale: 'zh-CN' });
-  const page = await ctx.newPage();
+  page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
 
   await page.goto(BASE);
   if ((await page.locator('.hud .mat:visible').count()) !== 4) fail('HUD should show 4 materials (glow hidden until found)');
-  if ((await page.locator('.hud .sound').count()) !== 1) fail('HUD should have a sound toggle');
-  await page.locator('.hud .sound').click();
-  if ((await page.locator('.hud .sound').getAttribute('aria-pressed')) !== 'false') fail('sound toggle should turn sound off');
+  // Settings menu: sound off.
+  await page.locator('.hud .settings-btn').click();
+  await page.locator('.menu button').first().click();
+  const snd = await page.evaluate(() => JSON.parse(localStorage.getItem('lightkeeper.save')).settings.sound);
+  if (snd !== false) fail('settings menu should turn sound off');
+  if (await page.locator('.menu').count()) fail('menu should close after a choice');
 
   const before = await total(page);
   const item = page.locator('.item').first();
@@ -54,7 +65,6 @@ try {
   // Test build: separate save, infinite materials on by default.
   await page.goto(BASE + '?debug=1');
   if (!(await page.locator('.debug-badge').count())) fail('test build should show its badge');
-  await page.locator('.debug-badge').click(); // open the test panel
   for (let i = 0; i < 3; i++) await page.locator('[data-upgrade="net"] .buy').click();
   if ((await page.locator('.toast').count()) < 1) fail('upgrading should show a toast');
   const lvl = await page.locator('[data-upgrade="net"] .level').textContent();
@@ -66,18 +76,18 @@ try {
       return Object.values(s.materials || {}).reduce((a, b) => a + b, 0);
     });
 
-  await page.getByText('无限材料：开').click();
+  await dbg('无限材料：开');
   const beforeAway = await savedTotal();
-  await page.getByText('+8 小时').click();
+  await dbg('+8 小时');
   await page.locator('.popup').waitFor({ timeout: 3000 });
   await page.waitForTimeout(500);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/popup-zh.png` });
-  await page.locator('.popup button.primary').click();
-  if ((await page.locator('.popup').count()) !== 0) fail('popup should close');
+  await page.locator('.popup .btn-primary').click();
+  await page.locator('.popup').waitFor({ state: 'detached', timeout: 2000 }).catch(() => fail('popup should close'));
   if (!((await savedTotal()) > beforeAway + 100)) fail('collecting from the popup should empty the chest into materials');
 
   // Chest fills while away; tapping it collects.
-  await page.getByText('+1 小时').click();
+  await dbg('+1 小时');
   await page.locator('.popup').waitFor({ timeout: 3000 });
   await page.evaluate(() => document.querySelector('.overlay')?.remove());
   await page.waitForTimeout(100);
@@ -103,13 +113,14 @@ try {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/map.png` });
   await page.locator('.map-close').click();
   if (await page.locator('.boat').isVisible()) fail('boat should be away from the dock');
-  await page.getByText('小船立即返航').click();
+  await dbg('小船立即返航');
   await page.locator('.boat.laden').waitFor({ timeout: 3000 });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/boat-laden.png` });
   await page.locator('.boat').dispatchEvent('pointerdown');
   await page.locator('.discovery').waitFor({ timeout: 3000 });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery.png` });
   await page.locator('.discovery button').click();
+  await page.locator('.discovery').waitFor({ state: 'detached', timeout: 2000 });
   const disc = await page.evaluate(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).discovered);
   if (!disc.includes('wreck')) fail('unloading should record the wreck as discovered');
   await page.locator('.map-btn').click();
@@ -126,12 +137,13 @@ try {
   if (!bl?.includes('1')) fail(`breaking bench should be level 1, got ${bl}`);
   await page.locator('.plot-btn[data-b="boatshed"]').click();
   await page.locator('[data-building="boatshed"] .buy').click();
-  await page.getByText('+8 小时').click();
+  await dbg('+8 小时');
   await page.locator('.popup button').first().click();
   await page.waitForTimeout(400);
   if (!(await page.locator('.island-store .haul').count())) fail('the island should save up what it makes');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/island.png` });
   await page.locator('.map-close').click(); // back to chart
+  await page.locator('.island-scene').waitFor({ state: 'detached', timeout: 2000 });
   await page.locator('.seamap').waitFor();
   await page.locator('.map-close').click();
 
@@ -139,32 +151,34 @@ try {
   const lvl2 = await page.locator('[data-upgrade="net"] .level').textContent();
   if (!lvl2?.includes('4')) fail(`test save should persist after reload, got ${lvl2}`);
 
-  await page.locator('.debug-badge').click(); // panel starts collapsed after reload
-  await page.getByText('天色 +4 分钟').click();
-  await page.getByText('随机海上事件').click();
+  await dbg('天色 +4 分钟');
+  await dbg('随机海上事件');
   if (!(await page.locator('.ambient .amb').count())) fail('a sea event should appear');
 
   // Pass the light on: lighthouse to 10 → button → confirm → arrive at the fog sea.
-  await page.getByText('灯塔修满').click();
+  await dbg('灯塔修满');
   await page.locator('.pass-btn').waitFor({ state: 'visible', timeout: 3000 });
   await page.locator('.pass-btn').click();
-  await page.locator('.popup.pass .primary').click();
+  await page.locator('.popup.pass .btn-primary').click();
   await page.waitForTimeout(5200);
-  if (!(await page.locator('.sea-chip.sea-fog.on').count())) fail('should arrive at the fog sea');
+  const seaNow = () => page.evaluate(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).sea);
+  if ((await seaNow()) !== 'fog') fail('should arrive at the fog sea');
+  if (!(await page.locator('.seas-btn').isVisible())) fail('the seas button should appear once there are two seas');
   if (!(await page.locator('.starlight').isVisible())) fail('starlight should show in the HUD');
   const fogLight = await page.locator('[data-upgrade="light"] .level').textContent();
   if (!fogLight?.includes('1')) fail(`new sea should start with lighthouse 1, got ${fogLight}`);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/fog.png` });
-  await page.locator('.sea-chip.sea-dusk').click();
+  await page.locator('.seas-btn').click();
+  await page.locator('.menu button', { hasText: '黄昏的海' }).click();
   const duskLight = await page.locator('[data-upgrade="light"] .level').textContent();
   if (!duskLight?.includes('10')) fail(`the old sea should still be lit at 10, got ${duskLight}`);
-  await page.locator('.sea-chip.sea-fog').click();
-  await page.locator('.debug-badge').click();
-  await page.getByText('灯塔修满').click();
+  await page.locator('.seas-btn').click();
+  await page.locator('.menu button', { hasText: '有雾的夜海' }).click();
+  await dbg('灯塔修满');
   await page.locator('.pass-btn').click();
-  await page.locator('.popup.pass .primary').click();
+  await page.locator('.popup.pass .btn-primary').click();
   await page.waitForTimeout(5200);
-  if (!(await page.locator('.sea-chip.sea-aurora.on').count())) fail('should arrive at the aurora sea');
+  if ((await seaNow()) !== 'aurora') fail('should arrive at the aurora sea');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/aurora.png` });
 
   // The real save was never touched by the test build.
@@ -173,7 +187,8 @@ try {
   const realLvl = await page.locator('[data-upgrade="net"] .level').textContent();
   if (!realLvl?.includes('1')) fail(`real save should still be net 1, got ${realLvl}`);
 
-  await page.locator('.lang').click();
+  await page.locator('.hud .settings-btn').click();
+  await page.locator('.menu button').nth(1).click();
   if (!(await page.locator('.panel').textContent())?.includes('Net')) fail('language toggle should switch to English');
 
   if (SHOTS) {

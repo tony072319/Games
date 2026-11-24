@@ -3,7 +3,7 @@ import type { OfflineReport } from '../core/sim';
 import type { Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { itemIcon } from './art';
-import { el } from './dom';
+import { dismiss, el } from './dom';
 
 export function formatDuration(seconds: number, lang: Lang): string {
   const totalMin = Math.floor(seconds / 60);
@@ -52,12 +52,12 @@ export function showOfflinePopup(
     haul.append(item);
   }
   const actions = el('div', 'actions');
-  const take = el('button');
+  const take = el('button', 'btn-ghost');
   take.textContent = t(lang, 'offline.collect');
-  const dbl = el('button', 'primary');
+  const dbl = el('button', 'btn-primary');
   dbl.textContent = t(lang, 'offline.double');
   const close = (double: boolean) => {
-    overlay.remove();
+    dismiss(overlay);
     onCollect(double);
   };
   take.addEventListener('click', () => close(false));

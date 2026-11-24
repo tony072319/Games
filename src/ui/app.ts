@@ -18,7 +18,7 @@ import { canPassLight, nextSea, passLight, starlightFor, switchSea } from '../co
 import { SEA_IDS, type SeaId } from '../core/data';
 import { destDesc, destName } from './names';
 import { createDebug } from './debug';
-import { el } from './dom';
+import { dismiss, el, openMenu } from './dom';
 import { createHud, type Hud } from './hud';
 import { showOfflinePopup } from './offlinePopup';
 import { createPanel, type Panel } from './upgrades';
@@ -42,6 +42,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let flotsamLayer!: HTMLElement;
   let game!: HTMLElement;
   let chestBtn!: HTMLButtonElement;
+  let chestBubble!: HTMLButtonElement;
+  let boatBubble!: HTMLButtonElement;
+  let bubbleKey = '';
   let chestKey = '';
   const itemEls = new Map<number, HTMLElement>();
   /** Test build: materials are topped up every frame so nothing ever runs out. */
@@ -61,7 +64,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let boatKey = '';
   let mapBtn!: HTMLButtonElement;
   let seaMap: SeaMap | null = null;
-  let seaChips!: HTMLElement;
+  let seasBtn!: HTMLButtonElement;
   let passBtn!: HTMLButtonElement;
   let chipsKey = '';
   let islandView: IslandView | null = null;
@@ -128,23 +131,30 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     setTimeout(() => g.remove(), 1300);
   }
 
-  function renderChips() {
+  /** The seas button shows once a second sea is reached; it opens a list of them. */
+  function renderSeas() {
     const key = `${state.sea}:${state.reached.join()}`;
     if (key === chipsKey) return;
     chipsKey = key;
-    seaChips.replaceChildren();
-    if (state.reached.length < 2) return;
-    for (const id of SEA_IDS) {
-      if (!state.reached.includes(id)) continue;
-      const c = el('button', `sea-chip sea-${id}${id === state.sea ? ' on' : ''}`);
-      c.textContent = t(state.settings.lang, `sea.${id}`);
-      c.addEventListener('click', () => {
-        if (id === state.sea || !switchSea(state, id, opts.now())) return;
-        save();
-        build();
-      });
-      seaChips.append(c);
-    }
+    seasBtn.style.display = state.reached.length < 2 ? 'none' : '';
+    seasBtn.querySelector('.val')!.textContent = t(state.settings.lang, `sea.${state.sea}`);
+  }
+
+  function openSeas() {
+    const lang = state.settings.lang;
+    openMenu(
+      game,
+      seasBtn,
+      SEA_IDS.filter((id) => state.reached.includes(id)).map((id) => ({
+        label: t(lang, `sea.${id}`),
+        on: id === state.sea,
+        pick: () => {
+          if (id === state.sea || !switchSea(state, id, opts.now())) return;
+          save();
+          build();
+        },
+      })),
+    );
   }
 
   function confirmPass() {
@@ -165,11 +175,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const actions = el('div', 'actions');
     const wait = el('button');
     wait.textContent = t(lang, 'pass.wait');
-    wait.addEventListener('click', () => overlay.remove());
-    const go = el('button', 'primary');
+    wait.className = 'btn-ghost';
+    wait.addEventListener('click', () => dismiss(overlay));
+    const go = el('button', 'btn-primary');
     go.textContent = t(lang, 'pass.go');
     go.addEventListener('click', () => {
-      overlay.remove();
+      dismiss(overlay);
       const from = state.sea;
       if (!passLight(state, opts.now())) return;
       save();
@@ -224,7 +235,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       },
       land: (d: DestId) => openIsland(d),
       close: () => {
-        seaMap?.el.remove();
+        if (seaMap) dismiss(seaMap.el);
         seaMap = null;
       },
     });
@@ -232,7 +243,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   function openIsland(d: DestId) {
-    seaMap?.el.remove();
+    if (seaMap) dismiss(seaMap.el);
     seaMap = null;
     const lang = state.settings.lang;
     islandView = createIslandView(lang, state, d, {
@@ -245,7 +256,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         sparkle(islandView?.flash(b) ?? null);
       },
       back: () => {
-        islandView?.el.remove();
+        if (islandView) dismiss(islandView.el);
         islandView = null;
         openMap();
       },
@@ -285,9 +296,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     desc.textContent = destDesc(lang, sea, d);
     const perk = el('p', 'perk');
     perk.textContent = t(lang, `dest.${d}.perk`);
-    const ok = el('button', 'primary');
+    const ok = el('button', 'btn-primary');
     ok.textContent = t(lang, 'discover.ok');
-    ok.addEventListener('click', () => overlay.remove());
+    ok.addEventListener('click', () => dismiss(overlay));
     const actions = el('div', 'actions');
     actions.append(ok);
     box.append(h, pic, name, desc, perk, actions);
@@ -416,7 +427,21 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       save();
     });
     chestKey = '';
-    stage.append(chestBtn, flotsamLayer);
+    // Bubbles above the chest and the boat say there is something to collect.
+    chestBubble = el('button', 'bubble');
+    chestBubble.type = 'button';
+    chestBubble.addEventListener('click', () => {
+      if (chestTotal(state.chest) < 1) return;
+      takeChest();
+      refresh();
+      save();
+    });
+    boatBubble = el('button', 'bubble');
+    boatBubble.type = 'button';
+    boatBubble.textContent = t(lang, 'bubble.unload');
+    boatBubble.addEventListener('click', () => unload());
+    bubbleKey = '';
+    stage.append(chestBtn, flotsamLayer, chestBubble, boatBubble);
     hud = createHud(
       lang,
       () => {
@@ -431,21 +456,32 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         sound.setEnabled(on);
         save();
       },
+      game,
     );
     panel = createPanel(lang, onBuy);
+    // Action bar: sea chart, seas (once there are two), and passing the light on.
     const toolbar = el('div', 'toolbar');
-    mapBtn = el('button', 'map-btn');
-    mapBtn.innerHTML = `<svg viewBox="0 0 16 16"><path d="M1 3l4-1.5 6 2 4-1.5v11l-4 1.5-6-2-4 1.5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.5v11M11 3.5v11" stroke="currentColor" stroke-width="1"/></svg>`;
+    mapBtn = el('button', 'btn-bar map-btn');
+    mapBtn.type = 'button';
+    mapBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3l4-1.5 6 2 4-1.5v11l-4 1.5-6-2-4 1.5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.5v11M11 3.5v11" stroke="currentColor" stroke-width="1"/></svg>`;
     mapBtn.append(t(lang, 'map.open'));
     mapBtn.addEventListener('click', openMap);
-    toolbar.append(mapBtn);
-    seaChips = el('div', 'sea-chips');
-    passBtn = el('button', 'pass-btn');
+    seasBtn = el('button', 'btn-bar seas-btn');
+    seasBtn.type = 'button';
+    seasBtn.setAttribute('aria-haspopup', 'menu');
+    seasBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 10q2-2 4 0t4 0 4 0 2 0M1 13q2-2 4 0t4 0 4 0 2 0M8 2v5M5.5 4.5 8 2l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+    seasBtn.append(el('span', 'val'));
+    seasBtn.addEventListener('click', openSeas);
+    passBtn = el('button', 'btn-bar pass-btn');
+    passBtn.type = 'button';
     passBtn.textContent = `✦ ${t(lang, 'pass.button')}`;
     passBtn.addEventListener('click', confirmPass);
-    toolbar.append(passBtn, seaChips);
+    toolbar.append(mapBtn, seasBtn, passBtn);
     chipsKey = '';
-    game.append(hud.el, stage, toolbar, panel.el);
+    // On wide screens this column sits to the right of the scene.
+    const side = el('div', 'side');
+    side.append(toolbar, panel.el);
+    game.append(hud.el, stage, side);
     if (seaMap || islandView) {
       seaMap = null;
       islandView = null;
@@ -517,6 +553,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     chestBtn.style.top = `${sceneYToPx(CHEST_POS.y)}px`;
     boatBtn.style.left = `${sceneXToPx(BOAT_POS.x)}px`;
     boatBtn.style.top = `${sceneYToPx(BOAT_POS.y)}px`;
+    placeBubbles();
   }
 
   /** Scene (viewBox 360x640) to stage pixels, matching preserveAspectRatio="xMidYMid slice". */
@@ -574,6 +611,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     chestKey = key;
     chestBtn.innerHTML = chestSvg(fill, tier) + `<span class="bar"><i style="width:${(fill * 100).toFixed(0)}%"></i></span>`;
     chestBtn.classList.toggle('full', fill >= 0.999);
+    placeBubbles(); // the chest's height can change with its look
   }
 
   function paintSea(now: number) {
@@ -585,6 +623,32 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     // Same mapping as the SVG layers: preserveAspectRatio="xMidYMid slice".
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (stageW / 2 - 180 * scale) * dpr, (stageH / 2 - 320 * scale) * dpr);
     drawSea(ctx, now, currentSky());
+  }
+
+  function renderBubbles() {
+    const lang = state.settings.lang;
+    const total = chestTotal(state.chest);
+    const fill = Math.min(1, total / chestCapacity(state));
+    const showChest = total >= 1 && fill >= 0.02;
+    const showBoat = !!state.boat.cargo && !state.boat.voyage;
+    const label = showChest ? t(lang, 'bubble.collect', { n: formatNumber(total, lang) }) : '';
+    const key = `${label}:${fill >= 0.999}:${showBoat}`;
+    if (key === bubbleKey) return;
+    bubbleKey = key;
+    chestBubble.style.display = showChest ? '' : 'none';
+    chestBubble.textContent = label;
+    chestBubble.classList.toggle('full', fill >= 0.999);
+    boatBubble.style.display = showBoat ? '' : 'none';
+    placeBubbles();
+  }
+
+  /** Bubbles sit just above the chest and the boat, wherever the scene puts them. */
+  function placeBubbles() {
+    if (!chestBtn || !chestBubble) return;
+    chestBubble.style.left = `${sceneXToPx(CHEST_POS.x)}px`;
+    chestBubble.style.top = `${sceneYToPx(CHEST_POS.y) - chestBtn.offsetHeight * 0.84 - 6}px`;
+    boatBubble.style.left = `${sceneXToPx(BOAT_POS.x)}px`;
+    boatBubble.style.top = `${sceneYToPx(BOAT_POS.y) - boatBtn.offsetHeight * 0.7 - 6}px`;
   }
 
   function renderBoat() {
@@ -608,9 +672,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       if (want !== dockSlot.hasChildNodes()) dockSlot.innerHTML = want ? dockSvg() : '';
     }
     renderBoat();
+    renderBubbles();
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     passBtn.style.display = canPassLight(state) ? '' : 'none';
-    renderChips();
+    renderSeas();
     mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
     seaMap?.update(state);
     islandView?.update(state);
