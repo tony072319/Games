@@ -67,7 +67,7 @@ export function collect(
       return { material: item.material, amount: 0, curio: found };
     }
   }
-  const amount = tapYield(state.levels.net);
+  const amount = tapYield(state.levels.net, state);
   state.materials[item.material] += amount;
   state.stats.tapped += 1;
   return { material: item.material, amount };

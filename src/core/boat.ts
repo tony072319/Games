@@ -3,6 +3,7 @@ import { addMaterials, netRate } from './economy';
 import { takeIslandStore } from './islands';
 import { curioChance, foundCurio, pickCurio } from './curios';
 import { seaView } from './seas';
+import { has } from './talents';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
 /** Lighthouse light level that repairs the dock so a boat can be built. */
@@ -46,7 +47,7 @@ export function reachable(s: GameState, d: DestId): boolean {
 }
 
 export function voyageMs(s: GameState, d: DestId): number {
-  return DESTS[d].minutes * 60_000 * Math.pow(0.92, s.levels.speed - 1) * (1 - 0.04 * (s.buildings.boatshed ?? 0));
+  return DESTS[d].minutes * 60_000 * Math.pow(0.92, s.levels.speed - 1) * (1 - 0.04 * (s.buildings.boatshed ?? 0)) * (has(s, 'voy1') ? 0.85 : 1);
 }
 
 export function cargoMultiplier(s: GameState): number {
@@ -56,7 +57,7 @@ export function cargoMultiplier(s: GameState): number {
 /** What one trip to d brings back right now (scales with the net, so trips stay worthwhile). */
 export function voyageHaul(s: GameState, d: DestId): Materials {
   const dest = DESTS[d];
-  const total = netRate(s) * dest.minutes * 60 * 0.8 * cargoMultiplier(s);
+  const total = netRate(s) * dest.minutes * 60 * 0.8 * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1);
   const h = emptyMaterials();
   for (const m of MATERIALS) h[m] = total * (dest.mix[m] ?? 0);
   if (d === 'firefly') h.glow = 2 + s.levels.cargo;
@@ -70,6 +71,7 @@ export function canSail(s: GameState, d: DestId): boolean {
 export function startVoyage(s: GameState, d: DestId, nowMs: number): boolean {
   if (!canSail(s, d)) return false;
   s.boat.voyage = { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + voyageMs(s, d) };
+  s.boat.lastDest = d;
   return true;
 }
 
@@ -104,4 +106,31 @@ export function unloadBoat(s: GameState): Cargo | null {
   if (c.curio) foundCurio(s, c.curio);
   s.boat.cargo = null;
   return c;
+}
+
+/** Most trips the auto-boat makes in one catch-up, so a long absence can't freeze the game. */
+export const AUTO_TRIPS_MAX = 200;
+
+/**
+ * With the auto-boat talent: a returned boat unloads itself and sails again to the
+ * same place, trip after trip, each leaving when the last one got back.
+ */
+export function autoSail(s: GameState, nowMs: number, rng: () => number = Math.random): void {
+  if (!has(s, 'autoBoat')) return;
+  if (s.boat.cargo && !s.boat.voyage) {
+    const dest = s.boat.cargo.dest;
+    unloadBoat(s);
+    if (s.boat.lastDest ?? dest) startVoyage(s, s.boat.lastDest ?? dest, nowMs);
+  }
+  for (let i = 0; i < AUTO_TRIPS_MAX; i++) {
+    const v = s.boat.voyage;
+    if (!v || nowMs < v.returnAt) break;
+    const back = v.returnAt;
+    settleVoyage(s, back, rng);
+    unloadBoat(s);
+    // Sail again from the sea it was at; reachability is judged there.
+    const at = seaView(s, v.sea) ?? s;
+    if (!canSail(at, v.dest)) break;
+    s.boat.voyage = { sea: v.sea, dest: v.dest, departAt: back, returnAt: back + voyageMs(at, v.dest) };
+  }
 }

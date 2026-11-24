@@ -1,6 +1,7 @@
 import { BUILDING_MAX, MATERIALS, SEA_DEF, type BuildingId, type DestId, type MaterialId, type Materials } from './data';
 import { seaBoost } from './economy';
 import { islandMult, islandTier } from './milestones';
+import { has } from './talents';
 import { emptyMaterials, type GameState } from './state';
 
 export interface Building {
@@ -62,7 +63,7 @@ export function islandRates(s: GameState, d: DestId): Materials {
     const def = BUILDINGS[b];
     if (def.makes) r[def.makes] += productionPerHour(b, buildingLevel(s, b));
   }
-  const boost = seaBoost(s) * islandMult(islandTier(s, d));
+  const boost = seaBoost(s) * islandMult(islandTier(s, d)) * (has(s, 'isl3') ? 1.3 : 1);
   for (const m of MATERIALS) r[m] *= boost;
   return r;
 }

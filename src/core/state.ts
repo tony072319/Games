@@ -46,7 +46,8 @@ export interface GameState {
   settings: { lang: Lang; sound: boolean; calm: boolean; mini: boolean };
   /** tutorial: first-time steps done (0..3). */
   stats: { tapped: number; tutorial: number };
-  boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null };
+  /** lastDest: where the boat last sailed (auto-sailing goes there again). */
+  boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null; lastDest?: DestId };
   discovered: DestId[];
   /** Island building levels (absent = not built). */
   buildings: Partial<Record<BuildingId, number>>;
@@ -63,6 +64,8 @@ export interface GameState {
   starlight: number;
   /** Curios in the book (ids like "dusk:3"). */
   curios: string[];
+  /** Starlight talents learned. */
+  talents: import('./talents').TalentId[];
 }
 
 export function emptyMaterials(): Materials {
@@ -90,5 +93,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     seas: {},
     starlight: 0,
     curios: [],
+    talents: [],
   };
 }

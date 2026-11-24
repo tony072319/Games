@@ -2,6 +2,7 @@ import { SEA_IDS, type SeaId } from './data';
 import { fillChest } from './economy';
 import { accrueIslands } from './islands';
 import { emptyMaterials, type GameState, type SeaState } from './state';
+import { has } from './talents';
 
 export { SEA_DEF } from './data';
 
@@ -102,6 +103,8 @@ export function passLight(s: GameState, nowMs: number): boolean {
   s.starlight += starlightFor(s);
   s.seas[s.sea] = snapshot(s, nowMs);
   restore(s, next, freshSea(nowMs));
+  // The star branch's last talent: the new lighthouse is already mended to the dock.
+  if (has(s, 'start3')) s.levels.light = 3;
   s.reached.push(next);
   return true;
 }

@@ -2,7 +2,9 @@ import { LIVE_DT_MAX_SECONDS, type Materials } from './data';
 import { addMaterials, fillChest } from './economy';
 export { expectedGain } from './economy';
 import { accrueOtherSeas } from './seas';
-import { settleVoyage } from './boat';
+import { autoSail, settleVoyage } from './boat';
+import { has } from './talents';
+import { chestCapacity, chestTotal } from './economy';
 import { accrueIslands } from './islands';
 import { emptyMaterials, type GameState } from './state';
 
@@ -17,6 +19,7 @@ export interface OfflineReport {
 export function applyOffline(state: GameState, nowMs: number): OfflineReport {
   accrueIslands(state, nowMs);
   accrueOtherSeas(state, nowMs);
+  autoSail(state, nowMs);
   settleVoyage(state, nowMs);
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
   const { creditedSeconds, gained } = fillChest(state, seconds);
@@ -44,10 +47,13 @@ export function claimDouble(state: GameState, collected: Materials): void {
 export function tick(state: GameState, nowMs: number): OfflineReport | null {
   accrueIslands(state, nowMs);
   accrueOtherSeas(state, nowMs);
+  autoSail(state, nowMs);
   settleVoyage(state, nowMs);
   const dt = (nowMs - state.lastActiveAt) / 1000;
   if (dt >= 0 && dt <= LIVE_DT_MAX_SECONDS) {
     fillChest(state, dt);
+    // With the auto-chest talent, a full chest empties itself while the game is open.
+    if (has(state, 'autoChest') && chestTotal(state.chest) >= chestCapacity(state) * 0.999) collectChest(state);
     state.lastActiveAt = nowMs;
     return null;
   }

@@ -2,6 +2,7 @@ import { MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, SEA_DEF, STARLIGHT_BONUS, type 
 import { emptyMaterials, type GameState } from './state';
 import { netMilestoneMult } from './milestones';
 import { curioBonus } from './curios';
+import { has } from './talents';
 
 /** Items per second the net collects automatically. */
 export function autoRate(netLevel: number): number {
@@ -13,9 +14,14 @@ export function offlineCapSeconds(storageLevel: number): number {
   return (1 + storageLevel) * 3600;
 }
 
-/** Amount gained from tapping one drifting item: worth about 10 seconds of the net. */
-export function tapYield(netLevel: number): number {
-  return Math.max(1, Math.round(autoRate(netLevel) * 10));
+/** Amount gained from tapping one drifting item: worth about 10 seconds of the net (twice that with the drift talent). */
+export function tapYield(netLevel: number, state?: GameState): number {
+  return Math.max(1, Math.round(autoRate(netLevel) * 10)) * (state && has(state, 'drift3') ? 2 : 1);
+}
+
+/** Hours of netting the chest holds, with the talent's extra two hours. */
+export function chestSeconds(state: GameState): number {
+  return offlineCapSeconds(state.levels.storage) + (has(state, 'chest2') ? 7200 : 0);
 }
 
 /** Items per second the net actually brings in, including perks from islands. */
@@ -25,13 +31,14 @@ export function netRate(state: GameState): number {
     netMilestoneMult(state.levels.net) *
     (state.discovered.includes('gullrock') ? 1.25 : 1) *
     (1 + 0.05 * (state.buildings.lookout ?? 0)) *
+    (has(state, 'net1') ? 1.15 : 1) *
     seaBoost(state)
   );
 }
 
 /** The current sea's richness times the starlight bonus. */
 export function seaBoost(state: GameState): number {
-  return SEA_DEF[state.sea].rate * (1 + STARLIGHT_BONUS * state.starlight) * curioBonus(state);
+  return SEA_DEF[state.sea].rate * (1 + STARLIGHT_BONUS * state.starlight) * curioBonus(state) * (has(state, 'prod3') ? 1.2 : 1);
 }
 
 /**
@@ -97,7 +104,7 @@ export function addMaterials(state: GameState, gained: Materials, factor = 1): v
 
 /** Items the chest can hold: enough for offlineCapSeconds of the current net. */
 export function chestCapacity(state: GameState): number {
-  return netRate(state) * offlineCapSeconds(state.levels.storage) * (1 + 0.1 * (state.buildings.path ?? 0));
+  return netRate(state) * chestSeconds(state) * (1 + 0.1 * (state.buildings.path ?? 0));
 }
 
 export function chestTotal(chest: Materials): number {
