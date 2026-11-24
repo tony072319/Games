@@ -20,6 +20,8 @@ All values live in `src/ui/theme.css`. Interface styles (`src/ui/ui.css`) use on
 | `--c-surface-1` / `--c-surface-2` | Cards / an opened card |
 | `--c-surface-dialog` | Dialogs, sheets, menus, toasts |
 | `--c-scrim` | Behind dialogs |
+| `--c-track` | The empty part of a progress bar |
+| `--c-rare` | Border of rare finds in the book |
 
 Rules: one accent per surface. Gold means "light" (something good, or where you are), not "press me". Never pure black or white.
 

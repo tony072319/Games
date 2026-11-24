@@ -694,7 +694,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     passBtn = el('button', 'btn-bar pass-btn');
     passBtn.type = 'button';
     passBtn.textContent = `✦ ${t(lang, 'pass.short')}`;
-    passBtn.setAttribute('aria-label', t(lang, 'pass.button'));
+    passBtn.title = t(lang, 'pass.button');
     passBtn.addEventListener('click', confirmPass);
     toolbar.append(mapBtn, bookBtn, seasBtn, passBtn);
     chipsKey = '';

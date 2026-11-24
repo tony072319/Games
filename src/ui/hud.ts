@@ -53,7 +53,9 @@ export function createHud(lang: Lang, host: HTMLElement, menu: () => MenuItem[],
   gear.setAttribute('aria-label', t(lang, 'settings.title'));
   gear.setAttribute('aria-haspopup', 'menu');
   gear.addEventListener('click', () => openMenu(host, gear, menu()));
-  root.append(mats, star, gear);
+  // Starlight leads the materials row, so it is never the one pushed off a narrow screen.
+  mats.prepend(star);
+  root.append(mats, gear);
 
   return {
     el: root,
