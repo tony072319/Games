@@ -3,6 +3,8 @@
 <style>html,body{margin:0;height:100%;overflow:hidden}#host{position:fixed;inset:0}</style></head>
 <body><div id="host"></div>
 <script type="module">
+import * as THREE from 'three';
+window.__THREE = THREE;
 import { createWorld } from '/src/world/scene.ts';
 import { worldLayout, boatPosition } from '/src/world/layout.ts';
 import { newGame } from '/src/core/state.ts';
@@ -19,13 +21,15 @@ s.buildings = { dismantler: 5, rack: 3, boatshed: 1, nest: 2, kelp: 4, lookout: 
 s.sea = q.get('sea') || 'dusk';
 const host = document.getElementById('host');
 window.__ready = false;
-const w = createWorld(host, { calm: false, onReady: () => (window.__ready = true), onError: (m) => console.error(m) });
+const onLost = () => { window.__lostCalls = (window.__lostCalls || 0) + 1; window.__world.dispose(); window.__world = window.__make(); };
+const w = createWorld(host, { calm: false, onReady: () => (window.__ready = true), onError: (m) => console.error(m), onLost });
 window.__world = w;
 const sky = { ...skyAt(0), sun: q.has('night') ? 0 : 1, moon: q.has('night') ? 1 : 0 };
 w.setSky(sky, s.sea); w.setLight(L);
 const items = worldLayout(s, Date.now());
 if (q.has('bad')) items.push({ key: 'bad', model: 'test/missing', x: 0, y: 0, z: 3, rotY: 0 });
-window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => {}, onError: () => {} }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boat: null, flotsam: [] }); return w2; };
+window.__bump = () => { s.levels.light = Math.min(10, s.levels.light + 1); s.levels.storage = Math.min(11, s.levels.storage + 1); w.update(worldLayout(s, Date.now()), { boat: null, flotsam: [] }); };
+window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => {}, onError: () => {}, onLost }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boat: null, flotsam: [] }); return w2; };
 w.update(items, { boat: null, flotsam: [{ id: 1, x: -3, z: 7, curio: false, material: 'wood' }, { id: 2, x: 3, z: 9, curio: true, material: 'wood' }] });
 if (q.get('focus')) setTimeout(() => w.focus(q.get('focus')), 100);
 </script></body></html>

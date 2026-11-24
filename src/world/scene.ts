@@ -47,7 +47,7 @@ export interface World {
   setCalm(on: boolean): void;
   anchor(tag: AnchorTag): ScreenPoint | null;
   /** The tag under a point in the canvas (CSS px from its top-left), if any. */
-  pick(x: number, y: number): Tag | null;
+  pick(x: number, y: number): AnchorTag | null;
   pulse(tag: Tag): void;
   /** Test build: show a passing whale now. */
   summon(): void;
@@ -58,11 +58,17 @@ export interface World {
   readonly canvas: HTMLCanvasElement;
   /** Test hook: renderer memory counters. */
   readonly info: () => { geometries: number; textures: number };
+  /** Test hook: the three.js scene. */
+  readonly scene: THREE.Scene;
 }
 export interface WorldOptions {
   calm: boolean;
   onReady(): void;
   onError(msg: string): void;
+  /** The drawing context was lost and has not come back (some phones never give it back): rebuild the world. */
+  onLost?(): void;
+  /** How many models have arrived out of those asked for so far. */
+  onProgress?(loaded: number, total: number): void;
 }
 
 const FLOTSAM_MODEL: Record<MaterialId, ModelId> = {
@@ -136,6 +142,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const sandMat = new THREE.MeshToonMaterial({ color: 0xf6dfae, gradientMap: toonRamp() });
   const sandGeo = new THREE.CylinderGeometry((TILE_D / 2) * 1.28, (TILE_D / 2) * 1.38, 0.5, 6);
   const glowGeo = new THREE.SphereGeometry(1, 14, 10);
+  const hitGeo = new THREE.SphereGeometry(0.75, 8, 6);
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const glowMats = new Map<number, THREE.MeshBasicMaterial>();
   const glowMat = (c: number) => {
     let m = glowMats.get(c);
@@ -156,10 +164,16 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const gltf = new GLTFLoader();
   const fbx = new FBXLoader();
   const templates = new Map<ModelId, Promise<Template | null>>();
+  /** Loaded templates, kept so dispose can free them right away. */
+  const loaded: Template[] = [];
+  let asked = 0;
+  let arrived = 0;
   const warned = new Set<string>();
   function template(id: ModelId): Promise<Template | null> {
     let p = templates.get(id);
     if (p) return p;
+    asked++;
+    opts.onProgress?.(arrived, asked);
     const url = modelUrl(id);
     const load: Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }> = url.endsWith('.fbx')
       ? fbx.loadAsync(url).then((g) => ({ scene: g, animations: g.animations }))
@@ -172,7 +186,10 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         });
         const box = new THREE.Box3().setFromObject(s);
         const size = box.getSize(new THREE.Vector3());
-        return { scene: s, animations, h: size.y || 1, len: Math.max(size.x, size.z) || 1, skinned };
+        const t: Template = { scene: s, animations, h: size.y || 1, len: Math.max(size.x, size.z) || 1, skinned };
+        if (disposed) freeTemplate(t);
+        else loaded.push(t);
+        return t;
       })
       .catch(() => {
         if (!warned.has(url)) {
@@ -181,8 +198,24 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         }
         return null;
       });
+    p.then(() => {
+      arrived++;
+      if (!disposed) opts.onProgress?.(arrived, asked);
+    });
     templates.set(id, p);
     return p;
+  }
+
+  function freeTemplate(t: Template) {
+    t.scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      m.geometry.dispose();
+      ([] as THREE.Material[]).concat(m.material).forEach((x) => {
+        (x as THREE.MeshStandardMaterial).map?.dispose();
+        x.dispose();
+      });
+    });
   }
 
   function instance(t: Template, item: { model: ModelId; size?: number; tint?: number; wash?: [number, number] }): THREE.Object3D {
@@ -237,6 +270,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       add(pl);
     } else if (g === 'window') {
       const w = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.05), glowMat(0xffb860));
+      w.userData.ownGeometry = true;
       w.position.set(c.x + 0.25, box.min.y + 0.75, box.max.z - 0.05);
       w.rotation.y = p.item.rotY;
       add(w);
@@ -252,6 +286,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       add(s);
     } else if (g === 'fire') {
       const f = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 8), glowMat(0xff9a40));
+      f.userData.ownGeometry = true;
       f.position.set(c.x, box.max.y + 0.08, c.z);
       f.userData.flame = true;
       add(f);
@@ -270,6 +305,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     scene.remove(p.obj);
     for (const e of p.extras) {
       scene.remove(e);
+      if (e.userData.ownGeometry) (e as THREE.Mesh).geometry.dispose();
       const i = lights.indexOf(e as THREE.PointLight);
       if (i >= 0) lights.splice(i, 1);
     }
@@ -285,6 +321,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       obj.position.set(item.x, item.y, item.z);
       obj.rotation.y = item.rotY;
       if (item.tag) obj.userData.tag = item.tag;
+      obj.userData.key = item.key;
       scene.add(obj);
       const p: Placed = { item, obj, extras: [], baseY: item.y };
       if (item.anim && t.animations.length) {
@@ -344,6 +381,11 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       let o = drift.get(f.id);
       if (!o) {
         const g = new THREE.Group();
+        g.userData.tag = `flotsam:${f.id}`;
+        // A finger-sized target: the find itself can be a thin log.
+        const hitBall = new THREE.Mesh(hitGeo, hitMat);
+        hitBall.position.y = 0.2;
+        g.add(hitBall);
         o = g;
         drift.set(f.id, g);
         scene.add(g);
@@ -384,7 +426,14 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   controls.addEventListener('end', () => (lastInput = performance.now()));
 
   // ---------- pulses ----------
-  const pulses: { obj: THREE.Object3D; base: THREE.Vector3; t0: number }[] = [];
+  const pulses: { obj: THREE.Object3D; t0: number }[] = [];
+  /** Pulses asked for before the world caught up with a level-up: started once the new model is in. */
+  let pending: { tag: Tag; at: number; updated: boolean }[] = [];
+  function startPulse(o: THREE.Object3D, now: number) {
+    if (pulses.some((p) => p.obj === o)) return;
+    if (o.userData.baseScale === undefined) o.userData.baseScale = o.scale.x;
+    pulses.push({ obj: o, t0: now });
+  }
 
   // ---------- sizing ----------
   function resize() {
@@ -437,13 +486,22 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     scene.traverse((o) => {
       if (o.userData.flame) o.scale.y = 0.8 + Math.random() * 0.4;
     });
+    pending = pending.filter((q) => {
+      if (now - q.at > 4000) return false;
+      if (!q.updated) return true;
+      const o = tagObj.get(q.tag);
+      if (!o || !items.some((i) => i.key === o.userData.key)) return true;
+      startPulse(o, now);
+      return false;
+    });
     for (let i = pulses.length - 1; i >= 0; i--) {
       const p = pulses[i];
+      const base = p.obj.userData.baseScale as number;
       const k = (now - p.t0) / 600;
       if (k >= 1) {
-        p.obj.scale.copy(p.base);
+        p.obj.scale.setScalar(base);
         pulses.splice(i, 1);
-      } else p.obj.scale.copy(p.base).multiplyScalar(1 + Math.sin(k * Math.PI) * 0.12);
+      } else p.obj.scale.setScalar(base * (1 + Math.sin(k * Math.PI) * 0.12));
     }
     let chimney: THREE.Vector3 | null = null;
     for (const p of placed.values()) {
@@ -470,8 +528,25 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   raf = requestAnimationFrame(loop);
 
   // ---------- context loss: three re-uploads on restore; keep the loop alive ----------
-  canvas.addEventListener('webglcontextlost', (e) => e.preventDefault());
+  // Some phones never give a lost context back: if it is still lost a little after the page is
+  // visible again, ask for a fresh world.
+  let lostTimer = 0;
+  const checkLost = () => {
+    window.clearTimeout(lostTimer);
+    lostTimer = window.setTimeout(() => {
+      if (!disposed && renderer.getContext().isContextLost() && document.visibilityState === 'visible') opts.onLost?.();
+    }, 3000);
+  };
+  const onVisible = () => {
+    if (document.visibilityState === 'visible' && renderer.getContext().isContextLost()) checkLost();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    if (document.visibilityState === 'visible') checkLost();
+  });
   canvas.addEventListener('webglcontextrestored', () => {
+    window.clearTimeout(lostTimer);
     resize();
     world.setSky(lastSky, lastSea);
   });
@@ -493,10 +568,12 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const world: World = {
     canvas,
     has,
+    scene,
     info: () => ({ geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }),
     update(next, ex) {
       const d = diffItems(items, next);
       items = next;
+      for (const q of pending) q.updated = true;
       extra = ex;
       for (const k of d.remove) removePlaced(k);
       for (const m of d.move) {
@@ -565,20 +642,21 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       const w = host.clientWidth;
       const h = host.clientHeight;
       raycaster.setFromCamera(new THREE.Vector2((x / w) * 2 - 1, -(y / h) * 2 + 1), cam);
-      const objs = [...tagObj.values()];
+      // Drifting finds first: they are small and sit in front of everything.
+      const objs = [...drift.values(), ...tagObj.values()];
       const hit = raycaster.intersectObjects(objs, true)[0];
       if (!hit) return null;
       let o: THREE.Object3D | null = hit.object;
       while (o && !o.userData.tag) o = o.parent;
-      return (o?.userData.tag as Tag) ?? null;
+      return (o?.userData.tag as AnchorTag) ?? null;
     },
     summon() {
       life?.summon();
     },
     pulse(tag) {
-      const o = tagObj.get(tag);
-      if (!o || calm) return;
-      pulses.push({ obj: o, base: o.scale.clone(), t0: performance.now() });
+      if (calm) return;
+      pending = pending.filter((q) => q.tag !== tag);
+      pending.push({ tag, at: performance.now(), updated: false });
     },
     focus(where) {
       if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
@@ -593,6 +671,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     dispose() {
       disposed = true;
       generation++;
+      window.clearTimeout(lostTimer);
+      document.removeEventListener('visibilitychange', onVisible);
       cancelAnimationFrame(raf);
       window.clearTimeout(readyTimer);
       controls.dispose();
@@ -602,24 +682,15 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         const m = o as THREE.Mesh;
         if (m.geometry) m.geometry.dispose();
       });
-      for (const p of templates.values())
-        p.then((t) =>
-          t?.scene.traverse((o) => {
-            const m = o as THREE.Mesh;
-            if (m.isMesh) {
-              m.geometry.dispose();
-              ([] as THREE.Material[]).concat(m.material).forEach((x) => {
-                (x as THREE.MeshStandardMaterial).map?.dispose();
-                x.dispose();
-              });
-            }
-          }),
-        );
+      for (const t of loaded) freeTemplate(t);
+      loaded.length = 0;
       sky.dispose();
       water.dispose();
       sandGeo.dispose();
       sandMat.dispose();
       glowGeo.dispose();
+      hitGeo.dispose();
+      hitMat.dispose();
       glowMats.forEach((m) => m.dispose());
       disposeToon();
       composer.dispose();

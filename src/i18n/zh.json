@@ -334,5 +334,6 @@
   "credits.by": "{author} · {licence} · {where}",
   "credits.CC0": "CC0 公共领域",
   "credits.free": "免费商用",
-  "credits.close": "好的"
+  "credits.close": "好的",
+  "world.loading": "正在点亮小岛… {n}%"
 }

@@ -491,10 +491,20 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     world?.dispose();
     world = null;
     try {
+      const loading = el('div', 'world-loading');
+      loading.textContent = t(lang, 'world.loading', { n: 0 });
+      stage.append(loading);
       world = createWorld(stage, {
         calm: state.settings.calm,
-        onReady: () => stage.classList.add('ready'),
+        onReady: () => {
+          stage.classList.add('ready');
+          loading.remove();
+        },
+        onProgress: (done, all) => {
+          loading.textContent = t(lang, 'world.loading', { n: Math.round((100 * done) / Math.max(1, all)) });
+        },
         onError: (msg) => console.warn(msg),
+        onLost: () => build(),
       });
       world.setSky(currentSky(), state.sea);
       world.setLight(state.levels.light);

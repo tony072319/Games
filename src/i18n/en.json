@@ -334,5 +334,6 @@
   "credits.by": "{author} · {licence} · {where}",
   "credits.CC0": "CC0 public domain",
   "credits.free": "free for commercial use",
-  "credits.close": "OK"
+  "credits.close": "OK",
+  "world.loading": "Lighting up the island… {n}%"
 }

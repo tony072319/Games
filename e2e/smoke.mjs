@@ -45,6 +45,9 @@ try {
   page.on('pageerror', (e) => errors.push(String(e)));
 
   await page.goto(BASE);
+  // Entering the game shows how far loading has got, then gets out of the way.
+  await page.locator('.world-loading').waitFor({ state: 'attached', timeout: 3000 }).catch(() => fail('entering the game should show loading progress'));
+  await page.locator('.world-loading').waitFor({ state: 'detached', timeout: 30000 }).catch(() => fail('the loading message should go away once the world is ready'));
   await page.locator('canvas.world').waitFor({ timeout: 10000 });
   await page.locator('.stage[data-world-has~="light"]').waitFor({ state: 'attached', timeout: 15000 });
   if ((await page.locator('.hud .mat:visible').count()) !== 4) fail('HUD should show 4 materials (glow hidden until found)');
@@ -62,8 +65,12 @@ try {
   const item = page.locator('.item:not(.curio)').first(); // a glowing find goes to the book instead
   await item.waitFor({ timeout: 5000 });
   if (SHOTS) { await page.waitForTimeout(6500); await page.screenshot({ path: `${SHOTS}/phone-zh-drift.png` }); }
-  await item.dispatchEvent('click');
-  await page.waitForTimeout(100);
+  // A real tap on the picture where the find floats (not the hidden button).
+  await page.waitForTimeout(1500);
+  const ib = await item.boundingBox();
+  if (!ib) fail('the drifting find should be on screen');
+  await page.mouse.click(ib.x + ib.width / 2, ib.y + ib.height / 2);
+  await page.waitForFunction((b) => [...document.querySelectorAll('.hud .mat span')].reduce((a, e) => a + Number(e.textContent || 0), 0) > b, before, { timeout: 4000 }).catch(() => {});
   if (!((await total(page)) > before)) fail('tapping flotsam should add material');
   await page.waitForTimeout(200);
   if (!(await goalText())?.includes('储物箱')) fail(`after tapping, the goal should move to the chest, got ${await goalText()}`);

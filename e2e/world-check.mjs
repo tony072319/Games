@@ -31,18 +31,60 @@ const pixel = async (p) => { const png = (await p.screenshot()).toString('base64
   if (after.some((v, i) => Math.abs(v - before[i]) > 8)) fail('canvas not drawn the same after context restore');
   await p.close(); }
 
-// Dispose and rebuild: GPU memory returns to the same counts.
+// Context lost and never given back (iOS after the tab was in the background): the world rebuilds itself.
+{ const p = await page('light=5');
+  await p.waitForFunction(() => window.__ready, null, { timeout: 15000 });
+  await p.waitForTimeout(1500);
+  const before = await pixel(p);
+  await p.evaluate(() => document.querySelector('canvas.world').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext());
+  await p.waitForTimeout(6000);
+  const after = await pixel(p);
+  const calls = await p.evaluate(() => window.__lostCalls || 0);
+  console.log('never restored: rebuilds', calls, 'pixel', after);
+  if (!calls || after.some((v, i) => Math.abs(v - before[i]) > 8)) fail('a context that never comes back should rebuild the world');
+  await p.close(); }
+
+// Upgrade pulse: shows on the new model after a level-up, and two quick pulses never leave it bigger.
 { const p = await page('light=5');
   await p.waitForFunction(() => window.__ready, null, { timeout: 15000 });
   await p.waitForTimeout(1500);
   const r = await p.evaluate(async () => {
-    window.__world.dispose();
-    const a = window.__make(); await new Promise((r) => setTimeout(r, 2500)); const m1 = a.info(); a.dispose();
-    const c = window.__make(); await new Promise((r) => setTimeout(r, 2500)); const m2 = c.info(); c.dispose();
-    return [m1, m2];
+    const lightObj = () => { let f = null; window.__world.scene.traverse((o) => { if (o.userData.tag === 'light') f = o; }); return f; };
+    const w = window.__world;
+    // Level-up then pulse, as the game does: the pulse must land on the new lighthouse.
+    w.pulse('light'); window.__bump(); // the game asks for the pulse, then its next frame updates the world
+    let grew = false; const t0 = performance.now();
+    while (performance.now() - t0 < 2500) { await new Promise((r) => setTimeout(r, 30)); const o = lightObj(); if (o && o.userData.baseScale && o.scale.x > o.userData.baseScale * 1.03) grew = true; }
+    const o = lightObj(); const base = o.scale.x;
+    w.pulse('light'); await new Promise((r) => setTimeout(r, 120)); w.pulse('light');
+    await new Promise((r) => setTimeout(r, 1500));
+    return { grew, base, after: lightObj().scale.x };
   });
-  console.log('memory', JSON.stringify(r));
-  if (Math.abs(r[0].geometries - r[1].geometries) > 5) fail('geometries leak across rebuilds');
+  console.log('pulse', JSON.stringify(r));
+  if (!r.grew) fail('a pulse right after a level-up should show on the new model');
+  if (Math.abs(r.after - r.base) > 1e-6) fail('two quick pulses left the lighthouse a different size');
+  await p.close(); }
+
+// Dispose frees everything it made: every geometry and material in the scene (after a level change too) is disposed.
+{ const p = await page('light=5');
+  await p.waitForFunction(() => window.__ready, null, { timeout: 15000 });
+  await p.waitForTimeout(1500);
+  const left = await p.evaluate(async () => {
+    const T = window.__THREE;
+    const freed = new Set();
+    const g0 = T.BufferGeometry.prototype.dispose; T.BufferGeometry.prototype.dispose = function () { freed.add(this); return g0.call(this); };
+    const m0 = T.Material.prototype.dispose; T.Material.prototype.dispose = function () { freed.add(this); return m0.call(this); };
+    const w = window.__world;
+    const seen = new Set();
+    const owner = new Map();
+    const collect = () => w.scene.traverse((o) => { if (o.isSprite) return; if (o.geometry) { seen.add(o.geometry); owner.set(o.geometry, o.type + '/' + (o.name || o.parent?.name || '?') + '/' + o.geometry.type); } if (o.material) [].concat(o.material).forEach((m) => { seen.add(m); owner.set(m, o.type + '/' + (o.name || '?') + '/' + m.type); }); });
+    collect();
+    window.__bump(); await new Promise((r) => setTimeout(r, 2500)); collect(); // a level change swaps models, lamps and glows
+    w.dispose();
+    const left = [...seen].filter((x) => !freed.has(x)).map((x) => owner.get(x)); const c = {}; left.forEach((k) => (c[k] = (c[k] || 0) + 1)); return Object.entries(c).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v}x ${k}`);
+  });
+  console.log('not freed after dispose:', left.length, left.slice(0, 12).join(' | '));
+  if (left.length) fail(`${left.length} geometries/materials were not freed`);
   await p.close(); }
 await b.close();
 console.log(process.exitCode ? 'world-check FAILED' : 'world-check OK');
