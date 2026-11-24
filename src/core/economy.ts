@@ -1,5 +1,6 @@
 import { MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, SEA_DEF, STARLIGHT_BONUS, type Materials, type UpgradeId } from './data';
 import { emptyMaterials, type GameState } from './state';
+import { netMilestoneMult } from './milestones';
 
 /** Items per second the net collects automatically. */
 export function autoRate(netLevel: number): number {
@@ -20,6 +21,7 @@ export function tapYield(netLevel: number): number {
 export function netRate(state: GameState): number {
   return (
     autoRate(state.levels.net) *
+    netMilestoneMult(state.levels.net) *
     (state.discovered.includes('gullrock') ? 1.25 : 1) *
     (1 + 0.05 * (state.buildings.lookout ?? 0)) *
     seaBoost(state)
