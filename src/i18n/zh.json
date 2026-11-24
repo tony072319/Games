@@ -322,5 +322,7 @@
   "book.tab": "{sea} {n}/12",
   "book.missing": "？？？：{hint}",
   "hud.starCount": "星光 {n}，打开星光天赋树",
-  "tree.resetTitle": "重新分配星光"
+  "tree.resetTitle": "重新分配星光",
+  "debug.speed": "时间 ×{n}",
+  "debug.stars": "+100 星光"
 }

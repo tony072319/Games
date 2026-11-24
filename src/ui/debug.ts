@@ -9,6 +9,10 @@ export interface DebugActions {
   reset(): void;
   skySkip(): void;
   boatNow(): void;
+  /** Next time speed (×1 → ×10 → ×100 → ×1000); returns the new speed. */
+  speed(): number;
+  currentSpeed(): number;
+  stars(): void;
   curio(): void;
   lightMax(): void;
   ambient(): void;
@@ -41,6 +45,12 @@ export function createDebug(lang: Lang, infinite: boolean, actions: DebugActions
   add(t(lang, 'debug.plusMillion'), () => actions.addAll(1_000_000));
   add(t(lang, 'debug.plus1h'), () => actions.skip(1));
   add(t(lang, 'debug.plus8h'), () => actions.skip(8));
+  add(t(lang, 'debug.speed', { n: actions.currentSpeed() }), (b) => {
+    const n = actions.speed();
+    b.textContent = t(lang, 'debug.speed', { n });
+    b.classList.toggle('on', n > 1);
+  });
+  add(t(lang, 'debug.stars'), () => actions.stars());
   add(t(lang, 'debug.boatNow'), () => actions.boatNow());
   add(t(lang, 'debug.curio'), () => actions.curio());
   add(t(lang, 'debug.lightMax'), () => actions.lightMax());

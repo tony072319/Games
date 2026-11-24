@@ -55,6 +55,8 @@ function grainUrl(): string {
 
 export interface AppOptions {
   now: () => number;
+  /** Test build only: a clock whose speed can be changed. */
+  clock?: import('../core/testClock').TestClock;
   kv: KV;
   navLangs: readonly string[];
   debug: boolean;
@@ -64,7 +66,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   const loaded = loadGame(opts.kv, opts.now(), detectLang(opts.navLangs));
   const state: GameState = loaded.state;
   const field: FlotsamField = newField(opts.now());
-  const save = () => saveGame(opts.kv, state);
+  const save = () => {
+    saveGame(opts.kv, state);
+    opts.clock?.save();
+  };
 
   let hud!: Hud;
   let panel!: Panel;
@@ -725,6 +730,19 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
               v.returnAt -= h * 3600 * 1000;
             }
           },
+          speed: () => {
+            const c = opts.clock;
+            if (!c) return 1;
+            const steps = [1, 10, 100, 1000];
+            c.setSpeed(steps[(steps.indexOf(c.speed()) + 1) % steps.length]);
+            return c.speed();
+          },
+          currentSpeed: () => opts.clock?.speed() ?? 1,
+          stars: () => {
+            state.starlight += 100;
+            save();
+            refresh();
+          },
           curio: () => {
             const c = CURIOS.find((x) => x.sea === state.sea && !state.curios.includes(x.id));
             if (c) {
@@ -1030,7 +1048,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const now = opts.now();
     if (infinite) for (const m of MATERIALS) state.materials[m] = Math.max(state.materials[m], INFINITE_AMOUNT);
     const report = tick(state, now);
-    if (report) showReport(report);
+    // When the test clock runs fast, every frame is "time away": no arrival report for those.
+    if (report && !(opts.clock && opts.clock.speed() > 1)) showReport(report);
     const hasCargo = state.boat.cargo !== null;
     if (hasCargo && !hadCargo && !report) {
       toast(t(state.settings.lang, 'toast.boatBack'));

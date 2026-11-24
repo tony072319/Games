@@ -322,5 +322,7 @@
   "book.tab": "{sea} {n}/12",
   "book.missing": "???: {hint}",
   "hud.starCount": "Starlight {n}, open the starlight tree",
-  "tree.resetTitle": "Spend starlight again"
+  "tree.resetTitle": "Spend starlight again",
+  "debug.speed": "Time ×{n}",
+  "debug.stars": "+100 starlight"
 }

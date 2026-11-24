@@ -191,6 +191,15 @@ try {
   if ((await seaNow()) !== 'aurora') fail('should arrive at the aurora sea');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/aurora.png` });
 
+  // Time speed in the test build: ×1 → ×10, and the label says so.
+  await dbg('时间 ×1');
+  await page.locator('.debug-badge').click();
+  if (!(await page.getByText('时间 ×10').count())) fail('the time button should step to ×10');
+  await page.getByText('时间 ×10').click(); // ×100
+  await page.getByText('时间 ×100').click(); // ×1000
+  await page.getByText('时间 ×1000').click(); // back to ×1
+  await page.locator('.debug-badge').click();
+
   // Milestones: the net card shows progress to its next milestone.
   if (!(await page.locator('[data-upgrade="net"] .progress').count())) fail('net card should show milestone progress');
 
