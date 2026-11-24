@@ -68,5 +68,5 @@ export const DEST_HEX: Record<DestId, Hex> = {
 };
 
 /** The pier leaves the island from this tile, heading out along PIER_DIR (x, z). */
-export const PIER_TILE: Hex = [1, 1];
+export const PIER_TILE: Hex = [0, 1];
 export const PIER_DIR: [number, number] = [0.55, 1];
