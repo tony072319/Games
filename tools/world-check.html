@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><base href="/"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;overflow:hidden}#host{position:fixed;inset:0}</style></head>
+<body><div id="host"></div>
+<script type="module">
+import { createWorld } from '/src/world/scene.ts';
+import { worldLayout, boatPosition } from '/src/world/layout.ts';
+import { newGame } from '/src/core/state.ts';
+import { skyAt } from '/src/ui/sky.ts';
+import { MODELS } from '/src/world/assets.ts';
+if (new URLSearchParams(location.search).has('bad')) MODELS['test/missing'] = { url: 'models/none/missing.glb', fit: 'height', size: 1 };
+const q = new URLSearchParams(location.search);
+const s = newGame(Date.now(), 'zh');
+const L = +(q.get('light') || 5);
+s.levels.light = L; s.levels.net = +(q.get('net') || L * 5); s.levels.storage = Math.min(11, +(q.get('storage') || L + 1));
+s.boat.built = L >= 3; s.levels.speed = L; s.levels.cargo = L;
+s.discovered = ['wreck', 'gullrock', 'oldlight', 'firefly'].slice(0, Math.max(0, L - 2));
+s.buildings = { dismantler: 5, rack: 3, boatshed: 1, nest: 2, kelp: 4, lookout: 5, depot: 1, workshop: 2, desk: 3, jars: 4, orchard: 5, path: 1 };
+s.sea = q.get('sea') || 'dusk';
+const host = document.getElementById('host');
+window.__ready = false;
+const w = createWorld(host, { calm: false, onReady: () => (window.__ready = true), onError: (m) => console.error(m) });
+window.__world = w;
+const sky = { ...skyAt(0), sun: q.has('night') ? 0 : 1, moon: q.has('night') ? 1 : 0 };
+w.setSky(sky, s.sea); w.setLight(L);
+const items = worldLayout(s, Date.now());
+if (q.has('bad')) items.push({ key: 'bad', model: 'test/missing', x: 0, y: 0, z: 3, rotY: 0 });
+window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => {}, onError: () => {} }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boat: null, flotsam: [] }); return w2; };
+w.update(items, { boat: null, flotsam: [{ id: 1, x: -3, z: 7, curio: false, material: 'wood' }, { id: 2, x: 3, z: 9, curio: true, material: 'wood' }] });
+if (q.get('focus')) setTimeout(() => w.focus(q.get('focus')), 100);
+</script></body></html>

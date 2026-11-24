@@ -24,11 +24,11 @@ const LH_TALL = 'lh/lighthouse_tall';
 export const LIGHT_LOOKS: Part[][] = [
   [],
   [
-    { part: 'body', model: LH_SMALL, dx: 0, dz: 0, size: 4.2, tint: 0x8a8090, glow: 'lamp' },
+    { part: 'body', model: LH_SMALL, dx: 0, dz: 0, size: 4.2, tint: 0xb4a8b0, glow: 'lamp' },
     { part: 'scaffold', model: 'kk/building_scaffolding', dx: 0.9, dz: 0.4, size: 2.4 },
   ],
   [
-    { part: 'body', model: LH_SMALL, dx: 0, dz: 0, size: 4.4, tint: 0xb0a8b4, glow: 'lamp' },
+    { part: 'body', model: LH_SMALL, dx: 0, dz: 0, size: 4.4, tint: 0xd8d0d6, glow: 'lamp' },
     { part: 'scaffold', model: 'kk/building_scaffolding', dx: 0.9, dz: 0.4, size: 1.6 },
     { part: 'crates', model: 'kk/crate_A_small', dx: -0.8, dz: 0.6, size: 0.45 },
   ],
