@@ -41,7 +41,8 @@ export interface GameState {
   /** Epoch ms of the last moment progress was credited. */
   lastActiveAt: number;
   settings: { lang: Lang; sound: boolean };
-  stats: { tapped: number };
+  /** tutorial: first-time steps done (0..3). */
+  stats: { tapped: number; tutorial: number };
   boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null };
   discovered: DestId[];
   /** Island building levels (absent = not built). */
@@ -73,7 +74,7 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     levels: { net: 1, storage: 1, light: 1, speed: 1, cargo: 1 },
     lastActiveAt: nowMs,
     settings: { lang, sound: true },
-    stats: { tapped: 0 },
+    stats: { tapped: 0, tutorial: 0 },
     boat: { built: false, voyage: null, cargo: null },
     discovered: [],
     buildings: {},
