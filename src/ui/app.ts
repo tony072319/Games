@@ -567,8 +567,20 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         pick: () => {
           state.settings.calm = !state.settings.calm;
           game.classList.toggle('calm', state.settings.calm);
+    game.classList.toggle('mini', state.settings.mini);
+    // In corner mode the controls fold away; this brings them back.
+    const exit = el('button', 'btn-quiet mini-exit');
+    exit.type = 'button';
+    exit.textContent = t(lang, 'ui.expand');
+    exit.addEventListener('click', () => setMini(false));
+    hud.el.append(exit);
           save();
         },
+      },
+      {
+        label: t(lang, 'settings.mini'),
+        value: t(lang, state.settings.mini ? 'ui.on' : 'ui.off'),
+        pick: () => setMini(!state.settings.mini),
       },
       {
         label: t(lang, 'settings.lang'),
@@ -581,6 +593,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       },
     ]);
     game.classList.toggle('calm', state.settings.calm);
+    game.classList.toggle('mini', state.settings.mini);
+    // In corner mode the controls fold away; this brings them back.
+    const exit = el('button', 'btn-quiet mini-exit');
+    exit.type = 'button';
+    exit.textContent = t(lang, 'ui.expand');
+    exit.addEventListener('click', () => setMini(false));
+    hud.el.append(exit);
     panel = createPanel(lang, onBuy);
     // Action bar: sea chart, seas (once there are two), and passing the light on.
     const toolbar = el('div', 'toolbar');
@@ -760,6 +779,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   /** "The brighter the light, the busier the sea": fog thins, the warm pool grows, ships appear. */
+  /** Corner mode: just the sea, the lighthouse and what you have; for keeping the game at the edge of the screen. */
+  function setMini(on: boolean) {
+    state.settings.mini = on;
+    game.classList.toggle('mini', on);
+    save();
+  }
+
   function renderLight() {
     if (lightShown === state.levels.light) return;
     lightShown = state.levels.light;

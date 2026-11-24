@@ -462,3 +462,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .arrival-line .haul { justify-content: flex-start; margin: var(--sp-1) 0 0; }
 .arrival-line .btn-ghost { margin-top: var(--sp-2); }
 .overlay.calm .arrival-line, .game.calm .arrival-line { animation: none; }
+
+/* ---------- corner mode ---------- */
+.mini-exit { display: none; }
+.game.mini .side, .game.mini .debug { display: none; }
+.game.mini .mini-exit { display: inline-flex; background: var(--c-surface-0); color: var(--c-gold); font-weight: var(--fw-bold); }
+.game.mini .hud .settings-btn { display: none; }

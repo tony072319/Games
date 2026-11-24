@@ -191,6 +191,15 @@ try {
   if ((await seaNow()) !== 'aurora') fail('should arrive at the aurora sea');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/aurora.png` });
 
+  // Corner mode: controls fold away, survive a reload, and come back.
+  await page.locator('.hud .settings-btn').click();
+  await page.locator('.menu button', { hasText: '角落模式' }).click();
+  if (await page.locator('.side').isVisible()) fail('corner mode should hide the controls');
+  await page.reload();
+  if (await page.locator('.side').isVisible()) fail('corner mode should survive a reload');
+  await page.locator('.mini-exit').click();
+  if (!(await page.locator('.side').isVisible())) fail('expand should bring the controls back');
+
   // The real save was never touched by the test build.
   await page.goto(BASE);
   await page.locator('.popup button').first().click({ timeout: 1000 }).catch(() => {});
@@ -198,7 +207,7 @@ try {
   if (!realLvl?.includes('1')) fail(`real save should still be net 1, got ${realLvl}`);
 
   await page.locator('.hud .settings-btn').click();
-  await page.locator('.menu button').nth(2).click();
+  await page.locator('.menu button').nth(3).click();
   if (!(await page.locator('.panel').textContent())?.includes('Net')) fail('language toggle should switch to English');
 
   if (SHOTS) {
