@@ -315,5 +315,12 @@
   "talent.drift3.desc": "点漂流物的收获 ×2。",
   "talent.start3.name": "传下去的光",
   "talent.start3.desc": "到达新的海时，灯塔直接从 3 级开始。",
-  "hud.starOpen": "打开星光天赋树"
+  "hud.starOpen": "打开星光天赋树",
+  "pass.short": "传光",
+  "seas.short": "海域",
+  "drift.curio": "发光的漂流物",
+  "book.tab": "{sea} {n}/12",
+  "book.missing": "？？？：{hint}",
+  "hud.starCount": "星光 {n}，打开星光天赋树",
+  "tree.resetTitle": "重新分配星光"
 }

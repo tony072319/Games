@@ -57,7 +57,7 @@ try {
   const goalText = () => page.locator('.goal-text').textContent();
   if (!(await goalText())?.includes('漂')) fail(`first goal should be to tap drifting things, got ${await goalText()}`);
   const before = await total(page);
-  const item = page.locator('.item').first();
+  const item = page.locator('.item:not(.curio)').first(); // a glowing find goes to the book instead
   await item.waitFor({ timeout: 5000 });
   if (SHOTS) { await page.waitForTimeout(6500); await page.screenshot({ path: `${SHOTS}/phone-zh-drift.png` }); }
   await item.dispatchEvent('pointerdown');
@@ -205,13 +205,14 @@ try {
   await page.locator('.book').waitFor({ state: 'detached', timeout: 2000 });
 
   // The starlight tree: learn one, then reset.
-  page.once('dialog', (d) => d.accept());
   await page.locator('.starlight').click();
   await page.locator('.tree').waitFor();
   await page.locator('[data-talent="net1"] .buy').click();
   if (!(await page.locator('[data-talent="net1"].learned').count())) fail('learning should light the talent');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/tree.png` });
   await page.locator('.tree-foot .btn-ghost').click();
+  await page.locator('.popup .btn-primary').click();
+  await page.waitForTimeout(300);
   if (await page.locator('[data-talent="net1"].learned').count()) fail('reset should give the point back');
   await page.locator('.tree .map-close').click();
   await page.locator('.tree').waitFor({ state: 'detached', timeout: 2000 });

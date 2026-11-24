@@ -124,7 +124,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .mat { display: flex; align-items: center; gap: var(--sp-1); white-space: nowrap; font-size: var(--fs-label); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; line-height: var(--lh-tight); }
 .mat svg { width: var(--icon-md); height: var(--icon-md); flex: none; }
 .hud .mat { font-size: var(--fs-body); }
-.starlight { min-height: var(--tap); padding: 0 var(--sp-1); border: 0; background: none; color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-bold); line-height: var(--lh-tight); white-space: nowrap; text-shadow: var(--glow-gold); }
+.starlight { flex: none; min-width: var(--tap); min-height: var(--tap); padding: 0 var(--sp-3); border: 0; border-radius: var(--r-pill); background: var(--c-surface-0); backdrop-filter: var(--blur-bar); color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-bold); line-height: var(--lh-tight); white-space: nowrap; text-shadow: var(--glow-gold); }
 .hud .settings-btn { background: var(--c-surface-0); backdrop-filter: var(--blur-bar); }
 .menu {
   position: absolute;
@@ -157,10 +157,10 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .menu button .val { color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-regular); }
 
 /* ---------- action bar ---------- */
-.toolbar { z-index: 2; display: flex; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) 0; }
+.toolbar { z-index: 2; display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) 0; }
 .btn-bar {
   position: relative;
-  flex: 1;
+  flex: 1 0 auto; /* share the row; wrap to a second row rather than run off screen */
   min-height: var(--tap);
   display: inline-flex;
   align-items: center;
@@ -179,7 +179,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .btn-bar svg { width: var(--icon-md); height: var(--icon-md); color: var(--c-gold); }
 .toolbar .map-btn.locked { color: var(--c-ink-faint); }
 .toolbar .map-btn.locked svg { color: var(--c-ink-faint); }
-.map-btn.badge::after { content: ''; position: absolute; top: calc(var(--sp-1) * -1); right: calc(var(--sp-1) * -1); width: var(--sp-3); height: var(--sp-3); border-radius: var(--r-pill); background: var(--c-accent); box-shadow: var(--glow-gold); animation: breathe var(--t-breathe) var(--ease-inout) infinite; }
+.map-btn.badge::after, .book-btn.badge::after { content: ''; position: absolute; top: calc(var(--sp-1) * -1); right: calc(var(--sp-1) * -1); width: var(--sp-3); height: var(--sp-3); border-radius: var(--r-pill); background: var(--c-accent); box-shadow: var(--glow-gold); animation: breathe var(--t-breathe) var(--ease-inout) infinite; }
 .toolbar .pass-btn { border: 0; color: var(--c-on-accent); font-weight: var(--fw-bold); background: linear-gradient(90deg, var(--c-gold), var(--c-gold-soft), var(--c-gold)); background-size: 200% 100%; box-shadow: var(--glow-gold); animation: shimmer var(--t-breathe) linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
@@ -472,11 +472,12 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 /* ---------- milestones ---------- */
 .progress { display: grid; gap: var(--sp-1); }
 .progress-label { color: var(--c-ink-dim); font-size: var(--fs-caption); line-height: var(--lh-tight); }
-.progress-bar { display: block; height: var(--sp-1); border-radius: var(--r-pill); background: var(--c-surface-dialog); overflow: hidden; }
+.progress-bar { display: block; height: var(--sp-1); border-radius: var(--r-pill); background: var(--c-track); overflow: hidden; }
 .progress-bar i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--c-gold); }
 .island-store .progress { margin-bottom: var(--sp-2); }
 .milestone.done { color: var(--c-gold); }
 .node.flourish { box-shadow: var(--glow-gold); border-radius: var(--r-md); }
+.node.flourish.sel { box-shadow: var(--ring-gold), var(--glow-gold); }
 
 /* ---------- collection book ---------- */
 .book-tabs { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
@@ -486,23 +487,24 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .book-cell { display: grid; justify-items: center; gap: var(--sp-1); min-height: calc(var(--thumb) + var(--sp-5)); padding: var(--sp-2) var(--sp-1); border: 1px solid transparent; border-radius: var(--r-md); background: var(--c-surface-1); color: var(--c-ink-faint); font-size: var(--fs-caption); line-height: var(--lh-tight); }
 .book-cell svg { width: var(--tap); height: var(--tap); }
 .book-cell.found { color: var(--c-ink); }
-.book-cell.found.rare { border-color: rgba(127, 196, 192, 0.5); }
+.book-cell.found.rare { border-color: var(--c-rare); }
 .book-cell.found.legend { border-color: var(--c-gold); box-shadow: var(--glow-gold); }
 .book-cell.sel { background: var(--c-surface-2); }
 .book-detail { min-height: var(--tap); }
 .book-detail h3 { margin: 0 0 var(--sp-1); font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
 .book-detail p, .book-foot { margin: 0; color: var(--c-ink-dim); font-size: var(--fs-body); }
 .book-foot { color: var(--c-gold); }
-.btn-bar.book-btn.badge::after { content: ''; position: absolute; top: calc(var(--sp-1) * -1); right: calc(var(--sp-1) * -1); width: var(--sp-3); height: var(--sp-3); border-radius: var(--r-pill); background: var(--c-accent); box-shadow: var(--glow-gold); }
 
 /* ---------- starlight tree ---------- */
 .tree-points { margin: 0; color: var(--c-gold); font-size: var(--fs-body); }
+.tree-passive, .book-bonus { margin: 0; color: var(--c-ink-dim); font-size: var(--fs-body); }
 .tree-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
 .tree-col { display: grid; align-content: start; gap: var(--sp-2); }
 .tree-col h3 { margin: 0; text-align: center; color: var(--c-gold); font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
 .tree-node { display: grid; gap: var(--sp-1); padding: var(--sp-2); border-radius: var(--r-md); background: var(--c-surface-1); border: 1px solid transparent; }
-.tree-node strong { font-size: var(--fs-body); line-height: var(--lh-tight); }
-.tree-desc, .tree-state { color: var(--c-ink-dim); font-size: var(--fs-caption); line-height: var(--lh-tight); }
+.tree-node h3 { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
+.tree-desc { color: var(--c-ink-dim); font-size: var(--fs-body); line-height: var(--lh-body); }
+.tree-state { color: var(--c-ink-dim); font-size: var(--fs-caption); line-height: var(--lh-tight); }
 .tree-node.ready { border-color: var(--c-line); }
 .tree-node.learned { border-color: var(--c-gold); box-shadow: var(--glow-gold); }
 .tree-node.learned .tree-state { color: var(--c-gold); }

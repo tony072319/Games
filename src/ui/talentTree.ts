@@ -1,7 +1,7 @@
 import type { GameState, Lang } from '../core/state';
 import { TALENTS, has, learn, lockReason, resetTalents, talentPoints, type TalentId } from '../core/talents';
 import { formatNumber, t } from '../i18n';
-import { el } from './dom';
+import { dismiss, el } from './dom';
 
 export interface TalentTreeActions {
   learned(id: TalentId, node: Element): void;
@@ -24,13 +24,15 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
   close.addEventListener('click', act.close);
   head.append(title, close);
   const points = el('p', 'tree-points');
+  const passive = el('p', 'tree-passive');
+  passive.textContent = t(lang, 'tree.passive');
   const cols = el('div', 'tree-cols');
   const foot = el('div', 'tree-foot');
-  box.append(head, points, cols, foot);
+  box.append(head, points, passive, cols, foot);
   overlay.append(box);
 
   function render() {
-    points.textContent = `${t(lang, 'tree.points', { n: formatNumber(talentPoints(state), lang), total: formatNumber(state.starlight, lang) })} ${t(lang, 'tree.passive')}`;
+    points.textContent = t(lang, 'tree.points', { n: formatNumber(talentPoints(state), lang), total: formatNumber(state.starlight, lang) });
     cols.replaceChildren();
     for (const b of ['fire', 'sail', 'star'] as const) {
       const col = el('div', 'tree-col');
@@ -41,7 +43,7 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
         const reason = lockReason(state, x.id);
         const node = el('div', `tree-node${has(state, x.id) ? ' learned' : reason === null ? ' ready' : ''}`);
         node.dataset.talent = x.id;
-        const n = el('strong');
+        const n = el('h3');
         n.textContent = t(lang, `talent.${x.id}.name`);
         const d = el('span', 'tree-desc');
         d.textContent = t(lang, `talent.${x.id}.desc`);
@@ -77,14 +79,44 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
       const reset = el('button', 'btn-ghost');
       reset.type = 'button';
       reset.textContent = t(lang, 'tree.reset');
-      reset.addEventListener('click', () => {
-        if (!confirm(t(lang, 'tree.resetConfirm'))) return;
-        resetTalents(state);
-        act.changed();
-        render();
-      });
+      reset.addEventListener('click', () =>
+        confirmReset(() => {
+          resetTalents(state);
+          act.changed();
+          render();
+        }),
+      );
       foot.append(reset);
     }
+  }
+
+  /** The game's own confirmation, on the shared dialog frame. */
+  function confirmReset(ok: () => void) {
+    const o = el('div', 'overlay');
+    const p = el('div', 'popup');
+    p.setAttribute('role', 'dialog');
+    p.setAttribute('aria-modal', 'true');
+    const h = el('h2');
+    h.textContent = t(lang, 'tree.resetTitle');
+    const text = el('p');
+    text.textContent = t(lang, 'tree.resetConfirm');
+    const actions = el('div', 'actions');
+    const no = el('button', 'btn-ghost');
+    no.type = 'button';
+    no.textContent = t(lang, 'pass.wait');
+    no.addEventListener('click', () => dismiss(o));
+    const yes = el('button', 'btn-primary');
+    yes.type = 'button';
+    yes.textContent = t(lang, 'tree.reset');
+    yes.addEventListener('click', () => {
+      dismiss(o);
+      ok();
+    });
+    actions.append(no, yes);
+    p.append(h, text, actions);
+    o.append(p);
+    overlay.parentElement?.append(o);
+    yes.focus();
   }
 
   render();

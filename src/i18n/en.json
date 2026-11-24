@@ -315,5 +315,12 @@
   "talent.drift3.desc": "Tapping drift gives twice as much.",
   "talent.start3.name": "Light passed on",
   "talent.start3.desc": "Each new sea starts with its lighthouse at level 3.",
-  "hud.starOpen": "Open the starlight tree"
+  "hud.starOpen": "Open the starlight tree",
+  "pass.short": "Pass on",
+  "seas.short": "Seas",
+  "drift.curio": "A glowing find",
+  "book.tab": "{sea} {n}/12",
+  "book.missing": "???: {hint}",
+  "hud.starCount": "Starlight {n}, open the starlight tree",
+  "tree.resetTitle": "Spend starlight again"
 }

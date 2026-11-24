@@ -48,13 +48,12 @@ export function createHud(lang: Lang, host: HTMLElement, menu: () => MenuItem[],
   star.setAttribute('aria-label', t(lang, 'hud.starOpen'));
   star.addEventListener('click', onStar);
   star.style.display = 'none';
-  mats.append(star);
   const gear = el('button', 'btn-quiet settings-btn', GEAR);
   gear.type = 'button';
   gear.setAttribute('aria-label', t(lang, 'settings.title'));
   gear.setAttribute('aria-haspopup', 'menu');
   gear.addEventListener('click', () => openMenu(host, gear, menu()));
-  root.append(mats, gear);
+  root.append(mats, star, gear);
 
   return {
     el: root,
@@ -64,6 +63,7 @@ export function createHud(lang: Lang, host: HTMLElement, menu: () => MenuItem[],
         if (star.textContent !== text) {
           star.textContent = text;
           star.title = t(lang, 'hud.starlight', { n: state.starlight, p: Math.round(state.starlight * 3) });
+          star.setAttribute('aria-label', t(lang, 'hud.starCount', { n: formatNumber(state.starlight, lang) }));
         }
         star.style.display = '';
       }

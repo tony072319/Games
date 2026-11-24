@@ -37,7 +37,8 @@ export function createBook(lang: Lang, state: GameState, onClose: () => void): B
   const pageEl = el('div', 'book-page');
   const detail = el('div', 'book-detail');
   const foot = el('p', 'book-foot');
-  box.append(head, tabs, pageEl, detail, foot);
+  const bonus = el('p', 'book-bonus');
+  box.append(head, tabs, pageEl, detail, foot, bonus);
   overlay.append(box);
 
   let sea: SeaId = state.sea;
@@ -50,7 +51,7 @@ export function createBook(lang: Lang, state: GameState, onClose: () => void): B
       const b = el('button', `book-tab${id === sea ? ' on' : ''}`);
       b.type = 'button';
       const n = CURIOS.filter((c) => c.sea === id && state.curios.includes(c.id)).length;
-      b.textContent = `${t(lang, `sea.${id}`)} ${n}/12`;
+      b.textContent = t(lang, 'book.tab', { sea: t(lang, `sea.${id}`), n });
       b.setAttribute('aria-pressed', String(id === sea));
       b.addEventListener('click', () => {
         sea = id;
@@ -70,7 +71,7 @@ export function createBook(lang: Lang, state: GameState, onClose: () => void): B
       const name = el('span');
       name.textContent = found ? t(lang, `curio.${c.id}.name`) : t(lang, 'book.unknown');
       cell.append(name);
-      cell.setAttribute('aria-label', found ? t(lang, `curio.${c.id}.name`) : hint(c, sea, lang));
+      cell.setAttribute('aria-label', found ? t(lang, `curio.${c.id}.name`) : t(lang, 'book.missing', { hint: hint(c, sea, lang) }));
       cell.addEventListener('click', () => {
         picked = c.id;
         render();
@@ -89,7 +90,8 @@ export function createBook(lang: Lang, state: GameState, onClose: () => void): B
       detail.append(h, p);
     }
 
-    foot.textContent = `${t(lang, pageComplete(state, sea) ? 'book.pageDone' : 'book.pageGoal')} ${t(lang, 'book.bonus', { n: formatNumber(state.curios.length, lang) })}`;
+    foot.textContent = t(lang, pageComplete(state, sea) ? 'book.pageDone' : 'book.pageGoal');
+    bonus.textContent = t(lang, 'book.bonus', { n: formatNumber(state.curios.length, lang) });
   }
 
   render();

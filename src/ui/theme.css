@@ -32,6 +32,8 @@
   --c-scrim: rgba(5, 6, 18, 0.66);
   --c-disabled: #36314f;
   --c-ok: #7fd18a;
+  --c-track: rgba(255, 255, 255, 0.1);   /* empty part of a progress bar, on any surface */
+  --c-rare: rgba(127, 196, 192, 0.5);    /* rare finds in the book */
 
   /* Type roles: size / line height (weight below) */
   --fs-caption: 12px;          /* costs, small labels */

@@ -204,7 +204,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (key === chipsKey) return;
     chipsKey = key;
     seasBtn.style.display = state.reached.length < 2 ? 'none' : '';
-    seasBtn.querySelector('.val')!.textContent = t(state.settings.lang, `sea.${state.sea}`);
+    seasBtn.setAttribute('aria-label', `${t(state.settings.lang, 'seas.short')}: ${t(state.settings.lang, `sea.${state.sea}`)}`);
   }
 
   function openSeas() {
@@ -689,11 +689,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     seasBtn.type = 'button';
     seasBtn.setAttribute('aria-haspopup', 'menu');
     seasBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 10q2-2 4 0t4 0 4 0 2 0M1 13q2-2 4 0t4 0 4 0 2 0M8 2v5M5.5 4.5 8 2l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
-    seasBtn.append(el('span', 'val'));
+    seasBtn.append(t(lang, 'seas.short'));
     seasBtn.addEventListener('click', openSeas);
     passBtn = el('button', 'btn-bar pass-btn');
     passBtn.type = 'button';
-    passBtn.textContent = `✦ ${t(lang, 'pass.button')}`;
+    passBtn.textContent = `✦ ${t(lang, 'pass.short')}`;
+    passBtn.setAttribute('aria-label', t(lang, 'pass.button'));
     passBtn.addEventListener('click', confirmPass);
     toolbar.append(mapBtn, bookBtn, seasBtn, passBtn);
     chipsKey = '';
@@ -818,7 +819,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     for (const item of field.items) {
       if (itemEls.has(item.id)) continue;
       const b = el('button', item.curio ? 'item curio' : 'item', item.curio ? CURIO_DRIFT_ICON : itemIcon(item.material));
-      b.setAttribute('aria-label', t(state.settings.lang, item.curio ? 'book.open' : `mat.${item.material}`));
+      b.setAttribute('aria-label', t(state.settings.lang, item.curio ? 'drift.curio' : `mat.${item.material}`));
       b.dataset.mat = item.material;
       b.style.top = `${laneTop(item.lane)}px`;
       // Farther items look smaller and dimmer.
