@@ -443,7 +443,15 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         pulses.splice(i, 1);
       } else p.obj.scale.copy(p.base).multiplyScalar(1 + Math.sin(k * Math.PI) * 0.12);
     }
-    life?.update(dt * speed, t, { night: pal.night, light, calm, cam });
+    let chimney: THREE.Vector3 | null = null;
+    for (const p of placed.values()) {
+      if (p.item.key.startsWith('house:')) {
+        const hb = new THREE.Box3().setFromObject(p.obj);
+        chimney = new THREE.Vector3(hb.min.x + 0.45, hb.max.y - 0.1, hb.min.z + 0.6);
+      }
+      if (p.item.model.includes('flag')) p.obj.rotation.y = p.item.rotY + Math.sin(t * 2.2 + p.item.x) * 0.25;
+    }
+    life?.update(dt * speed, t, { night: pal.night, light, calm, cam, chimney });
     if (focusTo) {
       controls.target.lerp(focusTo.target, 0.08);
       const dir = focusTo.dir ? focusTo.dir.clone() : cam.position.clone().sub(controls.target).normalize();
