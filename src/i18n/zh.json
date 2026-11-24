@@ -327,5 +327,12 @@
   "debug.stars": "+100 星光",
   "view.home": "回岛",
   "view.sea": "看海",
-  "world.noWebgl": "这个浏览器画不了 3D 画面，换个浏览器试试？"
+  "world.noWebgl": "这个浏览器画不了 3D 画面，换个浏览器试试？",
+  "settings.credits": "素材致谢",
+  "credits.title": "素材致谢",
+  "credits.intro": "游戏里的模型来自这些作者的免费素材，谢谢他们。",
+  "credits.by": "{author} · {licence} · {where}",
+  "credits.CC0": "CC0 公共领域",
+  "credits.free": "免费商用",
+  "credits.close": "好的"
 }

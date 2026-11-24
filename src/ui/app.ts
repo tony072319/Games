@@ -30,6 +30,7 @@ import { createHud, type Hud } from './hud';
 import { showArrival } from './offlinePopup';
 import { arrivalLines } from '../core/arrival';
 import { createPanel, type Panel } from './upgrades';
+import { openCredits } from './credits';
 
 export interface AppOptions {
   now: () => number;
@@ -600,6 +601,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
           build();
         },
       },
+      { label: t(lang, 'settings.credits'), pick: () => openCredits(game, lang) },
     ], openTree);
     game.classList.toggle('calm', state.settings.calm);
     game.classList.toggle('mini', state.settings.mini);

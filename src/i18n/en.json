@@ -327,5 +327,12 @@
   "debug.stars": "+100 starlight",
   "view.home": "Home",
   "view.sea": "Sea",
-  "world.noWebgl": "This browser can't draw the 3D scene — try another browser?"
+  "world.noWebgl": "This browser can't draw the 3D scene — try another browser?",
+  "settings.credits": "Credits",
+  "credits.title": "Credits",
+  "credits.intro": "The models in this game are free assets by these makers. Thank you!",
+  "credits.by": "{author} · {licence} · {where}",
+  "credits.CC0": "CC0 public domain",
+  "credits.free": "free for commercial use",
+  "credits.close": "OK"
 }
