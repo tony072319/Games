@@ -62,3 +62,15 @@ describe('each sea has its own look', () => {
     expect(new Set(SEA_IDS.map((s) => islandSceneSvg('wreck', s))).size).toBe(3);
   });
 });
+
+describe('life and light in the scene', () => {
+  test('low fog and the cat are in the front layer; the keeper shows from lighthouse 2', () => {
+    const front = sceneFrontSvg();
+    expect(front).toContain('class="lowfog"');
+    expect(front).toContain('class="cat"');
+    expect(towerSvg(1)).not.toContain('class="keeper"');
+    expect(towerSvg(2)).toContain('class="keeper"');
+    expect(towerSvg(3)).toContain('class="rim"');
+    expect(towerSvg(1)).toContain('beam-glow');
+  });
+});

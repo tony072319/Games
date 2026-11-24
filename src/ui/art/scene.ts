@@ -133,9 +133,14 @@ export function sceneFrontSvg(sea: SeaId = 'dusk'): string {
   return `${open}<defs>${DEFS}</defs>
 <rect class="haze" y="${HORIZON_Y}" width="360" height="36" fill="url(#haze)"/>
 <!-- island, light pool, platform -->
-<ellipse cx="180" cy="458" rx="120" ry="22" fill="url(#pool)"/>
+<ellipse class="lightpool" cx="180" cy="458" rx="120" ry="22" fill="url(#pool)"/>
 <path d="M108 452 Q120 424 150 418 L176 412 Q214 410 236 422 Q256 432 262 452 Z" fill="url(#rock)"/>
 <path class="foam" d="M100 452 Q140 446 180 452 T262 452" fill="none" stroke="#e8e0ff" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
+<!-- low fog: thick when the lamp is weak, thinning as the light grows (opacity from --light) -->
+<defs><radialGradient id="fogGrad"><stop offset="0" stop-color="#c8c8dc" stop-opacity="0.9"/><stop offset="1" stop-color="#c8c8dc" stop-opacity="0"/></radialGradient></defs>
+<g class="lowfog" fill="url(#fogGrad)">
+  <ellipse cx="60" cy="452" rx="120" ry="10"/><ellipse cx="300" cy="462" rx="130" ry="12"/><ellipse cx="180" cy="500" rx="200" ry="14"/>
+</g>
 <g class="dock-slot"></g>
 <g class="net-slot"></g>
 <g>
@@ -147,6 +152,14 @@ export function sceneFrontSvg(sea: SeaId = 'dusk'): string {
 </g>
 
 <g class="tower-slot"></g>
+<!-- a cat on the platform by the door -->
+<g class="cat" transform="translate(212 432)">
+  <path class="cat-tail" d="M7 -2 q8 -2 7 -10" fill="none" stroke="#1d1830" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="2" cy="-4" rx="7" ry="4.5" fill="#1d1830"/>
+  <circle cx="-5" cy="-9" r="3.6" fill="#1d1830"/>
+  <path d="M-8 -11.5 l1 -3.5 l2 2.5 Z M-3.4 -12 l1.6 -3 l1 3 Z" fill="#1d1830"/>
+  <g class="cat-eyes" fill="#ffd98a"><circle cx="-6.3" cy="-9.4" r="0.6"/><circle cx="-4" cy="-9.4" r="0.6"/></g>
+</g>
 ${FRONT_EXTRA[sea]}
 </svg>`;
 }

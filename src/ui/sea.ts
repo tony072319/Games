@@ -31,7 +31,8 @@ function hash(n: number): number {
 
 const ROWS = 64;
 
-export function drawSea(ctx: SeaCtx, tMs: number, sky: Sky): void {
+/** `light` is the lighthouse's light, 0..1: its reflection spreads farther and denser as it grows. */
+export function drawSea(ctx: SeaCtx, tMs: number, sky: Sky, light = 0.5): void {
   const t = tMs / 1000;
   const horizon = hex(sky.horizon);
   const low = hex(sky.skyLow);
@@ -82,12 +83,28 @@ export function drawSea(ctx: SeaCtx, tMs: number, sky: Sky): void {
   // Light on the water.
   glitter(ctx, t, 270, sky.sun, '#f8b67c', 0, 0.62);
   glitter(ctx, t, 78, sky.moon, '#e6ecff', 0, 0.62);
-  glitter(ctx, t, 180, 0.55, '#ffd98a', 0.4, 0.78);
+  glitter(ctx, t, 180, 0.3 + 0.55 * light, '#ffd98a', 0.4, 0.55 + 0.35 * light, Math.round(light * 4));
+  if (sky.moon > 0.3) plankton(ctx, t, sky.moon);
   ctx.globalAlpha = 1;
 }
 
+/** Tiny glowing specks in the dark water on moonlit nights. */
+function plankton(ctx: SeaCtx, t: number, moon: number): void {
+  ctx.fillStyle = '#8ff0e0';
+  for (let i = 0; i < 48; i++) {
+    const d = 0.45 + 0.55 * hash(i + 900);
+    const y = SEA_TOP + (SEA_BOTTOM - SEA_TOP) * Math.pow(d, 1.75);
+    const x = ((hash(i + 950) * 400 + t * (2 + 6 * hash(i))) % 400) - 20;
+    const flick = 0.5 + 0.5 * Math.sin(t * (0.8 + hash(i + 7)) + i);
+    if (flick < 0.4) continue;
+    ctx.globalAlpha = moon * flick * 0.7;
+    const r = 0.6 + 1.2 * d;
+    ctx.fillRect(x, y, r, r);
+  }
+}
+
 /** A shimmering column of light below a source at x = cx, between depths d0..d1. */
-function glitter(ctx: SeaCtx, t: number, cx: number, strength: number, color: string, d0: number, d1: number): void {
+function glitter(ctx: SeaCtx, t: number, cx: number, strength: number, color: string, d0: number, d1: number, extra = 0): void {
   if (strength <= 0.02) return;
   ctx.fillStyle = color;
   const rows = 30;
@@ -95,7 +112,7 @@ function glitter(ctx: SeaCtx, t: number, cx: number, strength: number, color: st
     const d = d0 + (d1 - d0) * (i / (rows - 1));
     const y = SEA_TOP + 1.5 + (SEA_BOTTOM - SEA_TOP) * Math.pow(d, 1.75);
     const spread = 3 + 46 * d;
-    const per = 2 + Math.floor(d * 3);
+    const per = 2 + Math.floor(d * 3) + extra;
     for (let j = 0; j < per; j++) {
       const seed = i * 13 + j * 7;
       // Each glint drifts and blinks on its own rhythm.

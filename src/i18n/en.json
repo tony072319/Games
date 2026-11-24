@@ -181,5 +181,6 @@
   "arrival.boat": "The boat came back from {name} with:",
   "arrival.island": "Waiting on the islands for the boat to fetch:",
   "arrival.tip": "You can mend the {name} now.",
-  "arrival.see": "Show me"
+  "arrival.see": "Show me",
+  "life.gull": "Gull"
 }

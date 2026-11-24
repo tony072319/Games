@@ -27,6 +27,25 @@ import { showArrival } from './offlinePopup';
 import { arrivalLines } from '../core/arrival';
 import { createPanel, type Panel } from './upgrades';
 
+/** A small tile of random noise, drawn once and reused as the scene's film grain. */
+let grainCache = '';
+function grainUrl(): string {
+  if (grainCache) return grainCache;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  if (!ctx) return '';
+  const img = ctx.createImageData(128, 128);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() * 255;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  grainCache = c.toDataURL();
+  return grainCache;
+}
+
 export interface AppOptions {
   now: () => number;
   kv: KV;
@@ -55,6 +74,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let goalBar!: HTMLButtonElement;
   let goalKey = '';
   let goal: Goal | null = null;
+  let gullBtn!: HTMLButtonElement;
+  let lightShown = -1;
+  /** Lighthouse light as 0..1; drives fog, reflections and ship lights. */
+  const lightLevel = () => state.levels.light / MAX_LEVEL.light;
   let chestKey = '';
   const itemEls = new Map<number, HTMLElement>();
   /** Test build: materials are topped up every frame so nothing ever runs out. */
@@ -506,6 +529,27 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     glint([76, 336], () => canBuy(state, 'net'));
     glint([CHEST_POS.x + 26, CHEST_POS.y - 50], () => canBuy(state, 'storage'));
     glintKey = '';
+    // Film grain, made once.
+    const grain = el('div', 'grain');
+    grain.style.backgroundImage = `url(${grainUrl()})`;
+    stage.append(grain);
+    // A gull resting on the platform; tap it and it flies off for a while.
+    gullBtn = el('button', 'gull');
+    gullBtn.type = 'button';
+    gullBtn.setAttribute('aria-label', t(lang, 'life.gull'));
+    gullBtn.innerHTML = `<svg viewBox="0 0 28 22" aria-hidden="true"><ellipse cx="13" cy="14" rx="8" ry="5" fill="#ece6f5"/><circle cx="20" cy="9" r="3.6" fill="#ece6f5"/><path d="M23 9 l4 1 l-4 1 Z" fill="#e8a23a"/><path d="M6 12 L13 10 L10 16 Z" fill="#9a93b3"/><circle cx="21" cy="8.2" r="0.8" fill="#1d1830"/><line x1="12" y1="19" x2="12" y2="22" stroke="#e8a23a"/><line x1="15" y1="19" x2="15" y2="22" stroke="#e8a23a"/></svg>`;
+    gullBtn.addEventListener('click', () => {
+      if (gullBtn.classList.contains('away')) return;
+      gullBtn.classList.add('away');
+      sound.play('tap');
+      setTimeout(() => {
+        gullBtn.classList.remove('away');
+        gullBtn.classList.add('back');
+        setTimeout(() => gullBtn.classList.remove('back'), 1900);
+      }, 20000 + Math.random() * 20000);
+    });
+    stage.append(gullBtn);
+    lightShown = -1;
     hud = createHud(lang, game, () => [
       {
         label: t(lang, 'settings.sound'),
@@ -642,6 +686,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       Object.assign(h.el.style, { left: `${sceneXToPx(x0)}px`, top: `${sceneYToPx(y0)}px`, width: `${(x1 - x0) * scale}px`, height: `${(y1 - y0) * scale}px` });
     }
     for (const g of glints) Object.assign(g.el.style, { left: `${sceneXToPx(g.at[0])}px`, top: `${sceneYToPx(g.at[1])}px` });
+    Object.assign(gullBtn.style, { left: `${sceneXToPx(140)}px`, top: `${sceneYToPx(432)}px` });
   }
 
   /** Scene (viewBox 360x640) to stage pixels, matching preserveAspectRatio="xMidYMid slice". */
@@ -711,7 +756,33 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     ctx.clearRect(0, 0, seaCanvas.width, seaCanvas.height);
     // Same mapping as the SVG layers: preserveAspectRatio="xMidYMid slice".
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (stageW / 2 - 180 * scale) * dpr, (stageH / 2 - 320 * scale) * dpr);
-    drawSea(ctx, now, currentSky());
+    drawSea(ctx, now, currentSky(), lightLevel());
+  }
+
+  /** "The brighter the light, the busier the sea": fog thins, the warm pool grows, ships appear. */
+  function renderLight() {
+    if (lightShown === state.levels.light) return;
+    lightShown = state.levels.light;
+    const k = lightLevel();
+    stage.style.setProperty('--light', k.toFixed(2));
+    farLayer.querySelector('.shiplights')?.remove();
+    const n = Math.floor(state.levels.light / 2);
+    if (n === 0) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('class', 'shiplights');
+    const xs = [40, 300, 110, 250, 200];
+    for (let i = 0; i < n; i++) {
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('class', 'shiplight');
+      c.setAttribute('cx', String(xs[i]));
+      c.setAttribute('cy', String(328 + (i % 2)));
+      c.setAttribute('r', '1.2');
+      c.setAttribute('fill', '#ffd98a');
+      c.setAttribute('style', `animation-delay:${-i * 1.3}s, ${-i * 17}s`);
+      g.append(c);
+    }
+    farLayer.append(g);
   }
 
   function renderGlints() {
@@ -816,6 +887,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     renderBubbles();
     renderGlints();
     renderGoal();
+    renderLight();
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     passBtn.style.display = canPassLight(state) ? '' : 'none';
     renderSeas();

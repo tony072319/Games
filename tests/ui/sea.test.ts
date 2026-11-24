@@ -45,3 +45,24 @@ describe('sea', () => {
     expect(near(night.rects, 78)).toBeGreaterThan(near(dusk.rects, 78));
   });
 });
+
+describe('light on the water grows with the lighthouse', () => {
+  test('more lamp glints, and a larger warm pool, at light 10 than at light 1', () => {
+    const dim = fakeCtx();
+    drawSea(dim, 0, skyAt(SKY_CYCLE_MS / 2), 0.1);
+    const bright = fakeCtx();
+    drawSea(bright, 0, skyAt(SKY_CYCLE_MS / 2), 1);
+    const nearLamp = (rs: { x: number; y: number; h: number; style: string }[]) =>
+      rs.filter((r) => r.h < 10 && r.y > 440 && Math.abs(r.x - 180) < 80 && r.style === '#ffd98a').length;
+    expect(nearLamp(bright.rects)).toBeGreaterThan(nearLamp(dim.rects));
+  });
+  test('night plankton sparkles only at night', () => {
+    const day = fakeCtx();
+    drawSea(day, 0, skyAt(0), 0.5);
+    const night = fakeCtx();
+    drawSea(night, 0, skyAt(SKY_CYCLE_MS / 2), 0.5);
+    const plankton = (rs: { style: string }[]) => rs.filter((r) => r.style === '#8ff0e0').length;
+    expect(plankton(night.rects)).toBeGreaterThan(10);
+    expect(plankton(day.rects)).toBe(0);
+  });
+});

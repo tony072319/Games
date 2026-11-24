@@ -181,5 +181,6 @@
   "arrival.boat": "小船从{name}回来了，带回：",
   "arrival.island": "岛上攒下了这些，小船下次去时一起带回：",
   "arrival.tip": "现在就能修整{name}。",
-  "arrival.see": "去看看"
+  "arrival.see": "去看看",
+  "life.gull": "海鸥"
 }

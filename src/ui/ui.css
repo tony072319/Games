@@ -417,12 +417,15 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   z-index: 6;
   width: var(--sp-3);
   height: var(--sp-3);
-  border-radius: var(--r-pill);
   pointer-events: none;
-  background: radial-gradient(var(--c-spark), var(--c-gold) 45%, transparent 70%);
+  /* a small four-pointed twinkle */
+  background: var(--c-spark);
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  filter: var(--drop-gold);
   transform: translate(-50%, -50%);
-  animation: breathe var(--t-breathe) var(--ease-inout) infinite;
+  animation: twinkle-star var(--t-breathe) var(--ease-inout) infinite;
 }
+@keyframes twinkle-star { 0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.7) rotate(0deg); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(45deg); } }
 /* A ring that says "here". */
 .spot { animation: spot var(--t-voyage) var(--ease-out) 1 !important; }
 @keyframes spot { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: var(--ring-gold), var(--glow-gold); } }

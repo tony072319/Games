@@ -38,6 +38,8 @@ export function towerSvg(level: number): string {
   // Tower body and stripes.
   s += `<path d="M162 432 L169 272 L191 272 L198 432 Z" fill="url(#${id})"/>`;
   s += `<path d="M165.6 366 L194.4 366 L195.2 384 L164.8 384 Z M167.7 312 L192.3 312 L192.9 328 L167.1 328 Z" fill="${k.stripe}" opacity="${k.stripeOpacity}"/>`;
+  // The sunset side catches a thin rim of warm light once the tower is clean.
+  if (L >= 3) s += `<path class="rim" d="M191 274 L198 430" stroke="#ffcf9a" stroke-opacity="0.55" stroke-width="1.6" fill="none"/>`;
   if (L === 1) {
     // Cracks, moss and a broken window.
     s += `<g fill="none" stroke="#2b2433" stroke-width="0.9"><path d="M172 290 l3 8 l-2 6 l4 9"/><path d="M190 350 l-4 6 l2 7"/><path d="M168 396 l5 4 l-1 7"/></g>`;
@@ -62,6 +64,8 @@ export function towerSvg(level: number): string {
   if (L >= 10) s += `<circle class="halo" cx="${LX}" cy="${LY}" r="30" fill="none" stroke="#fff0b8" stroke-opacity="0.5" stroke-width="1.2" stroke-dasharray="3 5"/>`;
   s += `<circle class="lamp" cx="${LX}" cy="${LY}" r="${k.lampGlow}" fill="url(#glow)"/>`;
   s += `<rect x="169" y="248" width="22" height="20" rx="2" fill="${k.lamp}"/>`;
+  // The keeper, a dark shape moving about in the lit lamp room.
+  if (L >= 2) s += `<g class="keeper" fill="#2b2433" opacity="0.85"><circle cx="175" cy="254" r="2.2"/><path d="M172.4 268 L172.8 258 Q175 255.6 177.2 258 L177.6 268 Z"/></g>`;
   if (L >= 5) s += `<g fill="#bfe0ff" opacity="0.35"><rect x="170" y="249" width="5" height="18"/><rect x="185" y="249" width="5" height="18"/></g>`;
   if (L === 1) s += `<path d="M184 248 l7 0 l0 9 l-4 -3 Z" fill="#1d1830"/>`;
   s += `<g stroke="${L >= 6 ? '#8a6a2a' : '#3a3044'}" stroke-width="1.5"><line x1="176" y1="248" x2="176" y2="268"/><line x1="184" y1="248" x2="184" y2="268"/></g>`;
@@ -79,6 +83,7 @@ export function towerSvg(level: number): string {
   }
   // Beam(s).
   const spread = 30 + (k.beamTo - 250) * 0.15;
+  s += `<polygon class="beam beam-glow" style="opacity:${(k.beamOpacity * 0.35).toFixed(2)}" points="${LX},${LY} ${k.beamTo + 20},${LY - spread * 1.8} ${k.beamTo + 20},${LY + spread * 1.8}" fill="url(#beamGrad)"/>`;
   s += `<polygon class="beam" style="opacity:${k.beamOpacity}" points="${LX},${LY} ${k.beamTo},${LY - spread} ${k.beamTo},${LY + spread}" fill="url(#beamGrad)"/>`;
   if (L >= 10) s += `<polygon class="beam beam2" style="opacity:0.7" points="${LX},${LY} ${LX - (k.beamTo - LX)},${LY - spread} ${LX - (k.beamTo - LX)},${LY + spread}" fill="url(#beamGrad)"/>`;
   return s;
