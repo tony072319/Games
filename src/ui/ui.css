@@ -124,7 +124,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .mat { display: flex; align-items: center; gap: var(--sp-1); white-space: nowrap; font-size: var(--fs-label); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; line-height: var(--lh-tight); }
 .mat svg { width: var(--icon-md); height: var(--icon-md); flex: none; }
 .hud .mat { font-size: var(--fs-body); }
-.starlight { color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-bold); white-space: nowrap; text-shadow: var(--glow-gold); }
+.starlight { min-height: var(--tap); padding: 0 var(--sp-1); border: 0; background: none; color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-bold); line-height: var(--lh-tight); white-space: nowrap; text-shadow: var(--glow-gold); }
 .hud .settings-btn { background: var(--c-surface-0); backdrop-filter: var(--blur-bar); }
 .menu {
   position: absolute;
@@ -278,7 +278,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 @keyframes rise { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(calc(var(--sp-6) * -1)); } }
 .toast {
   position: absolute;
-  z-index: 60;
+  z-index: 45; /* under dialogs (50), so it never covers what you're reading */
   left: 50%;
   top: 22%;
   padding: var(--sp-2) var(--sp-4);
@@ -468,3 +468,43 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .game.mini .side, .game.mini .debug { display: none; }
 .game.mini .mini-exit { display: inline-flex; background: var(--c-surface-0); color: var(--c-gold); font-weight: var(--fw-bold); }
 .game.mini .hud .settings-btn { display: none; }
+
+/* ---------- milestones ---------- */
+.progress { display: grid; gap: var(--sp-1); }
+.progress-label { color: var(--c-ink-dim); font-size: var(--fs-caption); line-height: var(--lh-tight); }
+.progress-bar { display: block; height: var(--sp-1); border-radius: var(--r-pill); background: var(--c-surface-dialog); overflow: hidden; }
+.progress-bar i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--c-gold); }
+.island-store .progress { margin-bottom: var(--sp-2); }
+.milestone.done { color: var(--c-gold); }
+.node.flourish { box-shadow: var(--glow-gold); border-radius: var(--r-md); }
+
+/* ---------- collection book ---------- */
+.book-tabs { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.book-tab { min-height: var(--tap); padding: 0 var(--sp-3); border: 1px solid var(--c-line); border-radius: var(--r-pill); background: transparent; color: var(--c-ink-dim); font-size: var(--fs-body); }
+.book-tab.on { border-color: var(--c-gold); color: var(--c-gold); font-weight: var(--fw-bold); }
+.book-page { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-2); }
+.book-cell { display: grid; justify-items: center; gap: var(--sp-1); min-height: calc(var(--thumb) + var(--sp-5)); padding: var(--sp-2) var(--sp-1); border: 1px solid transparent; border-radius: var(--r-md); background: var(--c-surface-1); color: var(--c-ink-faint); font-size: var(--fs-caption); line-height: var(--lh-tight); }
+.book-cell svg { width: var(--tap); height: var(--tap); }
+.book-cell.found { color: var(--c-ink); }
+.book-cell.found.rare { border-color: rgba(127, 196, 192, 0.5); }
+.book-cell.found.legend { border-color: var(--c-gold); box-shadow: var(--glow-gold); }
+.book-cell.sel { background: var(--c-surface-2); }
+.book-detail { min-height: var(--tap); }
+.book-detail h3 { margin: 0 0 var(--sp-1); font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
+.book-detail p, .book-foot { margin: 0; color: var(--c-ink-dim); font-size: var(--fs-body); }
+.book-foot { color: var(--c-gold); }
+.btn-bar.book-btn.badge::after { content: ''; position: absolute; top: calc(var(--sp-1) * -1); right: calc(var(--sp-1) * -1); width: var(--sp-3); height: var(--sp-3); border-radius: var(--r-pill); background: var(--c-accent); box-shadow: var(--glow-gold); }
+
+/* ---------- starlight tree ---------- */
+.tree-points { margin: 0; color: var(--c-gold); font-size: var(--fs-body); }
+.tree-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+.tree-col { display: grid; align-content: start; gap: var(--sp-2); }
+.tree-col h3 { margin: 0; text-align: center; color: var(--c-gold); font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
+.tree-node { display: grid; gap: var(--sp-1); padding: var(--sp-2); border-radius: var(--r-md); background: var(--c-surface-1); border: 1px solid transparent; }
+.tree-node strong { font-size: var(--fs-body); line-height: var(--lh-tight); }
+.tree-desc, .tree-state { color: var(--c-ink-dim); font-size: var(--fs-caption); line-height: var(--lh-tight); }
+.tree-node.ready { border-color: var(--c-line); }
+.tree-node.learned { border-color: var(--c-gold); box-shadow: var(--glow-gold); }
+.tree-node.learned .tree-state { color: var(--c-gold); }
+.tree-node .buy { min-width: 0; padding: 0 var(--sp-2); font-size: var(--fs-body); }
+.tree-foot { display: flex; justify-content: flex-end; }

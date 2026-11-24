@@ -3,6 +3,7 @@ import { canBuy, isMaxLevel, upgradeCost } from '../core/economy';
 import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
 import { affordState, etaSeconds, nextEffect } from '../core/advice';
+import { NET_MILESTONES, nextNetMilestone } from '../core/milestones';
 import { boatSvg, chestSvg, netSvg, towerSvg } from './art';
 import { upgradeCard } from './card';
 import { el } from './dom';
@@ -29,6 +30,14 @@ export function effectText(state: GameState, id: UpgradeId, lang: Lang): string 
   if (!e) return undefined;
   if (e.kind === 'unlock') return t(lang, e.key!);
   return t(lang, 'card.next', { effect: t(lang, `effect.${id}`, { n: e.value! }) });
+}
+
+/** Toward the next net milestone (10/20/30/40/50). */
+function netProgress(level: number, lang: Lang): { label: string; value: number } | undefined {
+  const next = nextNetMilestone(level);
+  if (next === null) return undefined;
+  const prev = [...NET_MILESTONES].reverse().find((m) => m <= level) ?? 1;
+  return { label: t(lang, 'ms.net', { n: next - level }), value: (level - prev) / (next - prev) };
 }
 
 /** Time until affordable, as words; undefined when it will not come by waiting. */
@@ -80,6 +89,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
           desc: t(lang, `upg.${id}.desc`),
           note: id === 'light' ? lightNote(state, lang) : undefined,
           effect: effectText(state, id, lang),
+          progress: id === 'net' ? netProgress(state.levels.net, lang) : undefined,
           cost: cost,
           have: state.materials,
           buyLabel: t(lang, 'ui.buy'),

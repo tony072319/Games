@@ -5,3 +5,4 @@ export * from './art/icons';
 export * from './art/tower';
 export * from './art/boat';
 export * from './art/island';
+export * from './art/curios';

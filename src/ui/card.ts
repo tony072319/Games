@@ -25,6 +25,8 @@ export interface CardSpec {
   eta?: string;
   /** What the next level does, e.g. "下一级：捞得快 12%". */
   effect?: string;
+  /** Progress toward a milestone: a short label and 0..1. */
+  progress?: { label: string; value: number };
   onBuy(): void;
   /** Description shown. A card whose description is always useful passes `alwaysOpen`. */
   open: boolean;
@@ -72,6 +74,7 @@ export function upgradeCard(lang: Lang, c: CardSpec): HTMLElement {
     text.append(e);
   }
   if (c.cost) text.append(costRow(c.cost, c.have, lang));
+  if (c.progress) text.append(progressBar(c.progress.label, c.progress.value));
   main.append(thumb, text);
 
   const btn = el('button', `buy${c.cost ? ` ${c.state}` : ''}`);
@@ -98,4 +101,17 @@ export function upgradeCard(lang: Lang, c: CardSpec): HTMLElement {
     card.append(d);
   }
   return card;
+}
+
+/** A thin bar toward the next milestone, with its label. */
+export function progressBar(label: string, value: number): HTMLElement {
+  const wrap = el('span', 'progress');
+  const l = el('span', 'progress-label');
+  l.textContent = label;
+  const bar = el('span', 'progress-bar');
+  const fill = el('i');
+  fill.style.width = `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
+  bar.append(fill);
+  wrap.append(l, bar);
+  return wrap;
 }

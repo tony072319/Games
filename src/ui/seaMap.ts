@@ -9,6 +9,7 @@ import { etaText } from './upgrades';
 import { el } from './dom';
 import { formatDuration } from './offlinePopup';
 import { createPanel } from './upgrades';
+import { islandTier } from '../core/milestones';
 import { destDesc, destName } from './names';
 
 /** Map layout: 360x360 chart, lighthouse at the centre. */
@@ -96,7 +97,7 @@ ${path}
       const p = pos(d);
       const lit = s.levels.light >= DESTS[d].needLight;
       const found = s.discovered.includes(d);
-      const b = el('button', `node ${lit ? (found ? 'found' : 'unknown') : 'dark'}${selected === d ? ' sel' : ''}`);
+      const b = el('button', `node ${lit ? (found ? 'found' : 'unknown') : 'dark'}${selected === d ? ' sel' : ''}${found && islandTier(s, d) > 0 ? ' flourish' : ''}`);
       b.style.left = `${(p.x / 360) * 100}%`;
       b.style.top = `${(p.y / 360) * 100}%`;
       b.dataset.dest = d;

@@ -25,7 +25,7 @@ export interface MenuItem {
  * button whose menu lists `menu()` (sound, language, animation, corner mode).
  * `host` is where the menu opens.
  */
-export function createHud(lang: Lang, host: HTMLElement, menu: () => MenuItem[]): Hud {
+export function createHud(lang: Lang, host: HTMLElement, menu: () => MenuItem[], onStar: () => void): Hud {
   const root = el('div', 'hud');
   const mats = el('div', 'mats');
   const values = {} as Record<MaterialId, HTMLElement>;
@@ -42,7 +42,11 @@ export function createHud(lang: Lang, host: HTMLElement, menu: () => MenuItem[])
     items[m] = item;
     mats.append(item);
   }
-  const star = el('div', 'starlight');
+  // Starlight count; tapping it opens the starlight tree.
+  const star = el('button', 'starlight');
+  star.type = 'button';
+  star.setAttribute('aria-label', t(lang, 'hud.starOpen'));
+  star.addEventListener('click', onStar);
   star.style.display = 'none';
   mats.append(star);
   const gear = el('button', 'btn-quiet settings-btn', GEAR);

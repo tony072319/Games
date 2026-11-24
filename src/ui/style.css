@@ -196,3 +196,7 @@
 /* Film grain over the scene, made once in code. */
 .grain { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay; background-size: 128px 128px; }
 .lightpool { transform-box: fill-box; transform-origin: center; transform: scale(calc(0.5 + var(--light, 0.3) * 0.9)); opacity: calc(0.5 + var(--light, 0.3) * 0.5); }
+
+/* A drifting curio: a soft glow that says "this one is special". */
+.item.curio svg { filter: drop-shadow(0 0 8px #fff0b8) drop-shadow(0 0 3px #ffd98a); }
+.item.curio::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 1px solid rgba(255, 240, 184, 0.7); animation: breathe 1.6s ease-in-out infinite; }

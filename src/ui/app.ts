@@ -10,6 +10,10 @@ import { BOAT_POS, CHEST_POS, SEA_BAND, boatSvg, chestSvg, dockSvg, islandIcon, 
 import { DOCK_LIGHT, buildBoat, startVoyage, unloadBoat } from '../core/boat';
 import { createSeaMap, type SeaMap } from './seaMap';
 import { createIslandView, type IslandView } from './islandView';
+import { createBook, type Book } from './book';
+import { createTalentTree } from './talentTree';
+import { CURIO_BY_ID, CURIOS, chestFind, foundCurio } from '../core/curios';
+import { shelfSvg } from './art';
 import { construct } from '../core/islands';
 import { drawSea } from './sea';
 import { SoundEngine } from './audio';
@@ -26,6 +30,9 @@ import { createHud, type Hud } from './hud';
 import { showArrival } from './offlinePopup';
 import { arrivalLines } from '../core/arrival';
 import { createPanel, type Panel } from './upgrades';
+
+/** What a drifting curio looks like before you know what it is: a small glowing bundle. */
+const CURIO_DRIFT_ICON = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="#fff0b8" opacity="0.25"/><path d="M9 14 Q16 6 23 14 L21 24 Q16 27 11 24 Z" fill="#b8923a" stroke="#fff0b8"/><path d="M12 15 h8" stroke="#fff0b8"/><circle cx="16" cy="19" r="2" fill="#fff6d8"/></svg>`;
 
 /** A small tile of random noise, drawn once and reused as the scene's film grain. */
 let grainCache = '';
@@ -101,6 +108,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let passBtn!: HTMLButtonElement;
   let chipsKey = '';
   let islandView: IslandView | null = null;
+  let book: Book | null = null;
+  let bookBtn!: HTMLButtonElement;
+  /** Something new went into the book since it was last opened. */
+  let newFind = false;
+  let shelfSlot: Element | null = null;
+  let shelfKey = '';
   /** Whether cargo was waiting last frame, to notice the boat coming home. */
   let hadCargo = state.boat.cargo !== null;
   let nextSeaAt = 0;
@@ -156,7 +169,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   /** Empty the chest into the inventory with a little "+N" for each material. */
   function takeChest(): Materials {
+    const fillBefore = chestTotal(state.chest) / chestCapacity(state);
     const moved = collectChest(state);
+    const found = chestFind(state, fillBefore, Math.random);
+    if (found) setTimeout(() => onCurio(found), 700);
     if (chestTotal(moved) >= 1) tutorialDone(1);
     if (chestTotal(moved) >= 1) sound.play('chest');
     const lang = state.settings.lang;
@@ -260,6 +276,66 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }, 3200);
   }
 
+  /** A new curio for the book: say what it is, and mark the book button. */
+  function onCurio(id: string, x?: number, y?: number) {
+    const lang = state.settings.lang;
+    toast(t(lang, 'book.found', { name: t(lang, `curio.${id}.name`) }));
+    sound.play('upgrade');
+    newFind = true;
+    if (x !== undefined && y !== undefined && !state.settings.calm) {
+      const dot = el('div', 'spark');
+      const g = game.getBoundingClientRect();
+      dot.style.left = `${x - g.left}px`;
+      dot.style.top = `${y - g.top}px`;
+      game.append(dot);
+      setTimeout(() => dot.remove(), 600);
+    }
+    sparkle(bookBtn);
+    save();
+    refresh();
+  }
+
+  let tree: HTMLElement | null = null;
+  function openTree() {
+    if (tree) return;
+    tree = createTalentTree(state.settings.lang, state, {
+      learned: (_id, node) => {
+        sound.play('upgrade');
+        sparkle(node);
+        save();
+      },
+      changed: () => {
+        save();
+        refresh();
+      },
+      close: () => {
+        if (tree) dismiss(tree);
+        tree = null;
+      },
+    });
+    game.append(tree);
+  }
+
+  function openBook() {
+    if (book) return;
+    newFind = false;
+    book = createBook(state.settings.lang, state, () => {
+      if (book) dismiss(book.el);
+      book = null;
+    });
+    game.append(book.el);
+    refresh();
+  }
+
+  function renderShelf() {
+    if (!shelfSlot) return;
+    const rare = state.curios.filter((id) => CURIO_BY_ID[id] && CURIO_BY_ID[id].rarity !== 'common');
+    const key = rare.join();
+    if (key === shelfKey) return;
+    shelfKey = key;
+    shelfSlot.innerHTML = shelfSvg(rare);
+  }
+
   function openMap() {
     if (seaMap) return;
     const lang = state.settings.lang;
@@ -331,6 +407,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     refresh();
     save();
     if (cargo.discovery) setTimeout(() => showDiscovery(cargo.sea, cargo.dest), 900);
+    else if (cargo.curio) setTimeout(() => onCurio(cargo.curio!), 900);
   }
 
   function showDiscovery(sea: SeaId, d: DestId) {
@@ -467,6 +544,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     towerSlot = front.querySelector('.tower-slot');
     towerShown = 0;
     dockSlot = front.querySelector('.dock-slot');
+    shelfSlot = front.querySelector('.shelf-slot');
+    shelfKey = '';
     boatBtn = el('button', 'boat');
     boatBtn.setAttribute('aria-label', t(lang, 'boat.label'));
     boatBtn.addEventListener('pointerdown', (ev) => {
@@ -584,7 +663,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
           build();
         },
       },
-    ]);
+    ], openTree);
     game.classList.toggle('calm', state.settings.calm);
     game.classList.toggle('mini', state.settings.mini);
     // In corner mode the controls fold away; this brings them back.
@@ -601,6 +680,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     mapBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3l4-1.5 6 2 4-1.5v11l-4 1.5-6-2-4 1.5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.5v11M11 3.5v11" stroke="currentColor" stroke-width="1"/></svg>`;
     mapBtn.append(t(lang, 'map.open'));
     mapBtn.addEventListener('click', openMap);
+    bookBtn = el('button', 'btn-bar book-btn');
+    bookBtn.type = 'button';
+    bookBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3q3-1.5 6 0q3-1.5 6 0v10q-3-1.5-6 0q-3-1.5-6 0z M8 3v10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+    bookBtn.append(t(lang, 'book.open'));
+    bookBtn.addEventListener('click', openBook);
     seasBtn = el('button', 'btn-bar seas-btn');
     seasBtn.type = 'button';
     seasBtn.setAttribute('aria-haspopup', 'menu');
@@ -611,7 +695,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     passBtn.type = 'button';
     passBtn.textContent = `✦ ${t(lang, 'pass.button')}`;
     passBtn.addEventListener('click', confirmPass);
-    toolbar.append(mapBtn, seasBtn, passBtn);
+    toolbar.append(mapBtn, bookBtn, seasBtn, passBtn);
     chipsKey = '';
     // On wide screens this column sits to the right of the scene.
     goalBar = el('button', 'goal');
@@ -621,6 +705,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const side = el('div', 'side');
     side.append(goalBar, toolbar, panel.el);
     game.append(hud.el, stage, side);
+    book = null;
+    tree = null;
     if (seaMap || islandView) {
       seaMap = null;
       islandView = null;
@@ -636,6 +722,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
             if (v) {
               v.departAt -= h * 3600 * 1000;
               v.returnAt -= h * 3600 * 1000;
+            }
+          },
+          curio: () => {
+            const c = CURIOS.find((x) => x.sea === state.sea && !state.curios.includes(x.id));
+            if (c) {
+              foundCurio(state, c.id);
+              onCurio(c.id);
             }
           },
           lightMax: () => {
@@ -724,8 +817,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     for (const item of field.items) {
       if (itemEls.has(item.id)) continue;
-      const b = el('button', 'item', itemIcon(item.material));
-      b.setAttribute('aria-label', t(state.settings.lang, `mat.${item.material}`));
+      const b = el('button', item.curio ? 'item curio' : 'item', item.curio ? CURIO_DRIFT_ICON : itemIcon(item.material));
+      b.setAttribute('aria-label', t(state.settings.lang, item.curio ? 'book.open' : `mat.${item.material}`));
       b.dataset.mat = item.material;
       b.style.top = `${laneTop(item.lane)}px`;
       // Farther items look smaller and dimmer.
@@ -738,6 +831,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         const srect = stage.getBoundingClientRect();
         const got = collect(field, state, item.id);
         if (!got) return;
+        if (got.curio) {
+          b.remove();
+          itemEls.delete(item.id);
+          onCurio(got.curio, rect.left + rect.width / 2, rect.top + rect.height / 2);
+          return;
+        }
         tutorialDone(0);
         sound.play('tap');
         b.remove();
@@ -909,6 +1008,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     renderGlints();
     renderGoal();
     renderLight();
+    renderShelf();
+    bookBtn.classList.toggle('badge', newFind);
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     passBtn.style.display = canPassLight(state) ? '' : 'none';
     renderSeas();
@@ -935,7 +1036,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       sound.play('chest');
     }
     hadCargo = hasCargo;
-    updateField(field, now, Math.random);
+    updateField(field, now, Math.random, state);
     syncFlotsam(now);
     if (now >= nextSkyAt) {
       applySky(stage, currentSky());

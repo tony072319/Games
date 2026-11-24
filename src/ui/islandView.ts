@@ -2,9 +2,10 @@ import { BUILDING_MAX, MATERIALS, type BuildingId, type DestId } from '../core/d
 import { BUILDINGS, ISLAND_BUILDINGS, buildCost, buildingLevel, canBuild, productionPerHour } from '../core/islands';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
-import { PLOTS, buildingSvg, islandSceneSvg, itemIcon } from './art';
+import { PLOTS, buildingSvg, flourishSvg, islandSceneSvg, itemIcon } from './art';
 import { el } from './dom';
-import { upgradeCard } from './card';
+import { progressBar, upgradeCard } from './card';
+import { islandTier } from '../core/milestones';
 import { affordState } from '../core/advice';
 import { etaText } from './upgrades';
 import { destName } from './names';
@@ -51,7 +52,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
       // The outer group places the building; the inner one can be animated without losing that position.
       .map((b, i) => `<g transform="translate(${plots[i][0]} ${plots[i][1]})"><g class="bld" data-b="${b}">${buildingSvg(b, buildingLevel(s, b))}</g></g>`)
       .join('');
-    scene.innerHTML = `<svg viewBox="0 0 360 240" aria-hidden="true">${islandSceneSvg(d, s.sea)}${gs}</svg>`;
+    scene.innerHTML = `<svg viewBox="0 0 360 240" aria-hidden="true">${islandSceneSvg(d, s.sea)}${gs}${flourishSvg(islandTier(s, d))}</svg>`;
     blds.forEach((b, i) => {
       const btn = el('button', `plot-btn${selected === b ? ' sel' : ''}`);
       btn.dataset.b = b;
@@ -69,6 +70,18 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
 
   function drawStore(s: GameState) {
     store.replaceChildren();
+    // Whole-island milestone: all three buildings at 3, then at 5.
+    const tier = islandTier(s, d);
+    const lv = ISLAND_BUILDINGS[d].map((b) => buildingLevel(s, b));
+    if (tier >= 2) {
+      const done = el('p', 'milestone done');
+      done.textContent = t(lang, 'ms.islandDone');
+      store.append(done);
+    } else {
+      const need = tier === 0 ? 3 : 5;
+      const ok = lv.filter((l) => l >= need).length;
+      store.append(progressBar(t(lang, tier === 0 ? 'ms.island1' : 'ms.island2', { done: ok }), ok / 3));
+    }
     const st = s.islandStore[d];
     const has = st && MATERIALS.some((m) => st[m] >= 1);
     const p = el('p');
@@ -138,6 +151,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
       selected,
       st ? MATERIALS.map((m) => Math.floor(st[m])).join() : '',
       selected ? MATERIALS.map((m) => (s.materials[m] >= buildCost(selected!, buildingLevel(s, selected!), s)[m] ? 1 : 0)).join('') : '',
+      islandTier(s, d),
     ].join('|');
     if (k === key) return;
     const levelsChanged = key.split('|')[0] !== k.split('|')[0] || key.split('|')[1] !== k.split('|')[1];

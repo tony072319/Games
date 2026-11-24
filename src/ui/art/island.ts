@@ -185,3 +185,17 @@ export function buildingSvg(b: BuildingId, level: number): string {
   if (level <= 0) return `<g class="plot"><ellipse rx="30" ry="7" fill="none" stroke="#ffd98a" stroke-opacity="0.6" stroke-dasharray="4 4"/><path d="M-5 -12 h10 M0 -17 v10" stroke="#ffd98a" stroke-width="2" stroke-linecap="round"/></g>`;
   return DRAW[b](Math.min(5, level));
 }
+
+/** An island that reached its milestone celebrates: a string of lanterns (tier 1) and flags (tier 2). */
+export function flourishSvg(tier: number): string {
+  if (tier <= 0) return '';
+  const lights = [40, 80, 120, 160, 200, 240, 280, 320]
+    .map((x, i) => `<circle cx="${x}" cy="${118 + Math.sin(i) * 6}" r="7" fill="url(#iglow)" class="lamp"/><circle cx="${x}" cy="${118 + Math.sin(i) * 6}" r="2" fill="#ffd98a"/>`)
+    .join('');
+  const line = `<path d="M20 112 Q100 132 180 116 T340 114" fill="none" stroke="#3a3044" stroke-width="0.8"/>`;
+  const flags =
+    tier >= 2
+      ? [60, 140, 220, 300].map((x, i) => `<path class="flag" d="M${x} ${124 + (i % 2) * 4} l10 3 l-10 4 Z" fill="${['#d96b4a', '#4a90c8', '#e8b84a', '#7fd18a'][i]}"/>`).join('')
+      : '';
+  return `<g class="flourish">${line}${lights}${flags}</g>`;
+}

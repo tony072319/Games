@@ -191,6 +191,31 @@ try {
   if ((await seaNow()) !== 'aurora') fail('should arrive at the aurora sea');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/aurora.png` });
 
+  // Milestones: the net card shows progress to its next milestone.
+  if (!(await page.locator('[data-upgrade="net"] .progress').count())) fail('net card should show milestone progress');
+
+  // The book: 12 cells per sea; a find shows up as found.
+  await dbg('+1 珍品');
+  await page.locator('.book-btn').click();
+  await page.locator('.book').waitFor();
+  if ((await page.locator('.book-cell').count()) !== 12) fail('a book page should have 12 cells');
+  if ((await page.locator('.book-cell.found').count()) < 1) fail('the find should be in the book');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/book.png` });
+  await page.locator('.book .map-close').click();
+  await page.locator('.book').waitFor({ state: 'detached', timeout: 2000 });
+
+  // The starlight tree: learn one, then reset.
+  page.once('dialog', (d) => d.accept());
+  await page.locator('.starlight').click();
+  await page.locator('.tree').waitFor();
+  await page.locator('[data-talent="net1"] .buy').click();
+  if (!(await page.locator('[data-talent="net1"].learned').count())) fail('learning should light the talent');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tree.png` });
+  await page.locator('.tree-foot .btn-ghost').click();
+  if (await page.locator('[data-talent="net1"].learned').count()) fail('reset should give the point back');
+  await page.locator('.tree .map-close').click();
+  await page.locator('.tree').waitFor({ state: 'detached', timeout: 2000 });
+
   // Switching the animation setting must not add anything else to the screen.
   for (let i = 0; i < 2; i++) {
     await page.locator('.hud .settings-btn').click();

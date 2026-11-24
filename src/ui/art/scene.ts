@@ -152,6 +152,7 @@ export function sceneFrontSvg(sea: SeaId = 'dusk'): string {
 </g>
 
 <g class="tower-slot"></g>
+<g class="shelf-slot"></g>
 <!-- a cat on the platform by the door -->
 <g class="cat" transform="translate(120 432)">
   <path class="cat-tail" d="M7 -2 q8 -2 7 -10" fill="none" stroke="#1d1830" stroke-width="2" stroke-linecap="round"/>
