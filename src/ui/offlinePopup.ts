@@ -46,7 +46,7 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
     const p = el('p');
     if (l.kind === 'away') p.textContent = t(lang, 'arrival.away', { time: formatDuration(l.seconds ?? 0, lang) });
     if (l.kind === 'chest') p.textContent = t(lang, 'arrival.chest');
-    if (l.kind === 'cap') p.textContent = t(lang, 'arrival.cap', { h: l.hours ?? 0 });
+    if (l.kind === 'cap') p.textContent = t(lang, 'arrival.cap', { h: formatNumber(l.hours ?? 0, lang) });
     if (l.kind === 'boat') p.textContent = t(lang, 'arrival.boat', { name: act.destName(l.dest!) });
     if (l.kind === 'island') p.textContent = t(lang, 'arrival.island');
     if (l.kind === 'tip') p.textContent = t(lang, 'arrival.tip', { name: t(lang, `upg.${l.upgrade}.name`) });

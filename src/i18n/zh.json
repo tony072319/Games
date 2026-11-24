@@ -182,5 +182,9 @@
   "arrival.island": "岛上攒下了这些，小船下次去时一起带回：",
   "arrival.tip": "现在就能修整{name}。",
   "arrival.see": "去看看",
-  "life.gull": "海鸥"
+  "life.gull": "海鸥",
+  "island.perkStep": "再 +{n}%",
+  "island.perkStepMinus": "再 -{n}%",
+  "island.starts": "开始产出",
+  "island.more": "产出 +{n}%"
 }

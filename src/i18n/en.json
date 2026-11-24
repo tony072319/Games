@@ -182,5 +182,9 @@
   "arrival.island": "Waiting on the islands for the boat to fetch:",
   "arrival.tip": "You can mend the {name} now.",
   "arrival.see": "Show me",
-  "life.gull": "Gull"
+  "life.gull": "Gull",
+  "island.perkStep": "+{n}% more",
+  "island.perkStepMinus": "{n}% cheaper again",
+  "island.starts": "starts producing",
+  "island.more": "produces {n}% more"
 }

@@ -177,7 +177,7 @@
 @keyframes tail-sway { 50% { transform: rotate(-18deg); } }
 .cat-eyes { animation: blink 5s steps(1) infinite; }
 @keyframes blink { 96% { opacity: 0; } }
-.game.calm .keeper, .game.calm .cat-tail, .game.calm .lowfog ellipse { animation: none; }
+.game.calm .keeper, .game.calm .cat-tail, .game.calm .cat-eyes, .game.calm .lowfog ellipse, .game.calm .shiplight { animation: none; }
 
 /* A gull resting on the platform; tap it and it flies off for a while. */
 .gull { position: absolute; z-index: 5; width: 28px; height: 22px; padding: 0; border: 0; background: none; transform: translate(-50%, -100%); }

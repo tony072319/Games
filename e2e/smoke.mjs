@@ -191,6 +191,13 @@ try {
   if ((await seaNow()) !== 'aurora') fail('should arrive at the aurora sea');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/aurora.png` });
 
+  // Switching the animation setting must not add anything else to the screen.
+  for (let i = 0; i < 2; i++) {
+    await page.locator('.hud .settings-btn').click();
+    await page.locator('.menu button', { hasText: '动画' }).click();
+  }
+  if ((await page.locator('.mini-exit').count()) !== 1) fail(`there should be one expand button, found ${await page.locator('.mini-exit').count()}`);
+
   // Corner mode: controls fold away, survive a reload, and come back.
   await page.locator('.hud .settings-btn').click();
   await page.locator('.menu button', { hasText: '角落模式' }).click();

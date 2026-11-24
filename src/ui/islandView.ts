@@ -1,5 +1,5 @@
 import { BUILDING_MAX, MATERIALS, type BuildingId, type DestId } from '../core/data';
-import { BUILDINGS, ISLAND_BUILDINGS, buildCost, buildingLevel, canBuild } from '../core/islands';
+import { BUILDINGS, ISLAND_BUILDINGS, buildCost, buildingLevel, canBuild, productionPerHour } from '../core/islands';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { PLOTS, buildingSvg, islandSceneSvg, itemIcon } from './art';
@@ -101,9 +101,17 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
       const [step, minus] = PERK_STEP[perk];
       note = t(lang, minus ? 'island.perkNowMinus' : 'island.perkNow', { n: step * lvl });
     }
+    // What one more level does: production up by N%, or the perk one step stronger.
+    let effect: string | undefined;
+    if (lvl < BUILDING_MAX) {
+      if (perk) effect = t(lang, 'card.next', { effect: t(lang, PERK_STEP[perk][1] ? 'island.perkStepMinus' : 'island.perkStep', { n: PERK_STEP[perk][0] }) });
+      else if (lvl === 0) effect = t(lang, 'card.next', { effect: t(lang, 'island.starts') });
+      else effect = t(lang, 'card.next', { effect: t(lang, 'island.more', { n: Math.round((productionPerHour(b, lvl + 1) / productionPerHour(b, lvl) - 1) * 100) }) });
+    }
     info.append(
       upgradeCard(lang, {
         data: ['building', b],
+        effect,
         // Not built yet: a faint preview of the first level.
         thumb: `<svg viewBox="-48 -88 96 96" aria-hidden="true" style="${lvl === 0 ? 'opacity:.5' : ''}">${buildingSvg(b, Math.max(1, lvl))}</svg>`,
         title: t(lang, `bld.${b}.name`),

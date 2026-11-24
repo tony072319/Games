@@ -32,7 +32,7 @@ function hash(n: number): number {
 const ROWS = 64;
 
 /** `light` is the lighthouse's light, 0..1: its reflection spreads farther and denser as it grows. */
-export function drawSea(ctx: SeaCtx, tMs: number, sky: Sky, light = 0.5): void {
+export function drawSea(ctx: SeaCtx, tMs: number, sky: Sky, light = 0.5, calm = false): void {
   const t = tMs / 1000;
   const horizon = hex(sky.horizon);
   const low = hex(sky.skyLow);
@@ -84,7 +84,7 @@ export function drawSea(ctx: SeaCtx, tMs: number, sky: Sky, light = 0.5): void {
   glitter(ctx, t, 270, sky.sun, '#f8b67c', 0, 0.62);
   glitter(ctx, t, 78, sky.moon, '#e6ecff', 0, 0.62);
   glitter(ctx, t, 180, 0.3 + 0.55 * light, '#ffd98a', 0.4, 0.55 + 0.35 * light, Math.round(light * 4));
-  if (sky.moon > 0.3) plankton(ctx, t, sky.moon);
+  if (sky.moon > 0.3 && !calm) plankton(ctx, t, sky.moon);
   ctx.globalAlpha = 1;
 }
 

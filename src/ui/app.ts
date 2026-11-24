@@ -567,13 +567,6 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         pick: () => {
           state.settings.calm = !state.settings.calm;
           game.classList.toggle('calm', state.settings.calm);
-    game.classList.toggle('mini', state.settings.mini);
-    // In corner mode the controls fold away; this brings them back.
-    const exit = el('button', 'btn-quiet mini-exit');
-    exit.type = 'button';
-    exit.textContent = t(lang, 'ui.expand');
-    exit.addEventListener('click', () => setMini(false));
-    hud.el.append(exit);
           save();
         },
       },
@@ -704,8 +697,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       const [x0, y0, x1, y1] = h.rect;
       Object.assign(h.el.style, { left: `${sceneXToPx(x0)}px`, top: `${sceneYToPx(y0)}px`, width: `${(x1 - x0) * scale}px`, height: `${(y1 - y0) * scale}px` });
     }
-    for (const g of glints) Object.assign(g.el.style, { left: `${sceneXToPx(g.at[0])}px`, top: `${sceneYToPx(g.at[1])}px` });
-    Object.assign(gullBtn.style, { left: `${sceneXToPx(140)}px`, top: `${sceneYToPx(432)}px` });
+    // Hint stars never hide under the top bar.
+    const hudBottom = hud.el.offsetHeight + 8;
+    for (const g of glints) Object.assign(g.el.style, { left: `${sceneXToPx(g.at[0])}px`, top: `${Math.max(hudBottom, sceneYToPx(g.at[1]))}px` });
+    Object.assign(gullBtn.style, { left: `${sceneXToPx(150)}px`, top: `${sceneYToPx(432)}px` });
   }
 
   /** Scene (viewBox 360x640) to stage pixels, matching preserveAspectRatio="xMidYMid slice". */
@@ -775,7 +770,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     ctx.clearRect(0, 0, seaCanvas.width, seaCanvas.height);
     // Same mapping as the SVG layers: preserveAspectRatio="xMidYMid slice".
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (stageW / 2 - 180 * scale) * dpr, (stageH / 2 - 320 * scale) * dpr);
-    drawSea(ctx, now, currentSky(), lightLevel());
+    drawSea(ctx, now, currentSky(), lightLevel(), state.settings.calm);
   }
 
   /** "The brighter the light, the busier the sea": fog thins, the warm pool grows, ships appear. */
