@@ -324,5 +324,8 @@
   "hud.starCount": "Starlight {n}, open the starlight tree",
   "tree.resetTitle": "Spend starlight again",
   "debug.speed": "Time ×{n}",
-  "debug.stars": "+100 starlight"
+  "debug.stars": "+100 starlight",
+  "view.home": "Home",
+  "view.sea": "Sea",
+  "world.noWebgl": "This browser can't draw the 3D scene — try another browser?"
 }

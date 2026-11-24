@@ -16,6 +16,8 @@ export interface LifeContext {
 }
 export interface Life {
   update(dt: number, t: number, ctx: LifeContext): void;
+  /** Test build: bring the whale by now. */
+  summon(): void;
   dispose(): void;
 }
 export type TemplateFn = (id: ModelId) => Promise<unknown>;
@@ -121,9 +123,16 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
   const whale = animal('qf/Whale');
   const dolphins = [animal('qf/Dolphin'), animal('qf/Dolphin')];
   let whaleAt = 20 + Math.random() * 40;
+  let lastT = 0;
+  let forced = false;
 
   return {
+    summon() {
+      whaleAt = lastT;
+      forced = true;
+    },
     update(dt, t, ctx) {
+      lastT = t;
       for (const m of mixers) m.update(dt);
       // Smoke.
       for (const p of puffs) {
@@ -185,10 +194,11 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
         if (c.position.x > 45) c.position.x = -45;
       }
       // The whale passes far out every few minutes once the light reaches 5.
-      if (ctx.light >= 5 && !ctx.calm && t > whaleAt) {
+      if ((ctx.light >= 5 || forced) && !ctx.calm && t > whaleAt) {
         const k = (t - whaleAt) / 40;
         if (k > 1) {
           whale.visible = false;
+          forced = false;
           whaleAt = t + 120 + Math.random() * 120;
         } else {
           whale.visible = true;
@@ -196,7 +206,7 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
           whale.position.set(Math.cos(a) * 24, -1.1 + Math.max(0, Math.sin(k * Math.PI * 3)) * 0.8, Math.sin(a) * 24);
           whale.rotation.y = -a;
         }
-      } else if (ctx.light < 5 || ctx.calm) whale.visible = false;
+      } else whale.visible = false;
       // A pair of dolphins once the light reaches 8.
       dolphins.forEach((d, i) => {
         d.visible = ctx.light >= 8 && !ctx.calm;

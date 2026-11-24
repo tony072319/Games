@@ -5,19 +5,19 @@ import { loadGame, saveGame, type KV } from '../core/save';
 import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } from '../core/sim';
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
-import { allowedEvents, ambientLayer, playAmbient } from './ambient';
-import { BOAT_POS, CHEST_POS, SEA_BAND, boatSvg, chestSvg, dockSvg, islandIcon, itemIcon, netSvg, sceneBackSvg, sceneFrontSvg, towerSvg } from './art';
+import { islandIcon, itemIcon } from './art';
 import { DOCK_LIGHT, buildBoat, startVoyage, unloadBoat } from '../core/boat';
+import { createWorld, type AnchorTag, type World } from '../world/scene';
+import { boatPosition, flotsamPosition, worldLayout, type Tag } from '../world/layout';
+import { boatModel } from '../world/looks';
 import { createSeaMap, type SeaMap } from './seaMap';
 import { createIslandView, type IslandView } from './islandView';
 import { createBook, type Book } from './book';
 import { createTalentTree } from './talentTree';
-import { CURIO_BY_ID, CURIOS, chestFind, foundCurio } from '../core/curios';
-import { shelfSvg } from './art';
-import { construct } from '../core/islands';
-import { drawSea } from './sea';
+import { CURIOS, chestFind, foundCurio } from '../core/curios';
+import { BUILDINGS, construct } from '../core/islands';
 import { SoundEngine } from './audio';
-import { SKY_CYCLE_MS, applySky, skyAt, tintSky } from './sky';
+import { SKY_CYCLE_MS, skyAt, tintSky } from './sky';
 import { canPassLight, nextSea, passLight, starlightFor, switchSea } from '../core/seas';
 import { nextGoal, type Goal } from '../core/advice';
 import { canBuy } from '../core/economy';
@@ -30,28 +30,6 @@ import { createHud, type Hud } from './hud';
 import { showArrival } from './offlinePopup';
 import { arrivalLines } from '../core/arrival';
 import { createPanel, type Panel } from './upgrades';
-
-/** What a drifting curio looks like before you know what it is: a small glowing bundle. */
-const CURIO_DRIFT_ICON = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="#fff0b8" opacity="0.25"/><path d="M9 14 Q16 6 23 14 L21 24 Q16 27 11 24 Z" fill="#b8923a" stroke="#fff0b8"/><path d="M12 15 h8" stroke="#fff0b8"/><circle cx="16" cy="19" r="2" fill="#fff6d8"/></svg>`;
-
-/** A small tile of random noise, drawn once and reused as the scene's film grain. */
-let grainCache = '';
-function grainUrl(): string {
-  if (grainCache) return grainCache;
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const ctx = c.getContext('2d');
-  if (!ctx) return '';
-  const img = ctx.createImageData(128, 128);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const v = Math.random() * 255;
-    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
-    img.data[i + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
-  grainCache = c.toDataURL();
-  return grainCache;
-}
 
 export interface AppOptions {
   now: () => number;
@@ -80,31 +58,24 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let chestBubble!: HTMLButtonElement;
   let boatBubble!: HTMLButtonElement;
   let bubbleKey = '';
-  let hits: { el: HTMLButtonElement; rect: [number, number, number, number] }[] = [];
-  let glints: { el: HTMLElement; at: [number, number]; when: () => boolean }[] = [];
+  let hits: { el: HTMLButtonElement; tag: Tag }[] = [];
+  let glints: { el: HTMLElement; tag: Tag; when: () => boolean }[] = [];
   let glintKey = '';
   let goalBar!: HTMLButtonElement;
   let goalKey = '';
   let goal: Goal | null = null;
-  let gullBtn!: HTMLButtonElement;
   let lightShown = -1;
-  /** Lighthouse light as 0..1; drives fog, reflections and ship lights. */
-  const lightLevel = () => state.levels.light / MAX_LEVEL.light;
+  let wasFast = false;
   let chestKey = '';
+  /** The 3D world; null when this browser cannot draw it. */
+  let world: World | null = null;
+  let viewBtns!: HTMLElement;
   const itemEls = new Map<number, HTMLElement>();
   /** Test build: materials are topped up every frame so nothing ever runs out. */
   let infinite = opts.debug;
   const INFINITE_AMOUNT = 1e12;
   const resizeObserver = new ResizeObserver(() => onStageResize());
   const sound = new SoundEngine(state.settings.sound);
-  let farLayer!: SVGSVGElement;
-  let nearLayer!: SVGSVGElement;
-  let seaCanvas!: HTMLCanvasElement;
-  let netSlot: Element | null = null;
-  let netShown = 0;
-  let towerSlot: Element | null = null;
-  let towerShown = 0;
-  let dockSlot: Element | null = null;
   let boatBtn!: HTMLButtonElement;
   let boatKey = '';
   let mapBtn!: HTMLButtonElement;
@@ -117,20 +88,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let bookBtn!: HTMLButtonElement;
   /** Something new went into the book since it was last opened. */
   let newFind = false;
-  let shelfSlot: Element | null = null;
-  let shelfKey = '';
   /** Whether cargo was waiting last frame, to notice the boat coming home. */
   let hadCargo = state.boat.cargo !== null;
-  let nextSeaAt = 0;
   /** Debug only: shifts the sky clock forward. */
   let skyOffset = 0;
   let nextSkyAt = 0;
-  let nextAmbientAt = opts.now() + 8000;
   const currentSky = () => tintSky(skyAt(opts.now() + skyOffset), state.sea);
-  function triggerAmbient() {
-    const kinds = allowedEvents(currentSky());
-    playAmbient(farLayer, nearLayer, kinds[Math.floor(Math.random() * kinds.length)]);
-  }
 
   // An open popup accumulates further time away instead of stacking dialogs.
   let pending: OfflineReport | null = null;
@@ -332,15 +295,6 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     refresh();
   }
 
-  function renderShelf() {
-    if (!shelfSlot) return;
-    const rare = state.curios.filter((id) => CURIO_BY_ID[id] && CURIO_BY_ID[id].rarity !== 'common');
-    const key = rare.join();
-    if (key === shelfKey) return;
-    shelfKey = key;
-    shelfSlot.innerHTML = shelfSvg(rare);
-  }
-
   function openMap() {
     if (seaMap) return;
     const lang = state.settings.lang;
@@ -517,20 +471,15 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     toast(t(lang, 'toast.upgraded', { name: t(lang, `upg.${id}.name`), level: state.levels[id] }));
     panel.flash(id);
     refresh(); // draw the new look first, then celebrate it
-    const target = id === 'net' ? netSlot : id === 'storage' ? chestBtn : id === 'light' ? towerSlot : boatBtn;
+    const target = id === 'net' ? hitEl('net') : id === 'storage' ? chestBtn : id === 'light' ? hitEl('light') : boatBtn;
     if (id === 'light' && state.levels.light >= MAX_LEVEL.light)
       setTimeout(() => toast(t(lang, state.sea === 'aurora' ? 'toast.allLit' : 'toast.lit')), 1200);
-    target?.classList.remove('pulse');
-    void (target as HTMLElement | null)?.getBoundingClientRect();
-    target?.classList.add('pulse');
+    const tag: Tag = id === 'net' ? 'net' : id === 'storage' ? 'chest' : id === 'light' ? 'light' : 'boat';
+    world?.pulse(tag);
     sparkle(target);
-    if (id === 'light' && towerSlot && !state.settings.calm) {
-      // The lighthouse flares up for a moment when it is mended.
-      towerSlot.classList.remove('flare');
-      void (towerSlot as unknown as HTMLElement).getBoundingClientRect();
-      towerSlot.classList.add('flare');
-    }
   }
+
+  const hitEl = (id: UpgradeId) => stage.querySelector<HTMLElement>(`.hit[data-hit="${id}"]`);
 
   function build() {
     const lang = state.settings.lang;
@@ -538,101 +487,83 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     document.title = t(lang, 'game.title');
     game = el('div', 'game');
     stage = el('div', 'stage');
-    const back = el('div', 'scene back', sceneBackSvg(state.sea));
-    seaCanvas = el('canvas', 'sea');
-    farLayer = ambientLayer();
-    const front = el('div', 'scene front', sceneFrontSvg(state.sea));
-    nearLayer = ambientLayer();
-    stage.append(back, seaCanvas, farLayer, front, nearLayer);
-    netSlot = front.querySelector('.net-slot');
-    netShown = 0;
-    towerSlot = front.querySelector('.tower-slot');
-    towerShown = 0;
-    dockSlot = front.querySelector('.dock-slot');
-    shelfSlot = front.querySelector('.shelf-slot');
-    shelfKey = '';
+    world?.dispose();
+    world = null;
+    try {
+      world = createWorld(stage, {
+        calm: state.settings.calm,
+        onReady: () => stage.classList.add('ready'),
+        onError: (msg) => console.warn(msg),
+      });
+      world.setSky(currentSky(), state.sea);
+      world.setLight(state.levels.light);
+      lightShown = state.levels.light;
+    } catch {
+      const note = el('div', 'note');
+      note.textContent = t(lang, 'world.noWebgl');
+      stage.append(note);
+    }
+    // Buttons sit invisibly over the 3D things (for keyboards and screen readers);
+    // taps on the picture itself are picked in the world.
+    const onAct = (b: HTMLElement, fn: () => void) => b.addEventListener('click', fn);
     boatBtn = el('button', 'boat');
     boatBtn.setAttribute('aria-label', t(lang, 'boat.label'));
-    boatBtn.addEventListener('pointerdown', (ev) => {
-      ev.preventDefault();
-      if (state.boat.cargo) unload();
-      else openMap();
-    });
+    onAct(boatBtn, () => tapThing('boat'));
     boatKey = '';
     stage.append(boatBtn);
     nextSkyAt = 0;
-    nextSeaAt = 0;
     flotsamLayer = el('div', 'flotsam');
     chestBtn = el('button', 'chest');
     chestBtn.setAttribute('aria-label', t(lang, 'chest.label'));
-    chestBtn.addEventListener('pointerdown', (ev) => {
-      ev.preventDefault();
-      if (chestTotal(state.chest) < 1) return;
-      takeChest();
-      refresh();
-      save();
-    });
+    onAct(chestBtn, () => tapThing('chest'));
     chestKey = '';
     // Bubbles above the chest and the boat say there is something to collect.
     chestBubble = el('button', 'bubble');
     chestBubble.type = 'button';
-    chestBubble.addEventListener('click', () => {
-      if (chestTotal(state.chest) < 1) return;
-      takeChest();
-      refresh();
-      save();
-    });
+    chestBubble.addEventListener('click', () => tapThing('chest'));
     boatBubble = el('button', 'bubble');
     boatBubble.type = 'button';
     boatBubble.textContent = t(lang, 'bubble.unload');
     boatBubble.addEventListener('click', () => unload());
     bubbleKey = '';
     stage.append(chestBtn, flotsamLayer, chestBubble, boatBubble);
-    // Tap the lighthouse or the net to open its upgrade (scene rectangles, viewBox units).
-    const hit = (id: UpgradeId, rect: [number, number, number, number]) => {
+    // The lighthouse and the net open their upgrade.
+    const hit = (id: UpgradeId, tag: Tag) => {
       const b = el('button', 'hit');
       b.type = 'button';
       b.dataset.hit = id;
       b.setAttribute('aria-label', t(lang, `upg.${id}.name`));
-      b.addEventListener('click', () => panel.show(id));
-      stage.insertBefore(b, flotsamLayer); // drifting items stay on top
-      hits.push({ el: b, rect });
+      onAct(b, () => tapThing(tag));
+      stage.insertBefore(b, flotsamLayer);
+      hits.push({ el: b, tag });
     };
     hits = [];
-    hit('light', [156, 220, 204, 432]);
-    hit('net', [20, 340, 132, 478]);
+    hit('light', 'light');
+    hit('net', 'net');
     // Small lights over things that can be mended right now.
     glints = [];
-    const glint = (at: [number, number], when: () => boolean) => {
+    const glint = (tag: Tag, when: () => boolean) => {
       const g = el('span', 'glint');
       g.setAttribute('aria-hidden', 'true');
       stage.append(g);
-      glints.push({ el: g, at, when });
+      glints.push({ el: g, tag, when });
     };
-    glint([180, 214], () => canBuy(state, 'light'));
-    glint([76, 336], () => canBuy(state, 'net'));
-    glint([CHEST_POS.x + 26, CHEST_POS.y - 50], () => canBuy(state, 'storage'));
+    glint('light', () => canBuy(state, 'light'));
+    glint('net', () => canBuy(state, 'net'));
+    glint('chest', () => canBuy(state, 'storage'));
     glintKey = '';
-    // Film grain, made once.
-    const grain = el('div', 'grain');
-    grain.style.backgroundImage = `url(${grainUrl()})`;
-    stage.append(grain);
-    // A gull resting on the platform; tap it and it flies off for a while.
-    gullBtn = el('button', 'gull');
-    gullBtn.type = 'button';
-    gullBtn.setAttribute('aria-label', t(lang, 'life.gull'));
-    gullBtn.innerHTML = `<svg viewBox="0 0 28 22" aria-hidden="true"><ellipse cx="13" cy="14" rx="8" ry="5" fill="#ece6f5"/><circle cx="20" cy="9" r="3.6" fill="#ece6f5"/><path d="M23 9 l4 1 l-4 1 Z" fill="#e8a23a"/><path d="M6 12 L13 10 L10 16 Z" fill="#9a93b3"/><circle cx="21" cy="8.2" r="0.8" fill="#1d1830"/><line x1="12" y1="19" x2="12" y2="22" stroke="#e8a23a"/><line x1="15" y1="19" x2="15" y2="22" stroke="#e8a23a"/></svg>`;
-    gullBtn.addEventListener('click', () => {
-      if (gullBtn.classList.contains('away')) return;
-      gullBtn.classList.add('away');
-      sound.play('tap');
-      setTimeout(() => {
-        gullBtn.classList.remove('away');
-        gullBtn.classList.add('back');
-        setTimeout(() => gullBtn.classList.remove('back'), 1900);
-      }, 20000 + Math.random() * 20000);
-    });
-    stage.append(gullBtn);
+    // Back home / out to sea.
+    viewBtns = el('div', 'view-btns');
+    for (const v of ['home', 'sea'] as const) {
+      const b = el('button', 'btn-quiet view-btn');
+      b.type = 'button';
+      b.dataset.view = v;
+      b.textContent = `${v === 'home' ? '🏠' : '🌊'} ${t(lang, `view.${v}`)}`;
+      b.addEventListener('click', () => world?.focus(v));
+      viewBtns.append(b);
+    }
+    stage.append(viewBtns);
+    if (world) watchTaps(world);
     lightShown = -1;
     hud = createHud(lang, game, () => [
       {
@@ -651,6 +582,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         pick: () => {
           state.settings.calm = !state.settings.calm;
           game.classList.toggle('calm', state.settings.calm);
+          world?.setCalm(state.settings.calm);
           save();
         },
       },
@@ -763,7 +695,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
             skyOffset += SKY_CYCLE_MS / 5;
             nextSkyAt = 0;
           },
-          ambient: () => triggerAmbient(),
+          ambient: () => world?.summon(),
           reset: () => {
             Object.assign(state, newGame(opts.now(), state.settings.lang));
             pending = null;
@@ -777,7 +709,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     root.replaceChildren(game);
     itemEls.clear();
     refresh(); // renders the panel, which decides how tall the stage is
-    layoutStage();
+    world?.resize();
     resizeObserver.disconnect();
     resizeObserver.observe(stage);
     if (pending) {
@@ -787,46 +719,83 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
   }
 
-  let stageW = 0;
-  let stageH = 0;
-  let scale = 1;
-  function layoutStage() {
-    stageW = stage.clientWidth;
-    stageH = stage.clientHeight;
-    scale = Math.max(stageW / 360, stageH / 640);
-    stage.style.setProperty('--stage-w', `${stageW}px`);
-    stage.style.setProperty('--scene-scale', String(scale));
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    seaCanvas.width = Math.round(stageW * dpr);
-    seaCanvas.height = Math.round(stageH * dpr);
-    nextSeaAt = 0;
-    chestBtn.style.left = `${sceneXToPx(CHEST_POS.x)}px`;
-    chestBtn.style.top = `${sceneYToPx(CHEST_POS.y)}px`;
-    boatBtn.style.left = `${sceneXToPx(BOAT_POS.x)}px`;
-    boatBtn.style.top = `${sceneYToPx(BOAT_POS.y)}px`;
-    placeBubbles();
-    for (const h of hits) {
-      const [x0, y0, x1, y1] = h.rect;
-      Object.assign(h.el.style, { left: `${sceneXToPx(x0)}px`, top: `${sceneYToPx(y0)}px`, width: `${(x1 - x0) * scale}px`, height: `${(y1 - y0) * scale}px` });
-    }
-    // Hint stars never hide under the top bar.
-    const hudBottom = hud.el.offsetHeight + 8;
-    for (const g of glints) Object.assign(g.el.style, { left: `${sceneXToPx(g.at[0])}px`, top: `${Math.max(hudBottom, sceneYToPx(g.at[1]))}px` });
-    Object.assign(gullBtn.style, { left: `${sceneXToPx(150)}px`, top: `${sceneYToPx(432)}px` });
+  /**
+   * Keep each invisible button over its 3D thing, and each hint above it. A thing that is
+   * off screen hides its button, bubble and hint rather than drawing outside the stage.
+   */
+  function placeOverlays() {
+    if (!world) return;
+    const top = hud.el.offsetHeight + 8;
+    const put = (e: HTMLElement, tag: AnchorTag, dy = 0, minTop = 0) => {
+      const a = world!.anchor(tag);
+      const ok = !!a && a.visible && a.y + dy >= minTop;
+      e.classList.toggle('offscreen', !ok);
+      if (!ok || !a) return null;
+      e.style.left = `${a.x}px`;
+      e.style.top = `${a.y + dy}px`;
+      return a;
+    };
+    put(chestBtn, 'chest');
+    put(boatBtn, 'boat');
+    for (const h of hits) put(h.el, h.tag);
+    for (const g of glints) put(g.el, g.tag, -46, top);
+    if (chestBubble.style.display !== 'none') put(chestBubble, 'chest', -48);
+    if (boatBubble.style.display !== 'none') put(boatBubble, 'boat', -52);
+    for (const [id, e] of itemEls) put(e, `flotsam:${id}`);
   }
 
-  /** Scene (viewBox 360x640) to stage pixels, matching preserveAspectRatio="xMidYMid slice". */
-  const sceneXToPx = (x: number) => stageW / 2 + (x - 180) * scale;
-  const sceneYToPx = (y: number) => stageH / 2 + (y - 320) * scale;
-
-  /** Pixel top for a lane (0 = far, 1 = near), kept inside the visible sea on short/wide screens. */
-  function laneTop(lane: number): number {
-    const top = sceneYToPx(SEA_BAND.top);
-    const bottom = Math.min(sceneYToPx(SEA_BAND.bottom), stageH - 28);
-    return top + lane * Math.max(0, bottom - top);
+  /** A tap on the picture: whatever is under the finger, unless the finger dragged the view. */
+  function watchTaps(w: World) {
+    let down: { x: number; y: number; at: number } | null = null;
+    w.canvas.addEventListener('pointerdown', (e) => (down = { x: e.clientX, y: e.clientY, at: e.timeStamp }));
+    w.canvas.addEventListener('pointerup', (e) => {
+      const d = down;
+      down = null;
+      if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8 || e.timeStamp - d.at > 300) return;
+      const r = w.canvas.getBoundingClientRect();
+      const hit = w.pick(e.clientX - r.left, e.clientY - r.top);
+      if (hit) tapThing(hit, e.clientX, e.clientY);
+    });
   }
 
-  function syncFlotsam(now: number) {
+  /** What tapping each thing does, from the picture or from its button. */
+  function tapThing(tag: AnchorTag, x?: number, y?: number) {
+    if (tag.startsWith('flotsam:')) return grabFlotsam(Number(tag.slice(8)), x, y);
+    if (tag === 'chest') {
+      if (chestTotal(state.chest) < 1) return panel.show('storage');
+      takeChest();
+      refresh();
+      save();
+    } else if (tag === 'boat') {
+      if (state.boat.cargo) unload();
+      else openMap();
+    } else if (tag === 'light' || tag === 'net') panel.show(tag);
+    else if (tag === 'dock') openMap();
+    else if (tag.startsWith('island:')) {
+      const d = tag.slice(7) as DestId;
+      if (state.discovered.includes(d)) openIsland(d);
+      else openMap();
+    } else if (tag.startsWith('bld:')) openIsland(BUILDINGS[tag.slice(4) as keyof typeof BUILDINGS].island);
+  }
+
+  function grabFlotsam(id: number, x?: number, y?: number) {
+    const b = itemEls.get(id);
+    const rect = b?.getBoundingClientRect();
+    const cx = x ?? (rect ? rect.left + rect.width / 2 : 0);
+    const cy = y ?? (rect ? rect.top + rect.height / 2 : 0);
+    const got = collect(field, state, id);
+    if (!got) return;
+    b?.remove();
+    itemEls.delete(id);
+    if (got.curio) return onCurio(got.curio, cx, cy);
+    tutorialDone(0);
+    sound.play('tap');
+    const srect = stage.getBoundingClientRect();
+    floatText(`+${formatNumber(got.amount, state.settings.lang)}`, cx - srect.left + 8, cy - srect.top - 4);
+    flyToHud(got.material, cx, cy, 1);
+  }
+
+  function syncFlotsam() {
     const alive = new Set(field.items.map((i) => i.id));
     for (const [id, e] of itemEls) {
       if (!alive.has(id)) {
@@ -836,33 +805,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     for (const item of field.items) {
       if (itemEls.has(item.id)) continue;
-      const b = el('button', item.curio ? 'item curio' : 'item', item.curio ? CURIO_DRIFT_ICON : itemIcon(item.material));
+      const b = el('button', item.curio ? 'item curio' : 'item');
+      b.type = 'button';
       b.setAttribute('aria-label', t(state.settings.lang, item.curio ? 'drift.curio' : `mat.${item.material}`));
       b.dataset.mat = item.material;
-      b.style.top = `${laneTop(item.lane)}px`;
-      // Farther items look smaller and dimmer.
-      b.style.setProperty('--depth', (0.65 + 0.5 * item.lane).toFixed(2));
-      b.style.zIndex = String(10 + Math.round(item.lane * 10));
-      b.style.animationDelay = `${-(now - item.spawnedAt)}ms`;
-      b.addEventListener('pointerdown', (ev) => {
-        ev.preventDefault();
-        const rect = b.getBoundingClientRect();
-        const srect = stage.getBoundingClientRect();
-        const got = collect(field, state, item.id);
-        if (!got) return;
-        if (got.curio) {
-          b.remove();
-          itemEls.delete(item.id);
-          onCurio(got.curio, rect.left + rect.width / 2, rect.top + rect.height / 2);
-          return;
-        }
-        tutorialDone(0);
-        sound.play('tap');
-        b.remove();
-        itemEls.delete(item.id);
-        floatText(`+${formatNumber(got.amount, state.settings.lang)}`, rect.left - srect.left + 8, rect.top - srect.top - 4);
-        flyToHud(got.material, rect.left + rect.width / 2, rect.top + rect.height / 2, 1);
-      });
+      b.addEventListener('click', () => tapThing(`flotsam:${item.id}`));
       itemEls.set(item.id, b);
       flotsamLayer.append(b);
     }
@@ -871,27 +818,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   function renderChest() {
     const fill = Math.min(1, chestTotal(state.chest) / chestCapacity(state));
     const tier = state.levels.storage;
-    // Redraw only when the picture would change (fill in 5% steps).
     const key = `${tier}:${Math.floor(fill * 20)}`;
     if (key === chestKey) return;
     chestKey = key;
-    chestBtn.innerHTML = chestSvg(fill, tier) + `<span class="bar"><i style="width:${(fill * 100).toFixed(0)}%"></i></span>`;
+    chestBtn.innerHTML = `<span class="bar"><i style="width:${(fill * 100).toFixed(0)}%"></i></span>`;
     chestBtn.classList.toggle('full', fill >= 0.999);
-    placeBubbles(); // the chest's height can change with its look
   }
 
-  function paintSea(now: number) {
-    const ctx = seaCanvas.getContext('2d');
-    if (!ctx || !stageW) return;
-    const dpr = seaCanvas.width / stageW;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, seaCanvas.width, seaCanvas.height);
-    // Same mapping as the SVG layers: preserveAspectRatio="xMidYMid slice".
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (stageW / 2 - 180 * scale) * dpr, (stageH / 2 - 320 * scale) * dpr);
-    drawSea(ctx, now, currentSky(), lightLevel(), state.settings.calm);
-  }
-
-  /** "The brighter the light, the busier the sea": fog thins, the warm pool grows, ships appear. */
   /** Corner mode: just the sea, the lighthouse and what you have; for keeping the game at the edge of the screen. */
   function setMini(on: boolean) {
     state.settings.mini = on;
@@ -899,29 +832,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     save();
   }
 
+  /** "The brighter the light, the busier the sea": the world lights further out and livens up. */
   function renderLight() {
     if (lightShown === state.levels.light) return;
     lightShown = state.levels.light;
-    const k = lightLevel();
-    stage.style.setProperty('--light', k.toFixed(2));
-    farLayer.querySelector('.shiplights')?.remove();
-    const n = Math.floor(state.levels.light / 2);
-    if (n === 0) return;
-    const ns = 'http://www.w3.org/2000/svg';
-    const g = document.createElementNS(ns, 'g');
-    g.setAttribute('class', 'shiplights');
-    const xs = [40, 300, 110, 250, 200];
-    for (let i = 0; i < n; i++) {
-      const c = document.createElementNS(ns, 'circle');
-      c.setAttribute('class', 'shiplight');
-      c.setAttribute('cx', String(xs[i]));
-      c.setAttribute('cy', String(328 + (i % 2)));
-      c.setAttribute('r', '1.2');
-      c.setAttribute('fill', '#ffd98a');
-      c.setAttribute('style', `animation-delay:${-i * 1.3}s, ${-i * 17}s`);
-      g.append(c);
-    }
-    farLayer.append(g);
+    world?.setLight(state.levels.light);
   }
 
   function renderGlints() {
@@ -990,16 +905,6 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     chestBubble.textContent = label;
     chestBubble.classList.toggle('full', fill >= 0.999);
     boatBubble.style.display = showBoat ? '' : 'none';
-    placeBubbles();
-  }
-
-  /** Bubbles sit just above the chest and the boat, wherever the scene puts them. */
-  function placeBubbles() {
-    if (!chestBtn || !chestBubble) return;
-    chestBubble.style.left = `${sceneXToPx(CHEST_POS.x)}px`;
-    chestBubble.style.top = `${sceneYToPx(CHEST_POS.y) - chestBtn.offsetHeight * 0.84 - 6}px`;
-    boatBubble.style.left = `${sceneXToPx(BOAT_POS.x)}px`;
-    boatBubble.style.top = `${sceneYToPx(BOAT_POS.y) - boatBtn.offsetHeight * 0.7 - 6}px`;
   }
 
   function renderBoat() {
@@ -1009,25 +914,15 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (key === boatKey) return;
     boatKey = key;
     boatBtn.style.display = shown ? '' : 'none';
-    boatBtn.innerHTML = boatSvg(laden, state.levels.cargo);
     boatBtn.classList.toggle('laden', laden);
   }
 
   function refresh() {
-    if (towerSlot && towerShown !== state.levels.light) {
-      towerSlot.innerHTML = towerSvg(state.levels.light);
-      towerShown = state.levels.light;
-    }
-    if (dockSlot) {
-      const want = state.levels.light >= DOCK_LIGHT || state.boat.built; // the boat sails with you, so its dock does too
-      if (want !== dockSlot.hasChildNodes()) dockSlot.innerHTML = want ? dockSvg() : '';
-    }
     renderBoat();
     renderBubbles();
     renderGlints();
     renderGoal();
     renderLight();
-    renderShelf();
     bookBtn.classList.toggle('badge', newFind);
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     passBtn.style.display = canPassLight(state) ? '' : 'none';
@@ -1035,10 +930,6 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
     seaMap?.update(state);
     islandView?.update(state);
-    if (netSlot && netShown !== state.levels.net) {
-      netSlot.innerHTML = netSvg(state.levels.net);
-      netShown = state.levels.net;
-    }
     renderChest();
     hud.update(state);
     panel.update(state);
@@ -1048,8 +939,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const now = opts.now();
     if (infinite) for (const m of MATERIALS) state.materials[m] = Math.max(state.materials[m], INFINITE_AMOUNT);
     const report = tick(state, now);
-    // When the test clock runs fast, every frame is "time away": no arrival report for those.
-    if (report && !(opts.clock && opts.clock.speed() > 1)) showReport(report);
+    // When the test clock runs fast, every frame is "time away": no arrival report for those,
+    // nor for the first frame after it slows down again (that gap was still fast time).
+    const fast = !!opts.clock && opts.clock.speed() > 1;
+    if (report && !fast && !wasFast) showReport(report);
+    wasFast = fast;
     const hasCargo = state.boat.cargo !== null;
     if (hasCargo && !hadCargo && !report) {
       toast(t(state.settings.lang, 'toast.boatBack'));
@@ -1057,30 +951,26 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     hadCargo = hasCargo;
     updateField(field, now, Math.random, state);
-    syncFlotsam(now);
-    if (now >= nextSkyAt) {
-      applySky(stage, currentSky());
-      nextSkyAt = now + 1000;
-    }
-    if (now >= nextSeaAt) {
-      paintSea(now);
-      nextSeaAt = now + 33;
-    }
-    if (now >= nextAmbientAt) {
-      triggerAmbient();
-      nextAmbientAt = now + 20000 + Math.random() * 30000;
+    syncFlotsam();
+    if (world) {
+      if (now >= nextSkyAt) {
+        world.setSky(currentSky(), state.sea);
+        nextSkyAt = now + 1000;
+      }
+      const v = state.boat.voyage;
+      const boat = v && v.sea === state.sea ? { ...boatPosition(state, now), model: boatModel(state.levels.speed, state.levels.cargo) } : null;
+      const flotsam = field.items.map((i) => ({ id: i.id, ...flotsamPosition(i, now), curio: !!i.curio, material: i.material }));
+      world.update(worldLayout(state, now), { boat, flotsam });
+      const has = [...world.has].join(' ');
+      if (stage.dataset.worldHas !== has) stage.dataset.worldHas = has;
     }
     refresh();
+    placeOverlays();
     requestAnimationFrame(frame);
   }
 
-  // Keep scene-anchored things (chest, flotsam) in place whenever the stage changes size.
   function onStageResize() {
-    layoutStage();
-    for (const [id, e] of itemEls) {
-      const item = field.items.find((i) => i.id === id);
-      if (item) e.style.top = `${laneTop(item.lane)}px`;
-    }
+    world?.resize();
   }
 
   // Start: credit time away, then build the screen.

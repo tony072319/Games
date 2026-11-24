@@ -412,7 +412,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .game.calm .buy.can, .game.calm .book-btn.badge::after, .game.calm .bubble.full, .game.calm .pass-btn, .game.calm .map-btn.badge::after, .game.calm .node.unknown, .game.calm .glint, .game.calm .card.flash { animation: none; }
 
 /* ---------- tapping the scene ---------- */
-.hit { position: absolute; z-index: 4; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-md); background: none; }
+.hit { position: absolute; z-index: 4; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-md); background: none; transform: translate(-50%, -50%); pointer-events: none; }
+.view-btns { position: absolute; right: var(--sp-3); bottom: var(--sp-3); z-index: 8; display: flex; gap: var(--sp-2); }
+.view-btn { background: var(--c-surface-1); color: var(--c-ink); }
 .hit:focus-visible { outline-offset: 0; }
 .glint {
   position: absolute;

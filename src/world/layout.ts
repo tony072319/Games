@@ -25,6 +25,8 @@ export interface WorldItem {
   /** World size (see MODELS fit); the model's default when missing. */
   size?: number;
   tint?: number;
+  /** Blend the colours toward this colour by this much (snow, fog), for when a tint is not enough. */
+  wash?: [number, number];
   tag?: Tag;
   glow?: 'lamp' | 'window' | 'lantern' | 'fire';
   anim?: string;
@@ -81,9 +83,12 @@ function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az
   });
 }
 
-function tile(items: WorldItem[], key: string, [q, r]: Hex, slope = false) {
+/** Ground colour per sea: fresh grass at dusk, muted in the fog, snowy under the aurora. */
+const GROUND: Record<GameState['sea'], [number, number] | undefined> = { dusk: undefined, fog: [0x9aa49a, 0.45], aurora: [0xf4f8ff, 0.8] };
+
+function tile(items: WorldItem[], key: string, [q, r]: Hex, wash?: [number, number]) {
   const [x, z] = hexToWorld(q, r);
-  items.push({ key, model: slope ? 'kk/hex_grass_sloped_high' : 'kk/hex_grass', x, y: 0, z, rotY: 0, shore: TILE_SHORE });
+  items.push({ key: `${key}:${wash ?? ''}`, model: 'kk/hex_grass', x, y: 0, z, rotY: 0, shore: TILE_SHORE, wash });
 }
 
 export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
@@ -92,7 +97,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   const light = s.levels.light;
 
   // Home island.
-  HOME_TILES.forEach(([q, r]) => tile(items, `home:${q},${r}`, [q, r]));
+  HOME_TILES.forEach(([q, r]) => tile(items, `home:${q},${r}`, [q, r], GROUND[s.sea]));
   const at = (q: number, r: number, dx = 0, dz = 0): [number, number] => {
     const [x, z] = hexToWorld(q, r);
     return [x + dx, z + dz];
@@ -169,7 +174,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
       [q + 1, r],
       [q, r + 1],
     ];
-    slots.forEach((h, i) => tile(items, `isle:${d}:tile:${i}`, h));
+    slots.forEach((h, i) => tile(items, `isle:${d}:tile:${i}`, h, GROUND[s.sea]));
     place(items, `isle:${d}`, ISLAND_DECOR[d], ix, iz, 0, `island:${d}`);
     ISLAND_BUILDINGS[d].forEach((b, i) => {
       const lvl = buildingLevel(s, b);

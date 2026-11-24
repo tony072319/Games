@@ -49,6 +49,8 @@ export interface World {
   /** The tag under a point in the canvas (CSS px from its top-left), if any. */
   pick(x: number, y: number): Tag | null;
   pulse(tag: Tag): void;
+  /** Test build: show a passing whale now. */
+  summon(): void;
   focus(where: 'home' | 'sea' | Tag): void;
   resize(): void;
   dispose(): void;
@@ -183,14 +185,14 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     return p;
   }
 
-  function instance(t: Template, item: { model: ModelId; size?: number; tint?: number }): THREE.Object3D {
+  function instance(t: Template, item: { model: ModelId; size?: number; tint?: number; wash?: [number, number] }): THREE.Object3D {
     const o = t.skinned ? cloneSkinned(t.scene) : t.scene.clone(true);
     o.traverse((c) => {
       const m = c as THREE.Mesh;
       if (!m.isMesh) return;
       m.castShadow = true;
       m.receiveShadow = true;
-      m.material = Array.isArray(m.material) ? m.material.map((x) => toonMaterial(x, item.tint)) : toonMaterial(m.material, item.tint);
+      m.material = Array.isArray(m.material) ? m.material.map((x) => toonMaterial(x, item.tint, item.wash)) : toonMaterial(m.material, item.tint, item.wash);
       if (t.skinned) m.frustumCulled = false;
     });
     const info = MODELS[item.model];
@@ -531,8 +533,11 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       key.intensity = pal.keyIntensity;
       bloom.strength = pal.bloom;
       renderer.toneMappingExposure = pal.exposure;
-      if (sea === 'fog') (scene.fog as THREE.Fog).far = 140;
-      else (scene.fog as THREE.Fog).far = 220;
+      const fog = scene.fog as THREE.Fog;
+      // The fog sea lives up to its name; the others keep a soft, far haze.
+      fog.near = sea === 'fog' ? 10 : 70;
+      fog.far = sea === 'fog' ? 55 : 220;
+      sky.setAurora(sea === 'aurora' ? 1 : 0);
     },
     setLight(level) {
       light = level;
@@ -566,6 +571,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       let o: THREE.Object3D | null = hit.object;
       while (o && !o.userData.tag) o = o.parent;
       return (o?.userData.tag as Tag) ?? null;
+    },
+    summon() {
+      life?.summon();
     },
     pulse(tag) {
       const o = tagObj.get(tag);

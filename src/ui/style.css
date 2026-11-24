@@ -3,54 +3,23 @@
 
 /* ---------- stage ---------- */
 .stage { position: relative; flex: 1; min-height: 240px; overflow: hidden; isolation: isolate; z-index: 1; }
-.scene, .scene svg, .sea { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.scene.front { pointer-events: none; }
-.flotsam { position: absolute; inset: 0; }
+.stage canvas.world { position: absolute; inset: 0; display: block; touch-action: none; }
+.flotsam { position: absolute; inset: 0; pointer-events: none; }
+/* Buttons over things in the 3D world: invisible, centred on the thing, taps go to the world. */
+.item, .chest, .boat { position: absolute; padding: 0; border: 0; background: none; transform: translate(-50%, -50%); pointer-events: none; }
+.item { width: 44px; height: 44px; }
+.chest { z-index: 5; width: 64px; height: 56px; }
+.boat { z-index: 6; width: 64px; height: 48px; }
+.offscreen { display: none !important; }
 
-.item {
-  position: absolute;
-  left: 0;
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
-  padding: 6px;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  animation: drift 8s linear forwards;
-}
-.item svg {
-  width: 100%;
-  height: 100%;
-  transform: scale(var(--depth, 1));
-  opacity: calc(0.55 + 0.45 * var(--depth, 1));
-  animation: bob 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 4px rgba(255, 217, 138, 0.35));
-}
-
-/* ---------- storage chest ---------- */
-.chest {
-  position: absolute;
-  z-index: 5;
-  width: calc(58px * var(--scene-scale, 1));
-  min-width: 56px;
-  max-width: 92px;
-  aspect-ratio: 72 / 72;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  transform: translate(-50%, -84%);
-}
-.chest svg { width: 100%; display: block; }
-.chest .bar { display: block; height: 5px; margin: 2px 6px 0; border-radius: 3px; background: rgba(0, 0, 0, 0.45); overflow: hidden; }
+/* ---------- storage chest fill ---------- */
+.chest .bar { position: absolute; left: 10px; right: 10px; bottom: -8px; display: block; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
 .chest .bar i { display: block; height: 100%; background: var(--lamp); border-radius: 3px; }
-.chest.full svg { filter: drop-shadow(0 0 6px var(--lamp)); animation: bob 1.6s ease-in-out infinite; }
+.chest.full .bar { box-shadow: 0 0 8px var(--lamp); }
 
 /* ---------- upgrade feedback ---------- */
 
 .net-slot.pulse { animation: pulse 0.8s ease-out; transform-box: fill-box; transform-origin: center; }
-.chest.pulse svg { animation: pulse 0.8s ease-out; }
 
 .twinkle { animation: twinkle 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .flag { animation: flutter 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: left center; }
@@ -90,7 +59,6 @@
 @keyframes pulse { 0% { transform: scale(1); } 35% { transform: scale(1.18); filter: drop-shadow(0 0 8px #ffd98a); } 100% { transform: scale(1); } }
 
 @keyframes twinkle { 50% { opacity: 0.35; } }
-@keyframes drift { from { transform: translateX(-30px); } to { transform: translateX(calc(var(--stage-w, 400px) + 30px)); } }
 @keyframes bob { 50% { transform: translateY(-4px) rotate(4deg); } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -118,21 +86,6 @@
 .a-whale .splash { animation-delay: 3.6s; }
 @keyframes tail { 0% { opacity: 0; transform: translateY(14px); } 25% { opacity: 1; transform: translateY(0); } 70% { opacity: 1; transform: translateY(0) rotate(-6deg); } 100% { opacity: 0; transform: translateY(16px); } }
 
-/* ---------- boat ---------- */
-.boat {
-  position: absolute;
-  z-index: 6;
-  width: calc(54px * var(--scene-scale, 1));
-  min-width: 52px;
-  max-width: 86px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  transform: translate(-50%, -70%);
-}
-.boat svg { width: 100%; display: block; animation: bob 3.2s ease-in-out infinite; }
-.boat.laden svg { filter: drop-shadow(0 0 7px #ffd98a); }
 .halo { animation: spin 18s linear infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .beam2 { animation-delay: -4s; }
@@ -179,14 +132,6 @@
 @keyframes blink { 96% { opacity: 0; } }
 .game.calm .item.curio::after, .game.calm .keeper, .game.calm .cat-tail, .game.calm .cat-eyes, .game.calm .lowfog ellipse, .game.calm .shiplight { animation: none; }
 
-/* A gull resting on the platform; tap it and it flies off for a while. */
-.gull { position: absolute; z-index: 5; width: 28px; height: 22px; padding: 0; border: 0; background: none; transform: translate(-50%, -100%); }
-.gull::before { content: ''; position: absolute; inset: -11px -8px; }
-.gull svg { width: 100%; height: 100%; display: block; }
-.gull.away { animation: gull-off 1.6s ease-in forwards; pointer-events: none; }
-.gull.back { animation: gull-back 1.8s ease-out; }
-@keyframes gull-off { to { transform: translate(-260%, -900%) scale(0.5); opacity: 0; } }
-@keyframes gull-back { from { transform: translate(300%, -800%) scale(0.5); opacity: 0; } }
 
 /* Ship lights out on the horizon: more of them as the light reaches farther. */
 .shiplight { animation: blink-soft 3s ease-in-out infinite, shipdrift 120s linear infinite alternate; }
@@ -194,9 +139,7 @@
 @keyframes shipdrift { to { transform: translateX(30px); } }
 
 /* Film grain over the scene, made once in code. */
-.grain { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay; background-size: 128px 128px; }
 .lightpool { transform-box: fill-box; transform-origin: center; transform: scale(calc(0.5 + var(--light, 0.3) * 0.9)); opacity: calc(0.5 + var(--light, 0.3) * 0.5); }
 
 /* A drifting curio: a soft glow that says "this one is special". */
-.item.curio svg { filter: drop-shadow(0 0 8px #fff0b8) drop-shadow(0 0 3px #ffd98a); }
 .item.curio::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 1px solid rgba(255, 240, 184, 0.7); animation: breathe 1.6s ease-in-out infinite; }

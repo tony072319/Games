@@ -15,8 +15,8 @@ const WARM = new THREE.Color(1, 0.97, 0.93);
 const cache = new Map<string, THREE.MeshToonMaterial>();
 
 /** The toon version of a loaded material (shared between all copies with the same tint). */
-export function toonMaterial(src: THREE.Material, tint?: number): THREE.MeshToonMaterial {
-  const key = `${src.uuid}:${tint ?? ''}`;
+export function toonMaterial(src: THREE.Material, tint?: number, wash?: [number, number]): THREE.MeshToonMaterial {
+  const key = `${src.uuid}:${tint ?? ''}:${wash ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const s = src as THREE.MeshStandardMaterial;
@@ -30,6 +30,18 @@ export function toonMaterial(src: THREE.Material, tint?: number): THREE.MeshToon
     side: s.side,
   });
   if (tint !== undefined) m.color.multiply(new THREE.Color(tint));
+  if (wash) {
+    // Blend after the texture is read, so textured models wash too (snowy grass, foggy grass).
+    const c = new THREE.Color(wash[0]);
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.washC = { value: c };
+      sh.uniforms.washK = { value: wash[1] };
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 washC;\nuniform float washK;')
+        .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, washC, washK);');
+    };
+    m.customProgramCacheKey = () => `wash:${wash[0]}:${wash[1]}`;
+  }
   cache.set(key, m);
   return m;
 }

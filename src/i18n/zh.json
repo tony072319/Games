@@ -324,5 +324,8 @@
   "hud.starCount": "星光 {n}，打开星光天赋树",
   "tree.resetTitle": "重新分配星光",
   "debug.speed": "时间 ×{n}",
-  "debug.stars": "+100 星光"
+  "debug.stars": "+100 星光",
+  "view.home": "回岛",
+  "view.sea": "看海",
+  "world.noWebgl": "这个浏览器画不了 3D 画面，换个浏览器试试？"
 }
