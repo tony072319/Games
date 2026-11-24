@@ -176,10 +176,18 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   // Added after the first release: a missing value keeps the default.
   if (typeof settings.sound === 'boolean') state.settings.sound = settings.sound;
   else if ('sound' in settings) dropped = true;
+  for (const k of ['calm', 'mini'] as const) {
+    if (typeof settings[k] === 'boolean') state.settings[k] = settings[k] as boolean;
+    else if (k in settings) dropped = true;
+  }
 
   const stats = isObj(data.stats) ? data.stats : {};
   if (isAmount(stats.tapped)) state.stats.tapped = stats.tapped;
   else dropped = true;
+  // First-time steps came later: a save that has already played skips them.
+  if (typeof stats.tutorial === 'number' && Number.isInteger(stats.tutorial) && stats.tutorial >= 0) state.stats.tutorial = Math.min(3, stats.tutorial);
+  else if ('tutorial' in stats) dropped = true;
+  else state.stats.tutorial = state.stats.tapped > 0 ? 3 : 0;
 
   if (dropped) safeSet(kv, CORRUPT_KEY, raw);
   return { state, status: dropped ? 'repaired' : 'loaded' };

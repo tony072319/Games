@@ -40,7 +40,8 @@ export interface GameState {
   levels: Record<UpgradeId, number>;
   /** Epoch ms of the last moment progress was credited. */
   lastActiveAt: number;
-  settings: { lang: Lang; sound: boolean };
+  /** calm: fewer animations. mini: corner mode. */
+  settings: { lang: Lang; sound: boolean; calm: boolean; mini: boolean };
   /** tutorial: first-time steps done (0..3). */
   stats: { tapped: number; tutorial: number };
   boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null };
@@ -73,7 +74,7 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     chest: emptyMaterials(),
     levels: { net: 1, storage: 1, light: 1, speed: 1, cargo: 1 },
     lastActiveAt: nowMs,
-    settings: { lang, sound: true },
+    settings: { lang, sound: true, calm: false, mini: false },
     stats: { tapped: 0, tutorial: 0 },
     boat: { built: false, voyage: null, cargo: null },
     discovered: [],

@@ -139,3 +139,25 @@ describe('saves from before the boat', () => {
     expect(r.state.discovered).toEqual(['gullrock']);
   });
 });
+
+describe('settings and first-time steps', () => {
+  test('new game defaults; round-trip', () => {
+    const s = newGame(0, 'zh');
+    expect(s.settings).toMatchObject({ calm: false, mini: false });
+    expect(s.stats.tutorial).toBe(0);
+    s.settings.calm = true;
+    s.settings.mini = true;
+    s.stats.tutorial = 2;
+    const kv = memKV();
+    saveGame(kv, s);
+    const r = loadGame(kv, 1, 'zh');
+    expect(r.state.settings).toMatchObject({ calm: true, mini: true });
+    expect(r.state.stats.tutorial).toBe(2);
+  });
+  test('an old save that has already played skips the first-time steps', () => {
+    const old = { version: 1, materials: {}, levels: {}, lastActiveAt: 0, settings: { lang: 'zh', sound: true }, stats: { tapped: 5 } };
+    const r = loadGame(memKV({ [SAVE_KEY]: JSON.stringify(old) }), 1, 'zh');
+    expect(r.status).toBe('loaded');
+    expect(r.state.stats.tutorial).toBe(3);
+  });
+});
