@@ -188,7 +188,7 @@ try {
   if (!realLvl?.includes('1')) fail(`real save should still be net 1, got ${realLvl}`);
 
   await page.locator('.hud .settings-btn').click();
-  await page.locator('.menu button').nth(1).click();
+  await page.locator('.menu button').nth(2).click();
   if (!(await page.locator('.panel').textContent())?.includes('Net')) fail('language toggle should switch to English');
 
   if (SHOTS) {

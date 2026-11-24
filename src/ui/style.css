@@ -162,3 +162,7 @@
 @keyframes snow { to { transform: translate(-10px, 60px); opacity: 0; } }
 
 
+
+/* The lighthouse flares when mended. */
+.tower-slot.flare { animation: flare 0.7s ease-out; }
+@keyframes flare { 30% { filter: brightness(1.7) drop-shadow(0 0 14px #ffd98a); } }

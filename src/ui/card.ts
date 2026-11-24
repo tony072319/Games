@@ -20,6 +20,11 @@ export interface CardSpec {
   have: Materials;
   buyLabel: string;
   canBuy: boolean;
+  /** can: affordable now; soon: within about ten minutes (show `eta`); far: not yet. */
+  state: 'can' | 'soon' | 'far';
+  eta?: string;
+  /** What the next level does, e.g. "下一级：捞得快 12%". */
+  effect?: string;
   onBuy(): void;
   /** Description shown. A card whose description is always useful passes `alwaysOpen`. */
   open: boolean;
@@ -61,16 +66,22 @@ export function upgradeCard(lang: Lang, c: CardSpec): HTMLElement {
     h.append(lvl);
   }
   text.append(h);
+  if (c.effect && c.cost) {
+    const e = el('span', 'card-effect');
+    e.textContent = c.effect;
+    text.append(e);
+  }
   if (c.cost) text.append(costRow(c.cost, c.have, lang));
   main.append(thumb, text);
 
-  const btn = el('button', 'buy');
+  const btn = el('button', `buy${c.cost ? ` ${c.state}` : ''}`);
   btn.type = 'button';
   if (!c.cost) {
     btn.textContent = t(lang, 'ui.max');
     btn.disabled = true;
   } else {
-    btn.textContent = c.buyLabel;
+    // Almost affordable: say how long; otherwise the action's name.
+    btn.textContent = !c.canBuy && c.state === 'soon' && c.eta ? c.eta : c.buyLabel;
     btn.disabled = !c.canBuy;
     btn.addEventListener('click', c.onBuy);
   }

@@ -310,6 +310,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   /** Item icons arc from a point on screen into the material's counter, then it bumps. */
   function flyToHud(m: (typeof MATERIALS)[number], x: number, y: number, n: number, delay = 0) {
+    if (state.settings.calm) {
+      hud.bump(m);
+      return;
+    }
     const g = game.getBoundingClientRect();
     const to = hud.target(m).getBoundingClientRect();
     const tx = to.left + 10 - g.left;
@@ -341,7 +345,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   /** A burst of little lights around something that was just mended. */
   function sparkle(target: Element | null) {
-    if (!target) return;
+    if (!target || state.settings.calm) return;
     const g = game.getBoundingClientRect();
     const r = target.getBoundingClientRect();
     const cx = r.left + r.width / 2 - g.left;
@@ -386,6 +390,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     void (target as HTMLElement | null)?.getBoundingClientRect();
     target?.classList.add('pulse');
     sparkle(target);
+    if (id === 'light' && towerSlot && !state.settings.calm) {
+      // The lighthouse flares up for a moment when it is mended.
+      towerSlot.classList.remove('flare');
+      void (towerSlot as unknown as HTMLElement).getBoundingClientRect();
+      towerSlot.classList.add('flare');
+    }
   }
 
   function build() {
@@ -442,22 +452,37 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     boatBubble.addEventListener('click', () => unload());
     bubbleKey = '';
     stage.append(chestBtn, flotsamLayer, chestBubble, boatBubble);
-    hud = createHud(
-      lang,
-      () => {
-        state.settings.lang = lang === 'zh' ? 'en' : 'zh';
-        save();
-        build();
+    hud = createHud(lang, game, () => [
+      {
+        label: t(lang, 'settings.sound'),
+        value: t(lang, state.settings.sound ? 'ui.on' : 'ui.off'),
+        pick: () => {
+          state.settings.sound = !state.settings.sound;
+          sound.start();
+          sound.setEnabled(state.settings.sound);
+          save();
+        },
       },
-      state.settings.sound,
-      (on) => {
-        state.settings.sound = on;
-        sound.start();
-        sound.setEnabled(on);
-        save();
+      {
+        label: t(lang, 'settings.calm'),
+        value: t(lang, state.settings.calm ? 'ui.calmValue' : 'ui.full'),
+        pick: () => {
+          state.settings.calm = !state.settings.calm;
+          game.classList.toggle('calm', state.settings.calm);
+          save();
+        },
       },
-      game,
-    );
+      {
+        label: t(lang, 'settings.lang'),
+        value: t(lang, 'lang.name'),
+        pick: () => {
+          state.settings.lang = lang === 'zh' ? 'en' : 'zh';
+          save();
+          build();
+        },
+      },
+    ]);
+    game.classList.toggle('calm', state.settings.calm);
     panel = createPanel(lang, onBuy);
     // Action bar: sea chart, seas (once there are two), and passing the light on.
     const toolbar = el('div', 'toolbar');

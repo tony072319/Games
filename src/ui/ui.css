@@ -63,6 +63,10 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   line-height: var(--lh-tight);
 }
 .buy:disabled, .btn-primary:disabled { background: var(--c-disabled); color: var(--c-ink-faint); }
+/* Affordable now: a slow warm pulse. Almost: shows the time left, in a softer tone. */
+.buy.can:not(:disabled) { animation: can-pulse var(--t-breathe) var(--ease-inout) infinite; }
+@keyframes can-pulse { 50% { box-shadow: var(--glow-gold); } }
+.buy.soon:disabled { color: var(--c-ink-dim); font-size: var(--fs-body); font-weight: var(--fw-regular); }
 /* Secondary action: outlined. */
 .btn-ghost {
   min-height: var(--tap);
@@ -223,6 +227,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .card-text { display: grid; gap: var(--sp-1); min-width: 0; }
 .card h3 { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
 .card h3 small { margin-left: var(--sp-2); color: var(--c-ink-dim); font-size: var(--fs-caption); font-weight: var(--fw-regular); }
+.card-effect { color: var(--c-gold); font-size: var(--fs-caption); line-height: var(--lh-tight); }
 .card-desc { grid-column: 1 / -1; margin: 0; padding: 0 var(--sp-1) var(--sp-1); color: var(--c-ink-dim); font-size: var(--fs-body); line-height: var(--lh-body); }
 .card-desc .perk { color: var(--c-gold); }
 .cost { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-caption); line-height: var(--lh-tight); }
@@ -400,3 +405,6 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   .mats { gap: var(--sp-2); padding: 0 var(--sp-2); }
   .hud .mat svg { width: var(--icon-sm); height: var(--icon-sm); }
 }
+
+/* Calm: the decorative loops stop; what carries information stays. */
+.game.calm .buy.can, .game.calm .bubble.full, .game.calm .pass-btn, .game.calm .map-btn.badge::after, .game.calm .node.unknown, .game.calm .glint, .game.calm .card.flash { animation: none; }

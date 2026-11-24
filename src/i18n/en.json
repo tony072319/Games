@@ -150,5 +150,17 @@
   "lang.name": "English",
   "seas.label": "Seas",
   "bubble.unload": "Unload",
-  "bubble.collect": "Collect +{n}"
+  "bubble.collect": "Collect +{n}",
+  "card.next": "Next: {effect}",
+  "effect.net": "catches {n}% faster",
+  "effect.storage": "holds {n} more hour",
+  "effect.speed": "voyages {n}% shorter",
+  "effect.cargo": "brings {n}% more",
+  "card.eta": "~{time}",
+  "time.lt1": "under 1 min",
+  "settings.calm": "Animation",
+  "ui.full": "Full",
+  "ui.calmValue": "Calm",
+  "settings.mini": "Corner mode",
+  "ui.expand": "Expand"
 }

@@ -35,3 +35,17 @@ export function formatNumber(n: number, lang: Lang): string {
   }
   return String(v);
 }
+
+/** "3 小时 5 分钟" / "12 分钟". */
+export function formatDuration(seconds: number, lang: Lang): string {
+  const totalMin = Math.floor(seconds / 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? t(lang, 'time.hm', { h, m }) : t(lang, 'time.m', { m });
+}
+
+/** Time until something, rounded up to the minute; "under 1 minute" below that. */
+export function formatEta(seconds: number, lang: Lang): string {
+  if (seconds < 60) return t(lang, 'time.lt1');
+  return formatDuration(Math.ceil(seconds / 60) * 60, lang);
+}

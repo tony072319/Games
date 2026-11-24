@@ -5,6 +5,8 @@ import { formatNumber, t } from '../i18n';
 import { PLOTS, buildingSvg, islandSceneSvg, itemIcon } from './art';
 import { el } from './dom';
 import { upgradeCard } from './card';
+import { affordState } from '../core/advice';
+import { etaText } from './upgrades';
 import { destName } from './names';
 
 export interface IslandActions {
@@ -112,6 +114,8 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
         have: s.materials,
         buyLabel: t(lang, lvl === 0 ? 'island.build' : 'ui.buy'),
         canBuy: canBuild(s, b),
+        state: lvl >= BUILDING_MAX ? 'far' : affordState(s, buildCost(b, lvl, s)),
+        eta: lvl >= BUILDING_MAX ? undefined : etaText(s, buildCost(b, lvl, s), lang),
         onBuy: () => act.build(b),
         open: true,
         alwaysOpen: true,

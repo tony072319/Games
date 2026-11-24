@@ -4,6 +4,8 @@ import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { boatSvg, islandIcon, itemIcon } from './art';
 import { upgradeCard } from './card';
+import { affordState } from '../core/advice';
+import { etaText } from './upgrades';
 import { el } from './dom';
 import { formatDuration } from './offlinePopup';
 import { createPanel } from './upgrades';
@@ -208,6 +210,8 @@ ${path}
         have: s.materials,
         buyLabel: t(lang, 'ui.buy'),
         canBuy: canBuildBoat(s),
+        state: affordState(s, BOAT_COST),
+        eta: etaText(s, BOAT_COST, lang),
         onBuy: act.build,
         open: true,
         alwaysOpen: true,

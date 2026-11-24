@@ -1,8 +1,8 @@
-import { DOCK_LIGHT } from '../core/boat';
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
 import { canBuy, isMaxLevel, upgradeCost } from '../core/economy';
 import type { GameState, Lang } from '../core/state';
-import { t } from '../i18n';
+import { formatEta, t } from '../i18n';
+import { affordState, etaSeconds, nextEffect } from '../core/advice';
 import { boatSvg, chestSvg, netSvg, towerSvg } from './art';
 import { upgradeCard } from './card';
 import { el } from './dom';
@@ -14,15 +14,25 @@ export interface Panel {
   flash(id: UpgradeId): void;
 }
 
-/** What mending the lighthouse once more will do. */
-function lightNext(state: GameState, lang: Lang): string {
-  const L = state.levels.light;
-  if (L >= MAX_LEVEL.light) return '';
-  const next = L + 1 === DOCK_LIGHT ? 'dock' : L + 1 === MAX_LEVEL.light ? 'end' : 'reach';
-  let s = t(lang, `upg.light.next.${next}`);
-  const cost = upgradeCost('light', L, state);
-  if (cost.glow > 0 && state.materials.glow < cost.glow) s += ' ' + t(lang, 'upg.light.next.glow');
-  return s;
+/** The lighthouse needs glowshards from level 7: say where they come from. */
+function lightNote(state: GameState, lang: Lang): string | undefined {
+  if (state.levels.light >= MAX_LEVEL.light) return undefined;
+  const cost = upgradeCost('light', state.levels.light, state);
+  return cost.glow > 0 && state.materials.glow < cost.glow ? t(lang, 'upg.light.next.glow') : undefined;
+}
+
+/** "下一级：捞得快 12%" — what one more level does. */
+export function effectText(state: GameState, id: UpgradeId, lang: Lang): string | undefined {
+  const e = nextEffect(state, id);
+  if (!e) return undefined;
+  if (e.kind === 'unlock') return t(lang, e.key!);
+  return t(lang, 'card.next', { effect: t(lang, `effect.${id}`, { n: e.value! }) });
+}
+
+/** Time until affordable, as words; undefined when it will not come by waiting. */
+export function etaText(state: GameState, cost: Parameters<typeof etaSeconds>[1], lang: Lang): string | undefined {
+  const eta = etaSeconds(state, cost);
+  return eta && eta > 0 ? t(lang, 'card.eta', { time: formatEta(eta, lang) }) : undefined;
 }
 
 /** A crop of what each upgrade looks like right now. */
@@ -39,7 +49,9 @@ function signature(state: GameState, ids: readonly UpgradeId[]): string {
   return ids
     .map((id) => {
       const cost = upgradeCost(id, state.levels[id], state);
-      return `${id}${state.levels[id]}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('');
+      const eta = etaSeconds(state, cost);
+      // Redraw when affordability changes, or when the "about N minutes" label would.
+      return `${id}${state.levels[id]}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
     })
     .join('|');
 }
@@ -56,6 +68,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
   function render(state: GameState) {
     root.replaceChildren();
     for (const id of ids) {
+      const cost = isMaxLevel(state, id) ? null : upgradeCost(id, state.levels[id], state);
       root.append(
         upgradeCard(lang, {
           data: ['upgrade', id],
@@ -63,11 +76,14 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
           title: t(lang, `upg.${id}.name`),
           level: state.levels[id],
           desc: t(lang, `upg.${id}.desc`),
-          note: id === 'light' ? lightNext(state, lang) : undefined,
-          cost: isMaxLevel(state, id) ? null : upgradeCost(id, state.levels[id], state),
+          note: id === 'light' ? lightNote(state, lang) : undefined,
+          effect: effectText(state, id, lang),
+          cost: cost,
           have: state.materials,
           buyLabel: t(lang, 'ui.buy'),
           canBuy: canBuy(state, id),
+          state: cost ? affordState(state, cost) : 'far',
+          eta: cost ? etaText(state, cost, lang) : undefined,
           onBuy: () => onBuy(id),
           open: open.has(id),
           onToggle: () => {

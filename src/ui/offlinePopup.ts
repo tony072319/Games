@@ -1,16 +1,11 @@
 import { MATERIALS, type Materials } from '../core/data';
 import type { OfflineReport } from '../core/sim';
 import type { Lang } from '../core/state';
-import { formatNumber, t } from '../i18n';
+import { formatDuration, formatNumber, t } from '../i18n';
 import { itemIcon } from './art';
 import { dismiss, el } from './dom';
 
-export function formatDuration(seconds: number, lang: Lang): string {
-  const totalMin = Math.floor(seconds / 60);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  return h > 0 ? t(lang, 'time.hm', { h, m }) : t(lang, 'time.m', { m });
-}
+export { formatDuration } from '../i18n';
 
 /**
  * "While you were away": shows how long, and what is waiting in the chest.

@@ -150,5 +150,17 @@
   "lang.name": "中文",
   "seas.label": "海域",
   "bubble.unload": "卸货",
-  "bubble.collect": "收下 +{n}"
+  "bubble.collect": "收下 +{n}",
+  "card.next": "下一级：{effect}",
+  "effect.net": "捞得快 {n}%",
+  "effect.storage": "多存 {n} 小时",
+  "effect.speed": "航程短 {n}%",
+  "effect.cargo": "多带回 {n}%",
+  "card.eta": "约 {time}",
+  "time.lt1": "不到 1 分钟",
+  "settings.calm": "动画",
+  "ui.full": "完整",
+  "ui.calmValue": "简洁",
+  "settings.mini": "角落模式",
+  "ui.expand": "展开"
 }
