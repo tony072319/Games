@@ -161,3 +161,30 @@ describe('settings and first-time steps', () => {
     expect(r.state.stats.tutorial).toBe(3);
   });
 });
+
+describe('book, talents, last destination', () => {
+  test('round trip', () => {
+    const s = newGame(0, 'zh');
+    s.curios.push('dusk:3', 'fog:11');
+    s.starlight = 10;
+    s.talents.push('net1');
+    s.boat.lastDest = 'wreck';
+    const kv = memKV();
+    saveGame(kv, s);
+    const r = loadGame(kv, 1, 'zh');
+    expect(r.status).toBe('loaded');
+    expect(r.state.curios).toEqual(['dusk:3', 'fog:11']);
+    expect(r.state.talents).toEqual(['net1']);
+    expect(r.state.boat.lastDest).toBe('wreck');
+  });
+  test('unknown ids are dropped, the rest kept', () => {
+    const s = newGame(0, 'zh');
+    const raw = JSON.parse(JSON.stringify(s));
+    raw.curios = ['dusk:3', 'moon:1'];
+    raw.talents = ['net1', 'fly'];
+    const r = loadGame(memKV({ [SAVE_KEY]: JSON.stringify(raw) }), 1, 'zh');
+    expect(r.status).toBe('repaired');
+    expect(r.state.curios).toEqual(['dusk:3']);
+    expect(r.state.talents).toEqual(['net1']);
+  });
+});

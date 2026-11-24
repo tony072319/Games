@@ -1,5 +1,7 @@
 import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type BuildingId, type DestId, type Materials, type SeaId } from './data';
 import { BUILDINGS } from './islands';
+import { CURIO_BY_ID } from './curios';
+import { TALENT_BY_ID, type TalentId } from './talents';
 import { emptyMaterials, newGame, type GameState, type Lang, type SeaState } from './state';
 
 export const SAVE_KEY = 'lightkeeper.save';
@@ -169,6 +171,21 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
       else dropped = true;
     }
   } else if ('seas' in data) dropped = true;
+
+  // The book and the starlight tree (added later): unknown ids are dropped.
+  if (Array.isArray(data.curios)) {
+    for (const c of data.curios) {
+      if (typeof c === 'string' && CURIO_BY_ID[c] && !state.curios.includes(c)) state.curios.push(c);
+      else dropped = true;
+    }
+  } else if ('curios' in data) dropped = true;
+  if (Array.isArray(data.talents)) {
+    for (const x of data.talents) {
+      if (typeof x === 'string' && x in TALENT_BY_ID && !state.talents.includes(x as TalentId)) state.talents.push(x as TalentId);
+      else dropped = true;
+    }
+  } else if ('talents' in data) dropped = true;
+  if (isObj(data.boat) && DEST_IDS.includes(data.boat.lastDest as DestId)) state.boat.lastDest = data.boat.lastDest as DestId;
 
   const settings = isObj(data.settings) ? data.settings : {};
   if (settings.lang === 'zh' || settings.lang === 'en') state.settings.lang = settings.lang;
