@@ -41,7 +41,7 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
 
   const list = el('ol', 'arrival-list');
   lines.forEach((l, i) => {
-    const li = el('li', `arrival-line ${l.kind}`);
+    const li = el('li', `arrival-line line-${l.kind}`);
     li.style.setProperty('--i', String(i));
     const p = el('p');
     if (l.kind === 'away') p.textContent = t(lang, 'arrival.away', { time: formatDuration(l.seconds ?? 0, lang) });
