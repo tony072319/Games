@@ -173,5 +173,13 @@
   "goal.mend": "现在就能修整{name}",
   "goal.saveFor": "再等 {time}，就能修整{name}",
   "goal.rest": "海很安静。东西会慢慢漂来。",
-  "goal.label": "下一步"
+  "goal.label": "下一步",
+  "arrival.title": "到港清单",
+  "arrival.away": "你离开了 {time}。",
+  "arrival.chest": "储物箱里攒下了：",
+  "arrival.cap": "储物箱装满了，后来漂来的东西没地方放。它最多能存 {h} 小时的量，修整储物箱能存更久。",
+  "arrival.boat": "小船从{name}回来了，带回：",
+  "arrival.island": "岛上攒下了这些，小船下次去时一起带回：",
+  "arrival.tip": "现在就能修整{name}。",
+  "arrival.see": "去看看"
 }

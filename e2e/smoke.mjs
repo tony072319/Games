@@ -88,7 +88,9 @@ try {
   const beforeAway = await savedTotal();
   await dbg('+8 小时');
   await page.locator('.popup').waitFor({ timeout: 3000 });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(900);
+  if (!(await page.locator('.arrival-line.chest').count())) fail('arrival report should list the chest');
+  if (!(await page.locator('.arrival-line.cap').count())) fail('arrival report should say the chest filled up');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/popup-zh.png` });
   await page.locator('.popup .btn-primary').click();
   await page.locator('.popup').waitFor({ state: 'detached', timeout: 2000 }).catch(() => fail('popup should close'));

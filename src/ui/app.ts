@@ -23,7 +23,8 @@ import { destDesc, destName } from './names';
 import { createDebug } from './debug';
 import { dismiss, el, openMenu } from './dom';
 import { createHud, type Hud } from './hud';
-import { showOfflinePopup } from './offlinePopup';
+import { showArrival } from './offlinePopup';
+import { arrivalLines } from '../core/arrival';
 import { createPanel, type Panel } from './upgrades';
 
 export interface AppOptions {
@@ -94,23 +95,40 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let pending: OfflineReport | null = null;
   let popupEl: HTMLElement | null = null;
 
+  /** After time away: the arrival report, if anything came in. Further time away while it is open adds up. */
   function showReport(r: OfflineReport) {
-    if (r.creditedSeconds < OFFLINE_MIN_REPORT_SECONDS && !pending) return;
     if (pending) {
       pending.seconds += r.seconds;
       pending.creditedSeconds += r.creditedSeconds;
-      popupEl?.remove();
     } else {
+      if (r.seconds < OFFLINE_MIN_REPORT_SECONDS) return;
       pending = { seconds: r.seconds, creditedSeconds: r.creditedSeconds, gained: { ...r.gained } };
     }
-    popupEl = showOfflinePopup(game, state.settings.lang, pending, state.chest, (double) => {
-      const moved = takeChest();
-      if (double) claimDouble(state, moved);
+    const lines = arrivalLines(state, pending);
+    if (lines.length === 0) {
       pending = null;
-      popupEl = null;
-      refresh();
-      save();
-    }, state.boat.cargo !== null);
+      return;
+    }
+    popupEl?.remove();
+    const lang = state.settings.lang;
+    popupEl = showArrival(game, lang, lines, {
+      destName: (d) => destName(lang, state.boat.cargo?.sea ?? state.sea, d),
+      showUpgrade: (id) => panel.show(id),
+      collect: (double) => {
+        const moved = takeChest();
+        if (double) claimDouble(state, moved);
+        const cargo = state.boat.cargo;
+        if (cargo) {
+          unload();
+          if (double) claimDouble(state, cargo.haul);
+        }
+        pending = null;
+        popupEl = null;
+        refresh();
+        save();
+      },
+    });
+    if (state.settings.calm) popupEl.classList.add('calm');
   }
 
   /** Empty the chest into the inventory with a little "+N" for each material. */

@@ -450,3 +450,12 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .goal-text { flex: 1; min-width: 0; }
 .goal.new { animation: rise-in var(--t-medium) var(--ease-out); }
 .game.calm .goal.new { animation: none; }
+
+/* ---------- arrival report ---------- */
+.arrival-list { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: var(--sp-3); text-align: left; }
+.arrival-line { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--c-surface-1); animation: rise-in var(--t-medium) var(--ease-out) both; animation-delay: calc(var(--i) * var(--t-small)); }
+.arrival-line.away { background: none; padding: 0; text-align: center; }
+.arrival-line.cap p, .arrival-line.tip p { color: var(--c-gold); }
+.arrival-line .haul { justify-content: flex-start; margin: var(--sp-1) 0 0; }
+.arrival-line .btn-ghost { margin-top: var(--sp-2); }
+.overlay.calm .arrival-line, .game.calm .arrival-line { animation: none; }

@@ -173,5 +173,13 @@
   "goal.mend": "You can mend the {name} now",
   "goal.saveFor": "In {time} you can mend the {name}",
   "goal.rest": "The sea is quiet. Things will drift in.",
-  "goal.label": "Next"
+  "goal.label": "Next",
+  "arrival.title": "While you were away",
+  "arrival.away": "You were away for {time}.",
+  "arrival.chest": "Waiting in the chest:",
+  "arrival.cap": "The chest filled up and the rest drifted off. It holds {h} hours; mend it to hold more.",
+  "arrival.boat": "The boat came back from {name} with:",
+  "arrival.island": "Waiting on the islands for the boat to fetch:",
+  "arrival.tip": "You can mend the {name} now.",
+  "arrival.see": "Show me"
 }
