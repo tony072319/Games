@@ -15,6 +15,9 @@ import { drawSea } from './sea';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, applySky, skyAt, tintSky } from './sky';
 import { canPassLight, nextSea, passLight, starlightFor, switchSea } from '../core/seas';
+import { nextGoal, type Goal } from '../core/advice';
+import { canBuy } from '../core/economy';
+import { formatEta } from '../i18n';
 import { SEA_IDS, type SeaId } from '../core/data';
 import { destDesc, destName } from './names';
 import { createDebug } from './debug';
@@ -45,6 +48,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let chestBubble!: HTMLButtonElement;
   let boatBubble!: HTMLButtonElement;
   let bubbleKey = '';
+  let hits: { el: HTMLButtonElement; rect: [number, number, number, number] }[] = [];
+  let glints: { el: HTMLElement; at: [number, number]; when: () => boolean }[] = [];
+  let glintKey = '';
+  let goalBar!: HTMLButtonElement;
+  let goalKey = '';
+  let goal: Goal | null = null;
   let chestKey = '';
   const itemEls = new Map<number, HTMLElement>();
   /** Test build: materials are topped up every frame so nothing ever runs out. */
@@ -107,6 +116,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   /** Empty the chest into the inventory with a little "+N" for each material. */
   function takeChest(): Materials {
     const moved = collectChest(state);
+    if (chestTotal(moved) >= 1) tutorialDone(1);
     if (chestTotal(moved) >= 1) sound.play('chest');
     const lang = state.settings.lang;
     const from = chestBtn.getBoundingClientRect();
@@ -377,6 +387,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   function onBuy(id: UpgradeId) {
     if (!buyUpgrade(state, id)) return;
+    if (id === 'net') tutorialDone(2);
     save();
     sound.play('upgrade');
     const lang = state.settings.lang;
@@ -452,6 +463,31 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     boatBubble.addEventListener('click', () => unload());
     bubbleKey = '';
     stage.append(chestBtn, flotsamLayer, chestBubble, boatBubble);
+    // Tap the lighthouse or the net to open its upgrade (scene rectangles, viewBox units).
+    const hit = (id: UpgradeId, rect: [number, number, number, number]) => {
+      const b = el('button', 'hit');
+      b.type = 'button';
+      b.dataset.hit = id;
+      b.setAttribute('aria-label', t(lang, `upg.${id}.name`));
+      b.addEventListener('click', () => panel.show(id));
+      stage.insertBefore(b, flotsamLayer); // drifting items stay on top
+      hits.push({ el: b, rect });
+    };
+    hits = [];
+    hit('light', [156, 220, 204, 432]);
+    hit('net', [20, 340, 132, 478]);
+    // Small lights over things that can be mended right now.
+    glints = [];
+    const glint = (at: [number, number], when: () => boolean) => {
+      const g = el('span', 'glint');
+      g.setAttribute('aria-hidden', 'true');
+      stage.append(g);
+      glints.push({ el: g, at, when });
+    };
+    glint([180, 214], () => canBuy(state, 'light'));
+    glint([76, 336], () => canBuy(state, 'net'));
+    glint([CHEST_POS.x + 26, CHEST_POS.y - 50], () => canBuy(state, 'storage'));
+    glintKey = '';
     hud = createHud(lang, game, () => [
       {
         label: t(lang, 'settings.sound'),
@@ -504,8 +540,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     toolbar.append(mapBtn, seasBtn, passBtn);
     chipsKey = '';
     // On wide screens this column sits to the right of the scene.
+    goalBar = el('button', 'goal');
+    goalBar.type = 'button';
+    goalBar.addEventListener('click', followGoal);
+    goalKey = '';
     const side = el('div', 'side');
-    side.append(toolbar, panel.el);
+    side.append(goalBar, toolbar, panel.el);
     game.append(hud.el, stage, side);
     if (seaMap || islandView) {
       seaMap = null;
@@ -579,6 +619,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     boatBtn.style.left = `${sceneXToPx(BOAT_POS.x)}px`;
     boatBtn.style.top = `${sceneYToPx(BOAT_POS.y)}px`;
     placeBubbles();
+    for (const h of hits) {
+      const [x0, y0, x1, y1] = h.rect;
+      Object.assign(h.el.style, { left: `${sceneXToPx(x0)}px`, top: `${sceneYToPx(y0)}px`, width: `${(x1 - x0) * scale}px`, height: `${(y1 - y0) * scale}px` });
+    }
+    for (const g of glints) Object.assign(g.el.style, { left: `${sceneXToPx(g.at[0])}px`, top: `${sceneYToPx(g.at[1])}px` });
   }
 
   /** Scene (viewBox 360x640) to stage pixels, matching preserveAspectRatio="xMidYMid slice". */
@@ -616,6 +661,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         const srect = stage.getBoundingClientRect();
         const got = collect(field, state, item.id);
         if (!got) return;
+        tutorialDone(0);
         sound.play('tap');
         b.remove();
         itemEls.delete(item.id);
@@ -650,11 +696,63 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     drawSea(ctx, now, currentSky());
   }
 
+  function renderGlints() {
+    const key = glints.map((g) => (g.when() ? 1 : 0)).join('');
+    if (key === glintKey) return;
+    glintKey = key;
+    glints.forEach((g, i) => (g.el.style.display = key[i] === '1' ? '' : 'none'));
+  }
+
+  function renderGoal() {
+    const lang = state.settings.lang;
+    const g = nextGoal(state);
+    const p = { ...(g.params ?? {}) };
+    if (typeof p.name === 'string') p.name = t(lang, `upg.${p.name}.name`);
+    if (typeof p.time === 'number') p.time = formatEta(p.time, lang);
+    const text = t(lang, g.key, p);
+    goal = g;
+    if (text === goalKey) return;
+    goalKey = text;
+    goalBar.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l1.6 4.9H15l-4.2 3 1.6 5L8 11l-4.4 2.9 1.6-5L1 5.9h5.4z" fill="currentColor"/></svg>`;
+    const label = el('span', 'goal-label');
+    label.textContent = t(lang, 'goal.label');
+    const body = el('span', 'goal-text');
+    body.textContent = text;
+    goalBar.append(label, body);
+    goalBar.classList.remove('new');
+    void goalBar.offsetWidth;
+    goalBar.classList.add('new');
+  }
+
+  /** Show where the goal is: ring the object, or open what it needs. */
+  function followGoal() {
+    if (!goal) return;
+    const g = goal.target;
+    if (g === 'map') return openMap();
+    if (g === 'net' || g === 'storage' || g === 'light') panel.show(g);
+    const spotOn: Element | null =
+      g === 'chest' ? chestBtn : g === 'boat' ? boatBtn : g === 'flotsam' ? flotsamLayer : g === 'storage' ? chestBtn : stage.querySelector(`.hit[data-hit="${g}"]`);
+    if (!spotOn) return;
+    spotOn.classList.remove('spot');
+    void (spotOn as HTMLElement).offsetWidth;
+    spotOn.classList.add('spot');
+    setTimeout(() => spotOn.classList.remove('spot'), 1800);
+  }
+
+  /** First-time steps move on when the player does each thing. */
+  function tutorialDone(step: number) {
+    if (state.stats.tutorial === step) {
+      state.stats.tutorial = step + 1;
+      save();
+    }
+  }
+
   function renderBubbles() {
     const lang = state.settings.lang;
     const total = chestTotal(state.chest);
     const fill = Math.min(1, total / chestCapacity(state));
-    const showChest = total >= 1 && fill >= 0.02;
+    // While learning to collect, show the bubble as soon as there is anything in the chest.
+    const showChest = total >= 1 && (fill >= 0.02 || state.stats.tutorial === 1);
     const showBoat = !!state.boat.cargo && !state.boat.voyage;
     const label = showChest ? t(lang, 'bubble.collect', { n: formatNumber(total, lang) }) : '';
     const key = `${label}:${fill >= 0.999}:${showBoat}`;
@@ -698,6 +796,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     renderBoat();
     renderBubbles();
+    renderGlints();
+    renderGoal();
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     passBtn.style.display = canPassLight(state) ? '' : 'none';
     renderSeas();

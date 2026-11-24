@@ -53,6 +53,9 @@ try {
   if (snd !== false) fail('settings menu should turn sound off');
   if (await page.locator('.menu').count()) fail('menu should close after a choice');
 
+  // First-time steps: the goal bar starts with "tap something drifting".
+  const goalText = () => page.locator('.goal-text').textContent();
+  if (!(await goalText())?.includes('漂')) fail(`first goal should be to tap drifting things, got ${await goalText()}`);
   const before = await total(page);
   const item = page.locator('.item').first();
   await item.waitFor({ timeout: 5000 });
@@ -60,6 +63,11 @@ try {
   await item.dispatchEvent('pointerdown');
   await page.waitForTimeout(100);
   if (!((await total(page)) > before)) fail('tapping flotsam should add material');
+  await page.waitForTimeout(200);
+  if (!(await goalText())?.includes('储物箱')) fail(`after tapping, the goal should move to the chest, got ${await goalText()}`);
+  // Tapping the lighthouse in the scene opens its card.
+  await page.locator('.hit[data-hit="light"]').click();
+  if (!(await page.locator('[data-upgrade="light"].open').count())) fail('tapping the lighthouse should open its card');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/phone-zh.png` });
 
   // Test build: separate save, infinite materials on by default.

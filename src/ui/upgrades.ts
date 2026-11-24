@@ -12,6 +12,8 @@ export interface Panel {
   update(state: GameState): void;
   /** Briefly highlight a card after it was upgraded. */
   flash(id: UpgradeId): void;
+  /** Open a card, bring it into view and highlight it (from tapping the scene). */
+  show(id: UpgradeId): void;
 }
 
 /** The lighthouse needs glowshards from level 7: say where they come from. */
@@ -115,6 +117,17 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
   return {
     el: root,
     update,
+    show(id) {
+      if (!ids.includes(id)) return;
+      open.add(id);
+      last = '';
+      flashing = id;
+      if (current) update(current);
+      root.querySelector(`[data-upgrade="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      setTimeout(() => {
+        if (flashing === id) flashing = null;
+      }, 900);
+    },
     flash(id) {
       flashing = id;
       root.querySelector(`[data-upgrade="${id}"]`)?.classList.add('flash');

@@ -162,5 +162,16 @@
   "ui.full": "Full",
   "ui.calmValue": "Calm",
   "settings.mini": "Corner mode",
-  "ui.expand": "Expand"
+  "ui.expand": "Expand",
+  "goal.tapDrift": "Tap something drifting by",
+  "goal.collectChest": "Tap the chest to take what the net caught",
+  "goal.mendNet": "Mend the net so it catches faster",
+  "goal.unload": "The boat is back: tap it to unload",
+  "goal.dock": "Mend the lighthouse to level 3 to repair the dock",
+  "goal.buildBoat": "Open the sea chart and build a boat",
+  "goal.sail": "The boat is idle: send it out from the sea chart",
+  "goal.mend": "You can mend the {name} now",
+  "goal.saveFor": "In {time} you can mend the {name}",
+  "goal.rest": "The sea is quiet. Things will drift in.",
+  "goal.label": "Next"
 }

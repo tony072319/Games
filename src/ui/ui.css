@@ -408,3 +408,45 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 
 /* Calm: the decorative loops stop; what carries information stays. */
 .game.calm .buy.can, .game.calm .bubble.full, .game.calm .pass-btn, .game.calm .map-btn.badge::after, .game.calm .node.unknown, .game.calm .glint, .game.calm .card.flash { animation: none; }
+
+/* ---------- tapping the scene ---------- */
+.hit { position: absolute; z-index: 4; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-md); background: none; }
+.hit:focus-visible { outline-offset: 0; }
+.glint {
+  position: absolute;
+  z-index: 6;
+  width: var(--sp-3);
+  height: var(--sp-3);
+  border-radius: var(--r-pill);
+  pointer-events: none;
+  background: radial-gradient(var(--c-spark), var(--c-gold) 45%, transparent 70%);
+  transform: translate(-50%, -50%);
+  animation: breathe var(--t-breathe) var(--ease-inout) infinite;
+}
+/* A ring that says "here". */
+.spot { animation: spot var(--t-voyage) var(--ease-out) 1 !important; }
+@keyframes spot { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: var(--ring-gold), var(--glow-gold); } }
+.flotsam.spot { border-radius: var(--r-lg); }
+
+/* ---------- next goal ---------- */
+.goal {
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  margin: var(--sp-2) var(--sp-3) 0;
+  padding: 0 var(--sp-3);
+  border: 1px dashed var(--c-line);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--c-ink);
+  font-size: var(--fs-body);
+  line-height: var(--lh-tight);
+  text-align: left;
+}
+.goal svg { width: var(--icon-sm); height: var(--icon-sm); flex: none; color: var(--c-gold); }
+.goal-label { flex: none; color: var(--c-gold); font-weight: var(--fw-bold); }
+.goal-text { flex: 1; min-width: 0; }
+.goal.new { animation: rise-in var(--t-medium) var(--ease-out); }
+.game.calm .goal.new { animation: none; }

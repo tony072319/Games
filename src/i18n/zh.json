@@ -162,5 +162,16 @@
   "ui.full": "完整",
   "ui.calmValue": "简洁",
   "settings.mini": "角落模式",
-  "ui.expand": "展开"
+  "ui.expand": "展开",
+  "goal.tapDrift": "点一下海上漂过来的东西",
+  "goal.collectChest": "点储物箱，收下渔网捞到的东西",
+  "goal.mendNet": "修整渔网，让它捞得更快",
+  "goal.unload": "小船回来了，点小船卸货",
+  "goal.dock": "把灯塔修到 3 级，就能修好码头",
+  "goal.buildBoat": "打开海图，造一艘小船",
+  "goal.sail": "小船闲着，打开海图派它出海",
+  "goal.mend": "现在就能修整{name}",
+  "goal.saveFor": "再等 {time}，就能修整{name}",
+  "goal.rest": "海很安静。东西会慢慢漂来。",
+  "goal.label": "下一步"
 }
