@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>样张 E · 现成 3D 模型 + 六边形岛</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none}canvas{display:block}
+.tag{position:fixed;left:12px;top:12px;font:600 13px system-ui;color:#fff;background:#0008;padding:6px 10px;border-radius:8px;text-decoration:none;z-index:2}
+.hint{position:fixed;left:0;right:0;bottom:16px;text-align:center;font:13px system-ui;color:#fffc;text-shadow:0 1px 3px #000}
+.lbl{position:fixed;font:600 12px system-ui;color:#fff;background:#1a1430cc;border:1px solid #fff3;padding:3px 8px;border-radius:10px;transform:translate(-50%,-100%);pointer-events:none;white-space:nowrap}</style>
+<script type="importmap">{"imports":{"three":"./three.module.min.js"}}</script></head>
+<body><a class="tag" href="./">← 样张 E · 现成模型 + 六边形岛</a><div class="hint">手指拖动可以转动视角 · 双指缩放</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './e/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from './e/jsm/controls/OrbitControls.js';
+const qs=new URLSearchParams(location.search);
+const r=new THREE.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(innerWidth,innerHeight);
+r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.0;r.outputColorSpace=THREE.SRGBColorSpace;
+document.body.appendChild(r.domElement);
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,500);
+const portrait=innerHeight>innerWidth;cam.position.set(20,portrait?26:16,portrait?44:30);
+const ctl=new OrbitControls(cam,r.domElement);ctl.target.set(0,1.2,1);ctl.enableDamping=true;ctl.autoRotate=!qs.has('still');ctl.autoRotateSpeed=.35;
+ctl.minDistance=10;ctl.maxDistance=80;ctl.maxPolarAngle=1.35;ctl.enablePan=false;ctl.update();
+// sky
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,vertexShader:`varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+fragmentShader:`varying vec3 v;float h(vec3 p){return fract(sin(dot(p,vec3(12.9,78.2,37.7)))*43758.5);}void main(){float t=clamp(v.y*1.5,0.,1.);vec3 lo=vec3(1.,.58,.36),mi=vec3(.52,.32,.55),hi=vec3(.07,.08,.22);
+vec3 c=mix(lo,mi,smoothstep(0.,.28,t));c=mix(c,hi,smoothstep(.22,1.,t));vec3 sd=normalize(vec3(-.6,.05,-1.));float s=max(0.,dot(v,sd));c+=vec3(1.,.6,.3)*(pow(s,80.)*2.+pow(s,8.)*.35);
+vec3 g=floor(v*300.);c+=step(.997,h(g))*smoothstep(.2,.6,v.y)*.9;gl_FragColor=vec4(c,1.);}`});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(300,32,16),skyMat));
+scene.fog=new THREE.Fog(0x7a4a6a,70,200);
+scene.add(new THREE.HemisphereLight(0xb8a0ff,0x40304a,1.4));
+const sun=new THREE.DirectionalLight(0xffa070,2.6);sun.position.set(-30,14,-40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:1,far:120});sun.shadow.bias=-.0005;scene.add(sun);
+const fill=new THREE.DirectionalLight(0xff9a8a,.8);fill.position.set(25,12,30);scene.add(fill);
+// deep sea plane under the hex tiles
+const seaG=new THREE.PlaneGeometry(400,400,1,1);seaG.rotateX(-Math.PI/2);
+const sea=new THREE.Mesh(seaG,new THREE.MeshStandardMaterial({color:0x141d40,roughness:.3,metalness:.3}));sea.position.y=-.24;sea.receiveShadow=true;scene.add(sea);
+const loader=new GLTFLoader();const cache={};
+const load=u=>cache[u]||(cache[u]=new Promise((ok,no)=>loader.load(u,g=>ok(g.scene),undefined,no)));
+async function put(u,x,y,z,o={}){const src=await load(u);const m=src.clone(true);
+  m.traverse(c=>{if(c.isMesh){c.castShadow=o.shadow!==false;c.receiveShadow=true;if(o.tint){c.material=c.material.clone();c.material.color.multiply(new THREE.Color(o.tint))}}});
+  if(o.height){const b=new THREE.Box3().setFromObject(m);const s=o.height/(b.max.y-b.min.y);m.scale.setScalar(s)}else if(o.scale)m.scale.setScalar(o.scale);
+  m.position.set(x,y,z);if(o.rot)m.rotation.y=o.rot;scene.add(m);return m}
+// hex grid (measured from the tile)
+const tile=await load('e/k/hex_grass.gltf');const tb=new THREE.Box3().setFromObject(tile);const tw=tb.max.x-tb.min.x,td=tb.max.z-tb.min.z;
+const pointy=td>tw;{const wb=new THREE.Box3().setFromObject(await load('e/k/hex_water.gltf'));console.log('grass',JSON.stringify(tb),'water',JSON.stringify(wb))}const hexPos=(q,rr)=>pointy?[tw*(q+rr/2),td*.75*rr]:[tw*.75*q,td*(rr+q/2)];
+const hexes=[];for(let q=-7;q<=7;q++)for(let rr=-7;rr<=7;rr++){const s=-q-rr;const d=Math.max(Math.abs(q),Math.abs(rr),Math.abs(s));if(d<=7)hexes.push([q,rr,d])}
+const LIT=4; // lighthouse light radius in hexes
+const land=new Map([['0,0',0],['1,0',0],['-1,0',0],['0,1',0],['0,-1',0],['1,-1',0],['-1,1',0],['2,-1',1],['-2,1',0],['1,1',0],['-1,-1',1],['2,0',0],['-2,2',0],['0,2',0]]);
+const tilesOut=[];
+for(const [q,rr,d] of hexes){const [x,z]=hexPos(q,rr);const key=q+','+rr;
+  if(land.has(key)){put('e/k/'+(land.get(key)?'hex_grass_sloped_high':'hex_grass')+'.gltf',x,0,z,{rot:Math.PI/3*((q*7+rr*3)%6)})}
+  else if(d<=LIT){put('e/k/hex_water.gltf',x,0,z,{shadow:false})}
+  else if(d===LIT+1){put('e/k/hex_water.gltf',x,-.02,z,{shadow:false,tint:0x7080b0})}}
+// a second island, discovered, under construction
+const far=hexPos(-5,1);
+for(const [dq,dr] of [[0,0],[1,0],[0,1],[-1,1]]){const [x,z]=hexPos(-5+dq,1+dr);put('e/k/hex_grass.gltf',x,0,z)}
+put('e/k/building_scaffolding.gltf',far[0],0,far[1],{height:1.6});
+{const [x,z]=hexPos(-4,1);put('e/k/trees_A_small.gltf',x,0,z)}
+// unknown island silhouette in the dark
+put('e/l/sea_stack.glb',...[0,0,0],{height:3,tint:0x333344}).then(m=>{const [x,z]=hexPos(-2,-6);m.position.set(x,0,z)});
+put('e/l/sea_rock_large.glb',0,0,0,{height:1.6,tint:0x444455}).then(m=>{const [x,z]=hexPos(4,-8);m.position.set(x,0,z)});
+// home island props (ground top ≈ tb.max.y)
+const G=tb.max.y;const at=(q,rr,dx=0,dz=0)=>{const [x,z]=hexPos(q,rr);return[x+dx,G,z+dz]};
+const lh=await put('e/l/lighthouse_tall.glb',...at(0,0),{height:6.5});
+put('e/l/keeper_house.glb',...at(1,0,.2,.1),{height:1.9,rot:-.6});
+put('e/k/building_windmill_blue.gltf',...at(-1,-1),{height:2.6});
+put('e/k/building_well_blue.gltf',...at(0,1,-.3,.2),{height:1});
+put('e/k/building_market_blue.gltf',...at(-2,1),{height:1.5,rot:.8});
+put('e/k/trees_A_small.gltf',...at(-1,0,-.3,0));put('e/k/trees_B_small.gltf',...at(-2,2));put('e/k/tree_single_A.gltf',...at(0,2,.4,0));put('e/k/hills_A_trees.gltf',...at(2,-1));
+put('e/k/barrel.gltf',...at(1,1,-.5,-.2));put('e/k/crate_A_small.gltf',...at(1,1,-.1,.3));put('e/k/sack.gltf',...at(1,1,.4,0));put('e/k/resource_lumber.gltf',...at(-1,1,.3,.2));
+put('e/k/flag_red.gltf',...at(2,0,.5,-.3));
+put('e/l/fishing_net_pile.glb',...at(1,-1,.2,.3),{height:.45});put('e/l/lobster_crate.glb',...at(1,-1,-.4,-.2),{height:.35});
+put('e/l/telescope_stand.glb',...at(0,-1,.3,-.3),{height:.9,rot:2});put('e/l/signal_lamp_post.glb',...at(2,0,-.4,.4),{height:1.5});
+put('e/l/beach_grass.glb',...at(-2,2,.5,.4),{height:.5});put('e/l/beach_grass.glb',...at(1,1,.6,.6),{height:.45});
+put('e/l/treasure_chest.glb',...at(0,1,.5,-.3),{height:.4,rot:.5});
+// pier + boats in the water to the east-south
+const [px,pz]=hexPos(2,1);put('e/l/wooden_pier.glb',px+.6,-.1,pz+.4,{height:.7,rot:-Math.PI/2.6});
+const boat=await put('e/l/fishing_boat.glb',px+2.4,-.1,pz+1.4,{height:1.5,rot:1.1});
+const row=await put('e/l/rowboat.glb',px-.6,-.05,pz+2.2,{height:.4,rot:2.2});
+const buoys=[];for(const [q,rr] of [[3,-2],[-3,3],[3,2]]){const [x,z]=hexPos(q,rr);buoys.push(await put('e/l/buoy.glb',x,-.1,z,{height:1}))}
+// flotsam drifting in the lit water
+const flot=[];for(let i=0;i<5;i++){const u=['e/l/driftwood_log.glb','e/l/lobster_crate.glb','e/k/barrel.gltf','e/k/crate_A_small.gltf','e/l/driftwood_log.glb'][i];
+  flot.push(await put(u,0,0,0,{height:u.includes('drift')?.35:.45}))}
+// gulls circling
+const gulls=[];for(let i=0;i<3;i++)gulls.push(await put('e/l/seagull.glb',0,0,0,{height:.35,shadow:false}));
+// clouds
+for(const [x,y,z,s] of [[-26,12,-30,1.6],[24,14,-36,2],[2,16,-50,2.4]])put('e/k/cloud_big.gltf',x,y,z,{scale:s,shadow:false});
+// lamp: light + glow sprite + sweeping beam
+const lb=new THREE.Box3().setFromObject(lh);const lampY=lb.min.y+(lb.max.y-lb.min.y)*.86;
+const plight=new THREE.PointLight(0xffc070,40,14,1.5);plight.position.set(0,lampY,0);scene.add(plight);
+const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,240,200,1)');gr.addColorStop(.25,'rgba(255,200,120,.5)');gr.addColorStop(1,'rgba(255,160,80,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c)})();
+const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));glow.scale.setScalar(3.2);glow.position.set(0,lampY,0);scene.add(glow);
+const beamM=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+vertexShader:`varying float vy;varying vec3 vn;varying vec3 vp;void main(){vy=uv.y;vn=normalize(normalMatrix*normal);vp=(modelViewMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+fragmentShader:`varying float vy;varying vec3 vn;varying vec3 vp;void main(){float e=pow(abs(dot(vn,normalize(-vp))),2.);gl_FragColor=vec4(vec3(1.,.82,.5)*pow(vy,2.5)*e*.6,1.);}`});
+const beamG=new THREE.ConeGeometry(1.6,22,24,1,true);beamG.translate(0,-11,0);beamG.rotateZ(Math.PI/2);
+const beam=new THREE.Group();const b1=new THREE.Mesh(beamG,beamM);b1.rotation.z=-.06;beam.add(b1);const b2=b1.clone();b2.rotation.set(0,Math.PI,-.06);beam.add(b2);beam.position.set(0,lampY,0);scene.add(beam);
+// labels (what you can tap) — screen-projected
+const labels=[['灯塔 Lv7',()=>new THREE.Vector3(0,lb.max.y+.3,0)],['新岛 · 建造中',()=>new THREE.Vector3(far[0],2.8,far[1])],['未知海域',()=>{const [x,z]=hexPos(-2,-6);return new THREE.Vector3(x,3.6,z)}]].map(([t,p])=>{const d=document.createElement('div');d.className='lbl';d.textContent=t;document.body.appendChild(d);return [d,p]});
+const T0=performance.now()-(+qs.get('t')||3)*1000;const v=new THREE.Vector3();
+function loop(){const t=(performance.now()-T0)/1000;
+  beam.rotation.y=t*.6;plight.intensity=36+Math.sin(t*3)*4;glow.material.opacity=.85+Math.sin(t*3)*.15;
+  boat.position.y=-.1+Math.sin(t*1.2)*.06;boat.rotation.z=Math.sin(t*.9)*.03;row.position.y=-.05+Math.sin(t*1.5+1)*.05;
+  buoys.forEach((b,i)=>{b.position.y=-.1+Math.sin(t*1.6+i)*.08;b.rotation.z=Math.sin(t*1.3+i)*.08});
+  flot.forEach((f,i)=>{const a=t*.05+i*1.25;const R=5.2+(i%2)*1.3;f.position.set(Math.cos(a)*R,.02+Math.sin(t*1.4+i)*.05,Math.sin(a)*R);f.rotation.y=t*.2+i});
+  gulls.forEach((g,i)=>{const a=t*.4+i*2.1;const R=4+i;g.position.set(Math.cos(a)*R,5+i*.6+Math.sin(t+i)*.3,Math.sin(a)*R);g.rotation.y=-a});
+  ctl.update();r.render(scene,cam);
+  for(const [d,p] of labels){v.copy(p()).project(cam);d.style.left=(v.x*.5+.5)*innerWidth+'px';d.style.top=(-v.y*.5+.5)*innerHeight+'px';d.style.display=v.z<1?'':'none'}
+  requestAnimationFrame(loop)}
+loop();
+addEventListener('resize',()=>{r.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+</script></body></html>
