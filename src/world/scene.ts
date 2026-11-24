@@ -660,7 +660,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     },
     focus(where) {
       if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
-      else if (where === 'sea') focusTo = { target: new THREE.Vector3(0, 0, 0), dist: Math.min(70, litRadiusWorld(light) * 2.4), dir: new THREE.Vector3(0.42, 1, 0.72).normalize() };
+      else if (where === 'sea') focusTo = { target: new THREE.Vector3(0, 0, 0), dist: Math.min(70, Math.max(DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * 1.3, litRadiusWorld(light) * 2.4)), dir: new THREE.Vector3(0.42, 1, 0.72).normalize() };
       else {
         const o = tagObj.get(where);
         if (o) focusTo = { target: o.position.clone().setY(1), dist: 16 };
