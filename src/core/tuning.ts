@@ -26,6 +26,9 @@ export const T = {
   /** Lighthouse levels 7–10 cost this much more per level past 6. */
   LATE_LIGHT_MULT: 3.31,
   /** Polishing the lamp: glow it costs, how long it lasts, and how many more finds drift by. */
+  /** From this lighthouse level on, each level is mended in this many parts (same total price). */
+  LIGHT_PARTS: 4,
+  LIGHT_PARTS_FROM: 5,
   POLISH_GLOW: 3,
   POLISH_MS: 30 * 60 * 1000,
   POLISH_SPAWN_BONUS: 0.6,

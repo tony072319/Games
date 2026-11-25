@@ -27,6 +27,7 @@ export interface SeaState {
   levels: { net: number; storage: number; light: number };
   /** Each sea keeps its own materials: what an old sea gathers stays there (author decision 2A). */
   materials: Materials;
+  lightParts: number;
   chest: Materials;
   discovered: DestId[];
   buildings: Partial<Record<BuildingId, number>>;
@@ -70,6 +71,8 @@ export interface GameState {
   talents: import('./talents').TalentId[];
   /** Until when the polished lamp brings more finds (0 = not polished). */
   polishUntil: number;
+  /** Lighthouse parts mended toward the next level (0..LIGHT_PARTS-1), this sea. */
+  lightParts: number;
 }
 
 export function emptyMaterials(): Materials {
@@ -99,5 +102,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     curios: [],
     talents: [],
     polishUntil: 0,
+    lightParts: 0,
   };
 }

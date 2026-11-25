@@ -5,7 +5,7 @@
  */
 import { DESTS, buildBoat, canBuildBoat, reachable, startVoyage, unloadBoat, voyageMs } from '../../src/core/boat';
 import { BOAT_UPGRADES, MATERIALS, PANEL_UPGRADES, type DestId, type Materials, type SeaId, type UpgradeId } from '../../src/core/data';
-import { buyUpgrade, canBuy, upgradeCost } from '../../src/core/economy';
+import { buyUpgrade, canBuy, priceOf, upgradeCost } from '../../src/core/economy';
 import { pickMaterial } from '../../src/core/flotsam';
 import { ISLAND_BUILDINGS, buildCost, canBuild, construct } from '../../src/core/islands';
 import { canPassLight, nextSea, passLight } from '../../src/core/seas';
@@ -98,7 +98,7 @@ function shop(s: GameState): number {
     // Then the cheapest upgrade among the net, chest, recycler and boat.
     const ups: UpgradeId[] = [...PANEL_UPGRADES.filter((u) => u !== 'light'), ...(s.boat.built ? BOAT_UPGRADES : [])];
     const ok = ups.filter((u) => canBuy(s, u));
-    ok.sort((a, b) => total(upgradeCost(a, s.levels[a], s)) - total(upgradeCost(b, s.levels[b], s)));
+    ok.sort((a, b) => total(priceOf(s, a)) - total(priceOf(s, b)));
     if (ok[0] && buyUpgrade(s, ok[0])) {
       bought++;
       continue;

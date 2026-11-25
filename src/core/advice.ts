@@ -1,6 +1,6 @@
 import { DESTS, DOCK_LIGHT, canSail } from './boat';
 import { DEST_IDS, MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, PANEL_UPGRADES, type Materials, type UpgradeId } from './data';
-import { autoRate, canBuy, chestCapacity, chestTotal, isMaxLevel, netRate, upgradeCost, upgradeLocked } from './economy';
+import { autoRate, canBuy, chestCapacity, chestTotal, isMaxLevel, netRate, priceOf, upgradeLocked } from './economy';
 import { emptyMaterials, type GameState } from './state';
 
 /** What the net brings in per second, by material (island production not counted). */
@@ -84,7 +84,7 @@ export function nextGoal(s: GameState): Goal {
   let bestEta = Infinity;
   for (const id of PANEL_UPGRADES) {
     if (isMaxLevel(s, id) || upgradeLocked(s, id)) continue;
-    const eta = etaSeconds(s, upgradeCost(id, s.levels[id], s));
+    const eta = etaSeconds(s, priceOf(s, id));
     if (eta !== null && eta < bestEta) {
       best = id;
       bestEta = eta;

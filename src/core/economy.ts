@@ -101,16 +101,32 @@ export function upgradeLocked(state: GameState, id: UpgradeId): boolean {
   return id === 'recycle' && state.levels.light < T.RECYCLE_LIGHT;
 }
 
+/** The lighthouse is mended in parts from LIGHT_PARTS_FROM on. */
+export function inParts(state: GameState, id: UpgradeId): boolean {
+  return id === 'light' && state.levels.light >= T.LIGHT_PARTS_FROM;
+}
+
+/** What the button buys now: one lighthouse part (a share of the level, rounded up) or one level. */
+export function priceOf(state: GameState, id: UpgradeId): Materials {
+  const level = upgradeCost(id, state.levels[id], state);
+  if (!inParts(state, id)) return level;
+  const c = emptyMaterials();
+  for (const m of MATERIALS) c[m] = Math.ceil(level[m] / T.LIGHT_PARTS);
+  return c;
+}
+
 export function canBuy(state: GameState, id: UpgradeId): boolean {
   if (isMaxLevel(state, id) || upgradeLocked(state, id)) return false;
-  const cost = upgradeCost(id, state.levels[id], state);
+  const cost = priceOf(state, id);
   return MATERIALS.every((m) => state.materials[m] >= cost[m]);
 }
 
 export function buyUpgrade(state: GameState, id: UpgradeId): boolean {
   if (!canBuy(state, id)) return false;
-  const cost = upgradeCost(id, state.levels[id], state);
+  const cost = priceOf(state, id);
   for (const m of MATERIALS) state.materials[m] -= cost[m];
+  if (inParts(state, id) && ++state.lightParts < T.LIGHT_PARTS) return true;
+  if (id === 'light') state.lightParts = 0;
   state.levels[id] += 1;
   return true;
 }

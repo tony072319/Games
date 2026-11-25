@@ -1,4 +1,5 @@
 import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type BuildingId, type DestId, type Materials, type SeaId } from './data';
+import { T } from './tuning';
 import { BUILDINGS } from './islands';
 import { CURIO_BY_ID } from './curios';
 import { TALENT_BY_ID, type TalentId } from './talents';
@@ -40,6 +41,11 @@ function readMaterials(v: unknown): Materials {
 }
 
 /** A sea you're not at. Returns null if it can't be read. */
+/** Lighthouse parts in progress: anything not a whole 0..LIGHT_PARTS-1 starts the level over. */
+function readParts(v: unknown): number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < T.LIGHT_PARTS ? v : 0;
+}
+
 function readSea(v: unknown, nowMs: number): SeaState | null {
   if (!isObj(v) || !isObj(v.levels)) return null;
   const L = v.levels;
@@ -52,6 +58,7 @@ function readSea(v: unknown, nowMs: number): SeaState | null {
     levels: { net: L.net as number, storage: L.storage as number, light: L.light as number },
     // Saves from before per-sea materials have none stored: the old sea starts with nothing.
     materials: readMaterials(v.materials),
+    lightParts: readParts(v.lightParts),
     chest: readMaterials(v.chest),
     discovered: Array.isArray(v.discovered) ? (v.discovered.filter((d) => DEST_IDS.includes(d as DestId)) as DestId[]) : [],
     buildings,
@@ -166,6 +173,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   } else state.reached = Array.from(new Set<SeaId>(['dusk', state.sea]));
   if (typeof data.polishUntil === 'number' && Number.isFinite(data.polishUntil) && data.polishUntil >= 0) state.polishUntil = data.polishUntil;
   else if ('polishUntil' in data) dropped = true;
+  state.lightParts = readParts(data.lightParts);
   if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
   else if ('starlight' in data) dropped = true;
   if (isObj(data.seas)) {

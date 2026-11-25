@@ -1,5 +1,5 @@
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
-import { canBuy, isMaxLevel, upgradeCost, upgradeLocked } from '../core/economy';
+import { canBuy, isMaxLevel, priceOf, upgradeCost, upgradeLocked } from '../core/economy';
 import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
 import { affordState, etaSeconds, nextEffect } from '../core/advice';
@@ -60,7 +60,7 @@ export function upgradeThumb(id: UpgradeId, state: GameState): string {
 function signature(state: GameState, ids: readonly UpgradeId[]): string {
   return ids
     .map((id) => {
-      const cost = upgradeCost(id, state.levels[id], state);
+      const cost = priceOf(state, id);
       const eta = etaSeconds(state, cost);
       // Redraw when affordability changes, or when the "about N minutes" label would.
       return `${id}${state.levels[id]}${upgradeLocked(state, id) ? 'L' : ''}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
@@ -81,7 +81,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
     root.replaceChildren();
     for (const id of ids) {
       if (upgradeLocked(state, id)) continue;
-      const cost = isMaxLevel(state, id) ? null : upgradeCost(id, state.levels[id], state);
+      const cost = isMaxLevel(state, id) ? null : priceOf(state, id);
       root.append(
         upgradeCard(lang, {
           data: ['upgrade', id],
