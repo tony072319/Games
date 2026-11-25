@@ -28,6 +28,7 @@ export interface SeaState {
   /** Each sea keeps its own materials: what an old sea gathers stays there (author decision 2A). */
   materials: Materials;
   lightParts: number;
+  decor: Partial<Record<import('./decor').DecorId, number>>;
   chest: Materials;
   discovered: DestId[];
   buildings: Partial<Record<BuildingId, number>>;
@@ -73,6 +74,8 @@ export interface GameState {
   polishUntil: number;
   /** Lighthouse parts mended toward the next level (0..LIGHT_PARTS-1), this sea. */
   lightParts: number;
+  /** Island decorations bought in this sea (tier 1..3). */
+  decor: Partial<Record<import('./decor').DecorId, number>>;
 }
 
 export function emptyMaterials(): Materials {
@@ -103,5 +106,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     talents: [],
     polishUntil: 0,
     lightParts: 0,
+    decor: {},
   };
 }

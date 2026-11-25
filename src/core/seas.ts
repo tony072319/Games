@@ -42,6 +42,7 @@ function snapshot(s: GameState, nowMs: number): SeaState {
     levels: { net: s.levels.net, storage: s.levels.storage, light: s.levels.light },
     materials: s.materials,
     lightParts: s.lightParts,
+    decor: s.decor,
     chest: s.chest,
     discovered: s.discovered,
     buildings: s.buildings,
@@ -57,6 +58,7 @@ function restore(s: GameState, id: SeaId, st: SeaState): void {
   s.levels.light = st.levels.light;
   s.materials = st.materials;
   s.lightParts = st.lightParts;
+  s.decor = st.decor;
   s.chest = st.chest;
   s.discovered = st.discovered;
   s.buildings = st.buildings;
@@ -70,6 +72,7 @@ function freshSea(nowMs: number): SeaState {
     levels: { net: 1, storage: 1, light: 1 },
     materials: emptyMaterials(),
     lightParts: 0,
+    decor: {},
     chest: emptyMaterials(),
     discovered: [],
     buildings: {},
@@ -94,6 +97,7 @@ export function seaView(s: GameState, id: SeaId): GameState | null {
     levels: { ...s.levels, ...st.levels },
     materials: st.materials,
     lightParts: st.lightParts,
+    decor: st.decor,
     chest: st.chest,
     discovered: st.discovered,
     buildings: st.buildings,

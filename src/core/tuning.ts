@@ -28,6 +28,9 @@ export const T = {
   /** Polishing the lamp: glow it costs, how long it lasts, and how many more finds drift by. */
   /** From this lighthouse level on, each level is mended in this many parts (same total price). */
   LIGHT_PARTS: 4,
+  /** Island decorations: price of the first one, and how much dearer each next one is. */
+  DECOR_BASE: 200,
+  DECOR_GROWTH: 1.25,
   LIGHT_PARTS_FROM: 5,
   POLISH_GLOW: 3,
   POLISH_MS: 30 * 60 * 1000,
