@@ -385,5 +385,11 @@
   "decor.lights.3": "望远镜",
   "decor.tower.1": "脚手架",
   "decor.tower.2": "小塔",
-  "decor.tower.3": "瞭望塔"
+  "decor.tower.3": "瞭望塔",
+  "land.title": "扩建小岛",
+  "land.desc": "用木头和塑料填出新的地块，小岛一圈圈长大。只让小岛更宽敞，不影响产出。",
+  "land.count": "已扩建 {n}/{max} 块",
+  "land.full": "小岛已经长到最大了",
+  "land.buy": "扩建",
+  "land.toast": "小岛又大了一块（{n}/{max}）"
 }

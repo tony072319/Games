@@ -11,7 +11,7 @@ export interface DecorSheet {
   update(state: GameState): void;
 }
 
-export function createDecorSheet(lang: Lang, state: GameState, opts: { buy(id: DecorId): void; close(): void }): DecorSheet {
+export function createDecorSheet(lang: Lang, state: GameState, opts: { buy(id: DecorId | 'land'): void; close(): void }): DecorSheet {
   const overlay = el('div', 'overlay sheet-overlay');
   const box = el('div', 'seamap decor');
   box.setAttribute('role', 'dialog');

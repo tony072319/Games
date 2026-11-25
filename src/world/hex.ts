@@ -59,13 +59,13 @@ export function litRadiusWorld(light: number): number {
 
 /**
  * Where each island lies: exactly at the edge the light first reaches
- * (DESTS needLight + 4 tiles), at four different bearings, none on the pier side.
+ * (DESTS needLight + 4 tiles), at four different bearings behind and beside home, so the water in front stays open for the pier and drifting finds.
  */
 export const DEST_HEX: Record<DestId, Hex> = {
-  wreck: [-7, 7],
+  wreck: [-7, 0],
   gullrock: [0, -8],
   oldlight: [9, -9],
-  firefly: [-10, 5],
+  firefly: [-5, -5],
 };
 
 /** The pier leaves the island from this tile, heading out along PIER_DIR (x, z). */

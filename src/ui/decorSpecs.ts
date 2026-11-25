@@ -3,6 +3,7 @@ import { DECOR_IDS, DECOR_TIERS, canDecorate, decorCost, type DecorId } from '..
 import type { GameState, Lang } from '../core/state';
 import { affordState, etaSeconds } from '../core/advice';
 import { MATERIALS } from '../core/data';
+import { LAND_MAX, canExpand, landCost } from '../core/land';
 import { t } from '../i18n';
 import type { CardSpec } from './card';
 import { etaText } from './upgrades';
@@ -20,7 +21,9 @@ export function decorThumb(id: DecorId, tier: number): string {
 
 /** Redraw when a tier, what is affordable, or the "about N minutes" label would change. */
 export function decorSignature(state: GameState): string {
-  return DECOR_IDS.map((id) => {
+  const land = landCost(state);
+  const landSig = `land${state.land}:` + (land ? MATERIALS.map((m) => (state.materials[m] >= land[m] ? 1 : 0)).join('') + `:${Math.ceil((etaSeconds(state, land) ?? -60) / 60)}` : 'x');
+  return landSig + '|' + DECOR_IDS.map((id) => {
     const c = decorCost(state, id);
     if (!c) return `${id}x`;
     const eta = etaSeconds(state, c);
@@ -28,7 +31,34 @@ export function decorSignature(state: GameState): string {
   }).join('|');
 }
 
-export function decorSpecs(lang: Lang, state: GameState, buy: (id: DecorId) => void): CardSpec[] {
+/** A small hex of new ground. */
+const LAND_THUMB = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4l10 6v12l-10 6-10-6V10z" fill="#8fbf5a" stroke="#5f8a3a" stroke-width="1.2"/><path d="M6 22l10 6 10-6v3l-10 6-10-6z" fill="#c9a66b"/><circle cx="13" cy="14" r="1.6" fill="#f6dd7a"/><circle cx="19" cy="17" r="1.3" fill="#e98aa8"/></svg>`;
+
+function landSpec(lang: Lang, state: GameState, buy: () => void): CardSpec {
+  const cost = landCost(state);
+  return {
+    data: ['decor', 'land'],
+    thumb: LAND_THUMB,
+    title: t(lang, 'land.title'),
+    desc: t(lang, 'land.desc'),
+    effect: cost ? t(lang, 'land.count', { n: state.land, max: LAND_MAX }) : t(lang, 'land.full'),
+    cost,
+    have: state.materials,
+    buyLabel: t(lang, 'land.buy'),
+    canBuy: canExpand(state),
+    state: cost ? affordState(state, cost) : 'far',
+    eta: cost ? etaText(state, cost, lang) : undefined,
+    onBuy: buy,
+    open: false,
+  };
+}
+
+/** Expanding the island first, then one card per decoration. */
+export function decorSpecs(lang: Lang, state: GameState, buy: (id: DecorId | 'land') => void): CardSpec[] {
+  return [landSpec(lang, state, () => buy('land')), ...decorCards(lang, state, buy)];
+}
+
+function decorCards(lang: Lang, state: GameState, buy: (id: DecorId) => void): CardSpec[] {
   return DECOR_IDS.map((id) => {
     const tier = state.decor[id] ?? 0;
     const cost = decorCost(state, id);

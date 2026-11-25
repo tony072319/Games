@@ -9,7 +9,7 @@ import type { FloatingItem } from '../core/flotsam';
 import { ISLAND_BUILDINGS, buildingLevel } from '../core/islands';
 import type { GameState } from '../core/state';
 import { MODELS, type ModelId } from './assets';
-import { DECOR_SLOTS, DEST_HEX, TILE_W, HOME_TILES, PIER_DIR, PIER_TILE, hexToWorld, litRadius, hexDist, type Hex } from './hex';
+import { DECOR_SLOTS, DEST_HEX, LAND_TILES, TILE_W, HOME_TILES, PIER_DIR, PIER_TILE, hexToWorld, litRadius, hexDist, type Hex } from './hex';
 import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
 export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | `island:${DestId}` | `bld:${BuildingId}`;
@@ -123,6 +123,16 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   const [tx, tz] = at(-1, 0, 0.2, -0.5);
   place(items, 'deco', deco.map((p) => (p.part === 'tree1' ? p : { ...p, dx: p.dx - tx, dz: p.dz - tz })), tx, tz, 0);
 
+  // The island grown by expanding: new ground in order, now and then a tuft of grass or flowers.
+  const TUFTS: ModelId[] = ['nature/grass_tuft', 'nature/flower_yellow', 'lh/beach_grass', 'nature/flower_purple'];
+  for (let i = 0; i < Math.min(s.land, LAND_TILES.length); i++) {
+    tile(items, `land:${i}`, LAND_TILES[i], GROUND[s.sea]);
+    if (i % 3 === 1) {
+      const [lx, lz] = hexToWorld(...LAND_TILES[i]);
+      items.push({ key: `land:${i}:tuft`, model: TUFTS[i % TUFTS.length], x: lx + 0.3, y: 0, z: lz - 0.2, rotY: i });
+    }
+  }
+
   // Decorations: each on its own new tile around the island (the island grows as you decorate).
   for (const id of DECOR_IDS) {
     const tier = s.decor[id];
@@ -216,17 +226,52 @@ export function boatPosition(s: GameState, nowMs: number): { x: number; z: numbe
   const [mx, mz] = mooring();
   const v = s.boat.voyage;
   if (!v) return { x: mx, z: mz, rotY: Math.atan2(PDX, PDZ), atDock: true };
-  const [ix, iz] = hexToWorld(...DEST_HEX[v.dest]);
-  // Stop just short of the island, on the side facing home.
-  const [ux, uz] = norm(mx - ix, mz - iz);
-  const tx = ix + ux * 1.6;
-  const tz = iz + uz * 1.6;
+  const route = boatRoute(v.dest);
   const span = Math.max(1, v.returnAt - v.departAt);
   const p = Math.min(1, Math.max(0, (nowMs - v.departAt) / span));
   const out = p < 0.5;
   const k = out ? p * 2 : (p - 0.5) * 2;
-  const [fx, fz, gx, gz] = out ? [mx, mz, tx, tz] : [tx, tz, mx, mz];
-  return { x: fx + (gx - fx) * k, z: fz + (gz - fz) * k, rotY: Math.atan2(gx - fx, gz - fz), atDock: false };
+  const { x, z, dx, dz } = along(out ? route : [...route].reverse(), k);
+  return { x, z, rotY: Math.atan2(dx, dz), atDock: false };
+}
+
+/** Sailing room around home: just outside the fully grown island. */
+const SEA_RING = 10.5;
+
+/** From the mooring out to open water, around the island at SEA_RING, then in to stop short of the island. */
+function boatRoute(dest: DestId): [number, number][] {
+  const [mx, mz] = mooring();
+  const [ix, iz] = hexToWorld(...DEST_HEX[dest]);
+  const a0 = Math.atan2(mz, mx);
+  const a1 = Math.atan2(iz, ix);
+  let da = a1 - a0;
+  while (da > Math.PI) da -= 2 * Math.PI;
+  while (da < -Math.PI) da += 2 * Math.PI;
+  const steps = Math.max(1, Math.ceil(Math.abs(da) / 0.25));
+  const pts: [number, number][] = [[mx, mz]];
+  for (let i = 0; i <= steps; i++) {
+    const a = a0 + (da * i) / steps;
+    pts.push([Math.cos(a) * SEA_RING, Math.sin(a) * SEA_RING]);
+  }
+  const [ux, uz] = norm(Math.cos(a1) * SEA_RING - ix, Math.sin(a1) * SEA_RING - iz);
+  pts.push([ix + ux * 1.6, iz + uz * 1.6]);
+  return pts;
+}
+
+/** The point a share k (0..1) of the way along a path, and the heading there. */
+function along(pts: [number, number][], k: number): { x: number; z: number; dx: number; dz: number } {
+  const lens = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
+  let left = k * lens.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < lens.length; i++) {
+    const [ax, az] = pts[i];
+    const [bx, bz] = pts[i + 1];
+    if (left <= lens[i] || i === lens.length - 1) {
+      const f = lens[i] > 0 ? Math.min(1, left / lens[i]) : 1;
+      return { x: ax + (bx - ax) * f, z: az + (bz - az) * f, dx: bx - ax, dz: bz - az };
+    }
+    left -= lens[i];
+  }
+  return { x: pts[0][0], z: pts[0][1], dx: 0, dz: 1 };
 }
 
 /** Drifting finds cross the lit water in front of the island, far lane to near lane. */

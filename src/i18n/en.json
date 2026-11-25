@@ -385,5 +385,11 @@
   "decor.lights.3": "Telescope",
   "decor.tower.1": "Scaffold",
   "decor.tower.2": "Little tower",
-  "decor.tower.3": "Watchtower"
+  "decor.tower.3": "Watchtower",
+  "land.title": "Grow the island",
+  "land.desc": "Fill in new ground with wood and plastic; the island grows ring by ring. Only gives room; changes no numbers.",
+  "land.count": "Grown {n}/{max} tiles",
+  "land.full": "The island is as big as it gets",
+  "land.buy": "Grow",
+  "land.toast": "The island grew a tile ({n}/{max})"
 }

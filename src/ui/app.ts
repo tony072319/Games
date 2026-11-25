@@ -15,6 +15,7 @@ import { createIslandView, type IslandView } from './islandView';
 import { createBook, type Book } from './book';
 import { createDecorSheet, type DecorSheet } from './decor';
 import { decorate, type DecorId } from '../core/decor';
+import { LAND_MAX, expand } from '../core/land';
 import { createTalentTree } from './talentTree';
 import { CURIOS, chestFind, foundCurio } from '../core/curios';
 import { BUILDINGS, construct } from '../core/islands';
@@ -310,10 +311,15 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (decorSheet) return;
     const lang = state.settings.lang;
     decorSheet = createDecorSheet(lang, state, {
-      buy: (id: DecorId) => {
-        if (!decorate(state, id)) return;
+      buy: (id: DecorId | 'land') => {
+        if (id === 'land') {
+          if (!expand(state)) return;
+          toast(t(lang, 'land.toast', { n: state.land, max: LAND_MAX }));
+        } else {
+          if (!decorate(state, id)) return;
+          toast(t(lang, 'decor.toast', { name: t(lang, `decor.${id}.${state.decor[id]}`) }));
+        }
         sound.play('upgrade');
-        toast(t(lang, 'decor.toast', { name: t(lang, `decor.${id}.${state.decor[id]}`) }));
         save();
         refresh();
       },
