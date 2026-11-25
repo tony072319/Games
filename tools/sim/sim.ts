@@ -14,6 +14,7 @@ import { newGame, type GameState } from '../../src/core/state';
 import { TALENTS, canLearn, learn } from '../../src/core/talents';
 import { incomePerSecond } from '../../src/core/advice';
 import { tapValue } from './taps';
+import { DECOR_IDS, canDecorate, decorCost, decorate } from '../../src/core/decor';
 import { SKY_CYCLE_MS } from '../../src/core/daycycle';
 
 const DAY = 24 * 3600 * 1000;
@@ -100,6 +101,13 @@ function shop(s: GameState): number {
     const ok = ups.filter((u) => canBuy(s, u));
     ok.sort((a, b) => total(priceOf(s, a)) - total(priceOf(s, b)));
     if (ok[0] && buyUpgrade(s, ok[0])) {
+      bought++;
+      continue;
+    }
+    // Last, decorations with what is left, cheapest first (they only change the picture).
+    const decs = DECOR_IDS.filter((d) => canDecorate(s, d));
+    decs.sort((a, b) => total(decorCost(s, a)!) - total(decorCost(s, b)!));
+    if (decs[0] && decorate(s, decs[0])) {
       bought++;
       continue;
     }

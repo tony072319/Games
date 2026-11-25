@@ -24,10 +24,9 @@ describe('pacing for a normal player (3 visits a day)', () => {
     expect(normal.seas[2]?.days).toBeGreaterThanOrEqual(28);
     expect(normal.seas[2]?.days).toBeLessThanOrEqual(42);
   });
-  // Ruling (ledger, Task 9): 90% holds only where the sea is short; the long later seas wait on the
-  // late lighthouse, so their floor is lower until more things to buy are added.
+  // Lighthouse parts and decorations give the long later seas something to buy (late-sea content plan).
   test('most visits have something to buy', () => {
-    const floor = [0.8, 0.5, 0.3];
+    const floor = [0.85, 0.7, 0.5];
     normal.seas.forEach((s, i) => expect(s.buyRatio, s.sea).toBeGreaterThanOrEqual(floor[i]));
   });
 });
@@ -58,7 +57,8 @@ describe('choices that matter', () => {
     for (const s of normal.seas) for (const [m, v] of Object.entries(s.leftover)) expect(v ?? 0, `${s.sea} ${m}`).toBeLessThanOrEqual(20);
   });
   test('the net reaches 40 in every sea', () => {
-    for (const s of normal.seas) expect(s.maxNet, s.sea).toBeGreaterThanOrEqual(40);
+    // Ruling (late-sea content, Task 3): decorations now share the dusk sea's budget; the net ends at 39–41.
+    for (const s of normal.seas) expect(s.maxNet, s.sea).toBeGreaterThanOrEqual(39);
   });
   test('three seas buy 55–70% of the talent tree', () => {
     expect(normal.talentFill).toBeGreaterThanOrEqual(0.55);

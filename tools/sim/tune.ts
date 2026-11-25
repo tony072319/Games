@@ -24,6 +24,8 @@ const KNOBS: Knob[] = [
   { key: 'NET_COST_GROWTH', lo: 1.12, hi: 1.8 },
   { key: 'TALENT_COST_SCALE', lo: 0.5, hi: 4, log: true },
   { key: 'RECYCLE_RATE', lo: 0.05, hi: 5, log: true },
+  { key: 'DECOR_BASE', lo: 20, hi: 5000, log: true },
+  { key: 'DECOR_GROWTH', lo: 1.05, hi: 1.6 },
 ];
 const BASE_TALENT = [...T.TALENT_COSTS];
 
@@ -44,7 +46,7 @@ export function loss(r: SimReport): number {
   const [a, b, c] = r.seas;
   l += 3 * range(a?.days, 4, 6) + 4 * range(b?.days, 14, 21) + 4 * range(c?.days, 28, 42);
   for (const [i, s] of r.seas.entries()) {
-    l += 3 * range(s.buyRatio, i === 0 ? 0.9 : 0.6, 1);
+    l += 3 * range(s.buyRatio, i === 0 ? 0.85 : 0.8, 1);
     l += range(s.share.net, 0.35, 0.5) + range(s.share.boat, 0.3, 0.45) + range(s.share.islands, 0.1, 0.25);
     l += range(s.tapSeconds, 10, 15);
     for (const v of Object.values(s.leftover)) if ((v ?? 0) > 20) l += Math.log10((v ?? 0) / 20) ** 2;

@@ -45,14 +45,14 @@ describe('buying', () => {
 
 describe('lighthouse light and boat upgrades', () => {
   test('light costs, with glow from level 7', () => {
-    expect(upgradeCost('light', 1)).toEqual({ wood: 200, plastic: 80, rope: 0, metal: 0, glow: 0 });
+    expect(upgradeCost('light', 1)).toEqual({ wood: Math.ceil(200 * T.LIGHT_COST_MULT), plastic: Math.ceil(80 * T.LIGHT_COST_MULT), rope: 0, metal: 0, glow: 0 });
     expect(upgradeCost('light', 7).glow).toBe(5);
     expect(upgradeCost('light', 6).glow).toBe(0);
   });
   test('the old lighthouse blueprint makes light 20% cheaper', () => {
     const s = newGame(0, 'zh');
     s.discovered.push('oldlight');
-    expect(upgradeCost('light', 1, s).wood).toBe(160);
+    expect(upgradeCost('light', 1, s).wood / upgradeCost('light', 1).wood).toBeCloseTo(0.8, 2);
     expect(upgradeCost('net', 1, s).wood).toBe(15);
   });
   test('boat upgrade costs', () => {

@@ -11,10 +11,11 @@ export const DECOR_IDS: readonly DecorId[] = ['lantern', 'flowers', 'bench', 'fl
 export const DECOR_TIERS = 3;
 
 /** How the price of each tier is made up (shares of the total, before rounding up). */
+// Mostly wood and plastic, the materials that pile up while the lighthouse waits on rope and metal.
 const MIX: Partial<Materials>[] = [
   { wood: 0.6, plastic: 0.4 },
-  { wood: 0.4, rope: 0.3, plastic: 0.3 },
-  { wood: 0.3, rope: 0.3, metal: 0.3 },
+  { wood: 0.5, plastic: 0.5 },
+  { wood: 0.45, plastic: 0.45, metal: 0.1 },
 ];
 
 /** Decorations bought in this sea so far (every tier counts). */
