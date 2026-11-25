@@ -62,15 +62,22 @@ try {
   const goalText = () => page.locator('.goal-text').textContent();
   if (!(await goalText())?.includes('漂')) fail(`first goal should be to tap drifting things, got ${await goalText()}`);
   const before = await total(page);
-  const item = page.locator('.item:not(.curio)').first(); // a glowing find goes to the book instead
+  const item = page.locator('.item:not(.curio):not(.offscreen)').first(); // a glowing find goes to the book instead
   await item.waitFor({ timeout: 5000 });
-  if (SHOTS) { await page.waitForTimeout(6500); await page.screenshot({ path: `${SHOTS}/phone-zh-drift.png` }); }
-  // A real tap on the picture where the find floats (not the hidden button).
+  if (SHOTS) { await page.waitForTimeout(2500); await page.screenshot({ path: `${SHOTS}/phone-zh-drift.png` }); }
+  // A real tap on the picture where the find floats (not the hidden button). Finds drift on and off
+  // screen, so tap one that is visible now; slow screenshot runs may also drop an input (ruling): retry there.
   await page.waitForTimeout(1500);
-  const ib = await item.boundingBox();
-  if (!ib) fail('the drifting find should be on screen');
-  await page.mouse.click(ib.x + ib.width / 2, ib.y + ib.height / 2);
-  await page.waitForFunction((b) => [...document.querySelectorAll('.hud .mat span')].reduce((a, e) => a + Number(e.textContent || 0), 0) > b, before, { timeout: 4000 }).catch(() => {});
+  for (let tries = SHOTS ? 4 : 1; tries > 0 && !((await total(page)) > before); tries--) {
+    await item.waitFor({ timeout: 8000 });
+    const ib = await item.boundingBox();
+    if (!ib) {
+      if (tries === 1) fail('the drifting find should be on screen');
+      continue;
+    }
+    await page.mouse.click(ib.x + ib.width / 2, ib.y + ib.height / 2);
+    await page.waitForFunction((b) => [...document.querySelectorAll('.hud .mat span')].reduce((a, e) => a + Number(e.textContent || 0), 0) > b, before, { timeout: 4000 }).catch(() => {});
+  }
   if (!((await total(page)) > before)) fail('tapping flotsam should add material');
   await page.waitForTimeout(200);
   if (!(await goalText())?.includes('储物箱')) fail(`after tapping, the goal should move to the chest, got ${await goalText()}`);

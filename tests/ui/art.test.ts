@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { MAX_LEVEL, MATERIALS } from '../../src/core/data';
 import { BUILDING_MAX, DEST_IDS, SEA_IDS } from '../../src/core/data';
@@ -17,6 +18,13 @@ describe('scene', () => {
   test('each material has its own icon', () => {
     const icons = MATERIALS.map(itemIcon);
     expect(new Set(icons).size).toBe(MATERIALS.length);
+  });
+  test("material icons are the author's pictures, and each file exists", () => {
+    for (const m of MATERIALS) {
+      const html = itemIcon(m);
+      expect(html).toMatch(new RegExp(`^<img class="item-icon" src="icons/${m}\\.png" alt="" draggable="false">$`));
+      expect(existsSync(`public/icons/${m}.png`), m).toBe(true);
+    }
   });
 });
 

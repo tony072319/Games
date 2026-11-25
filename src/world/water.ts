@@ -1,6 +1,7 @@
 /**
- * The sea (sample G): turquoise shallows near land, white foam bands around everything that
- * touches the water, a few sparkles; darker beyond the lighthouse's reach, with a warm edge.
+ * The sea (sample G, toward the author's concept): calm darker deep water, a glowing cyan ring with a
+ * white rim around everything that touches the water, sparse white wave marks; darker beyond the
+ * lighthouse's reach, with a warm edge.
  */
 import * as THREE from 'three';
 import type { Palette } from './palette';
@@ -37,15 +38,26 @@ export function createWater(): Water {
       float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
       void main(){
         float sd=1e3;for(int i=0;i<${MAX_SHORES};i++){sd=min(sd,length(W.xz-B[i].xy)-B[i].z);}
-        float wob=n(W.xz*1.3+vec2(T*.3,-T*.2))*.35;
-        vec3 col=mix(shal,deep,smoothstep(.2,3.2,sd+wob));
-        float band=fract((sd+wob*.6)*1.4-T*.35);
-        float foamL=smoothstep(.0,.06,band)*smoothstep(.16,.08,band)*smoothstep(1.6,.3,sd);
-        float edge=smoothstep(.35,.05,sd+wob*.5);
-        col=mix(col,foam,max(edge,foamL*.55));
-        float st=n(W.xz*vec2(.6,2.2)+vec2(0.,T*.4));col+=vec3(1.)*smoothstep(.72,.9,st)*.07;
+        float wob=n(W.xz*.9+vec2(T*.15,-T*.1))*.45;
+        // Calm deep water with a slow, broad swell of shade; no fine streaks.
+        vec3 dp=deep*(.86+.08*n(W.xz*.05+T*.01));
+        // A bright cyan shallow ring that glows, with a thin white rim at its outer edge.
+        float ring=1.-smoothstep(1.2,2.6,sd+wob);
+        vec3 glow=mix(shal,vec3(.05,.78,.82),.9);
+        vec3 col=mix(dp,glow,ring);
+        float rim=smoothstep(.09,.0,abs(sd+wob-2.35))*.9;
+        float edge=smoothstep(.3,.05,sd+wob*.4);
+        col=mix(col,foam,max(edge,rim));
+        // Sparse white wave marks out on the open water: a short curved stroke in some cells, fading in and out.
+        vec2 q=W.xz/3.6;vec2 c=floor(q);float r=h(c);
+        vec2 o=fract(q)-.5-vec2(h(c+3.1)-.5,h(c+7.7)-.5)*.5;
+        o=mat2(.9,-.44,.44,.9)*o*(r>.5?1.:-1.);
+        float arc=abs(o.y+.9*o.x*o.x-.03)-.018*(1.-abs(o.x)/.12);
+        float mark=step(.62,r)*step(abs(o.x),.12)*smoothstep(.012,.0,arc);
+        mark*=smoothstep(.2,.8,sin(T*.45+r*40.))*smoothstep(3.,4.5,sd);
+        col=mix(col,foam,mark*.85);
         vec2 cell=floor(W.xz*6.);vec2 fr=fract(W.xz*6.)-.5;
-        float sp=step(.992,h(cell+floor(T*1.5)))*smoothstep(.18,.0,length(fr))*smoothstep(1.,3.,sd);col+=vec3(1.,.97,.9)*sp*.6;
+        float sp=step(.995,h(cell+floor(T*1.5)))*smoothstep(.18,.0,length(fr))*smoothstep(1.,3.,sd)*smoothstep(22.,10.,length(W.xz));col+=vec3(1.,.97,.9)*sp*.4;
         float d=length(W.xz);float inside=1.-smoothstep(lit-1.5,lit+1.5,d);
         col*=mix(.55,1.,inside);
         col+=vec3(1.,.82,.55)*exp(-pow((d-lit)*1.2,2.))*.12;

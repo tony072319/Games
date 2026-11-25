@@ -122,7 +122,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 }
 .mats::-webkit-scrollbar { display: none; }
 .mat { display: flex; align-items: center; gap: var(--sp-1); white-space: nowrap; font-size: var(--fs-label); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; line-height: var(--lh-tight); }
-.mat svg { width: var(--icon-md); height: var(--icon-md); flex: none; }
+.mat :is(svg, img) { width: var(--icon-md); height: var(--icon-md); flex: none; }
 .hud .mat { font-size: var(--fs-body); }
 .starlight { flex: none; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-pill); background: none; color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-bold); line-height: var(--lh-tight); white-space: nowrap; text-shadow: var(--glow-gold); }
 .hud .settings-btn { background: var(--c-surface-0); backdrop-filter: var(--blur-bar); }
@@ -233,8 +233,8 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .cost { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-caption); line-height: var(--lh-tight); }
 .cost span { display: flex; align-items: center; gap: var(--sp-1); }
 .cost span.short { color: var(--c-ink-faint); }
-.cost span.short svg { opacity: 0.45; }
-.cost svg { width: var(--icon-sm); height: var(--icon-sm); }
+.cost span.short :is(svg, img) { opacity: 0.45; }
+.cost :is(svg, img) { width: var(--icon-sm); height: var(--icon-sm); }
 .card.flash { animation: cardflash var(--t-flash) var(--ease-out); }
 @keyframes cardflash { 0% { box-shadow: var(--ring-gold), var(--glow-gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
@@ -274,7 +274,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   text-shadow: var(--shadow-text);
   animation: rise var(--t-float) var(--ease-out) forwards;
 }
-.gain svg { width: var(--icon-sm); height: var(--icon-sm); }
+.gain :is(svg, img) { width: var(--icon-sm); height: var(--icon-sm); }
 @keyframes rise { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(calc(var(--sp-6) * -1)); } }
 .toast {
   position: absolute;
@@ -294,9 +294,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 }
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px); } 12% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -12px); } }
 .fly { position: absolute; z-index: 40; width: var(--sp-5); height: var(--sp-5); pointer-events: none; filter: var(--drop-gold); }
-.fly svg { width: 100%; height: 100%; }
+.fly :is(svg, img) { width: 100%; height: 100%; }
 .spark { position: absolute; z-index: 40; width: var(--sp-2); height: var(--sp-2); border-radius: var(--r-pill); pointer-events: none; background: radial-gradient(var(--c-spark), var(--c-gold) 45%, transparent 70%); }
-.mat.bump svg { animation: bump var(--t-medium) var(--ease-out); }
+.mat.bump :is(svg, img) { animation: bump var(--t-medium) var(--ease-out); }
 @keyframes bump { 40% { transform: scale(1.45); filter: var(--drop-gold); } }
 .note { position: absolute; left: var(--sp-3); right: var(--sp-3); top: calc(var(--tap) + var(--sp-5)); z-index: 3; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--c-surface-1); font-size: var(--fs-body); }
 
@@ -373,7 +373,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .sail-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); font-size: var(--fs-body); }
 .sail-row .haul { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); flex: 1; color: var(--c-ink-dim); }
 .sail-row .mat { font-size: var(--fs-body); }
-.sail-row .mat svg { width: var(--icon-sm); height: var(--icon-sm); }
+.sail-row .mat :is(svg, img) { width: var(--icon-sm); height: var(--icon-sm); }
 .map-bottom .panel { max-height: none; padding: 0; overflow: visible; }
 
 /* ---------- island ---------- */
@@ -404,7 +404,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 @media (max-width: 400px) {
   .mats { gap: var(--sp-2); padding: 0 var(--sp-2); }
   .hud .mat { gap: 0; font-size: var(--fs-caption); }
-  .hud .mat svg { width: var(--icon-sm); height: var(--icon-sm); }
+  .hud .mat :is(svg, img) { width: var(--icon-sm); height: var(--icon-sm); }
   .starlight { min-width: 0; font-size: var(--fs-caption); }
 }
 
@@ -522,3 +522,5 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .credits-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; text-align: left; }
 .credits-list li { display: grid; gap: var(--sp-1); padding: var(--sp-2) 0; border-bottom: 1px solid var(--c-line); }
 .credits-list span { color: var(--c-ink-dim); font-size: var(--fs-caption); }
+
+.item-icon { display: inline-block; object-fit: contain; user-select: none; pointer-events: none; }
