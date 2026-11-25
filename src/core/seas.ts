@@ -35,6 +35,7 @@ export function materialStars(s: GameState): number {
 function snapshot(s: GameState, nowMs: number): SeaState {
   return {
     levels: { net: s.levels.net, storage: s.levels.storage, light: s.levels.light },
+    materials: s.materials,
     chest: s.chest,
     discovered: s.discovered,
     buildings: s.buildings,
@@ -48,6 +49,7 @@ function restore(s: GameState, id: SeaId, st: SeaState): void {
   s.levels.net = st.levels.net;
   s.levels.storage = st.levels.storage;
   s.levels.light = st.levels.light;
+  s.materials = st.materials;
   s.chest = st.chest;
   s.discovered = st.discovered;
   s.buildings = st.buildings;
@@ -59,6 +61,7 @@ function restore(s: GameState, id: SeaId, st: SeaState): void {
 function freshSea(nowMs: number): SeaState {
   return {
     levels: { net: 1, storage: 1, light: 1 },
+    materials: emptyMaterials(),
     chest: emptyMaterials(),
     discovered: [],
     buildings: {},
@@ -81,6 +84,7 @@ export function seaView(s: GameState, id: SeaId): GameState | null {
     ...s,
     sea: id,
     levels: { ...s.levels, ...st.levels },
+    materials: st.materials,
     chest: st.chest,
     discovered: st.discovered,
     buildings: st.buildings,
@@ -120,7 +124,7 @@ export function passLight(s: GameState, nowMs: number): boolean {
   return true;
 }
 
-/** Go and look after another sea you've already reached. */
+/** Go and look after another sea you've already reached. Its materials are its own; yours stay here. */
 export function switchSea(s: GameState, id: SeaId, nowMs: number): boolean {
   const target = s.seas[id];
   if (id === s.sea || !target) return false;

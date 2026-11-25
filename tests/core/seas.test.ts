@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { T } from '../../src/core/tuning';
 import { canPassLight, materialStars, passLight, starlightFor, switchSea, SEA_DEF } from '../../src/core/seas';
-import { buildBoat, settleVoyage, startVoyage } from '../../src/core/boat';
+import { buildBoat, settleVoyage, startVoyage, unloadBoat } from '../../src/core/boat';
 import { autoRate, chestCapacity, chestTotal, netRate, upgradeCost } from '../../src/core/economy';
 import { construct } from '../../src/core/islands';
 import { applyOffline, tick } from '../../src/core/sim';
@@ -121,6 +121,50 @@ describe('sea economy', () => {
     const cargo = settleVoyage(s, H);
     expect(cargo?.sea).toBe('dusk');
     expect(cargo!.haul.metal).toBeGreaterThan(0);
+  });
+});
+
+describe('each sea keeps its own materials', () => {
+  test('going back to an old sea and returning brings nothing across', () => {
+    const s = lit();
+    s.levels.net = 40;
+    passLight(s, 0);
+    tick(s, 1000);
+    s.materials.wood = 7;
+    // Go back to dusk: its chest has filled while away; collect everything there.
+    expect(switchSea(s, 'dusk', 3 * H)).toBe(true);
+    expect(s.materials.wood).toBe(0); // the fog sea's 7 stay in fog
+    s.materials.wood = 1e7; // a rich old sea
+    expect(switchSea(s, 'fog', 4 * H)).toBe(true);
+    expect(s.materials.wood).toBe(7);
+    expect(switchSea(s, 'dusk', 5 * H)).toBe(true);
+    expect(s.materials.wood).toBe(1e7);
+  });
+  test("the boat's haul from an old sea lands in that sea, not where you unload it", () => {
+    const s = lit();
+    buildBoat(s);
+    passLight(s, 0);
+    switchSea(s, 'dusk', 0);
+    startVoyage(s, 'wreck', 0);
+    switchSea(s, 'fog', 1000);
+    settleVoyage(s, 10 * H, () => 0.5);
+    const got = unloadBoat(s)!;
+    expect(got.sea).toBe('dusk');
+    expect(s.materials.wood).toBe(0);
+    expect(s.seas.dusk!.materials.wood).toBeGreaterThan(0);
+  });
+  test("an old sea's materials survive a save", () => {
+    const map = new Map<string, string>();
+    const kv: KV = { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => void map.set(k, v) };
+    const s = lit();
+    passLight(s, 0);
+    switchSea(s, 'dusk', 1000);
+    s.materials.rope = 42;
+    switchSea(s, 'fog', 2000);
+    saveGame(kv, s);
+    const r = loadGame(kv, 2000, 'zh').state;
+    expect(r.seas.dusk?.materials?.rope).toBe(42);
+    expect(r.materials.rope).toBe(0);
   });
 });
 

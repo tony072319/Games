@@ -25,6 +25,8 @@ export interface Cargo {
 /** Everything that belongs to one sea. The sea you're at lives in the top-level fields; the others are kept here. */
 export interface SeaState {
   levels: { net: number; storage: number; light: number };
+  /** Each sea keeps its own materials: what an old sea gathers stays there (author decision 2A). */
+  materials: Materials;
   chest: Materials;
   discovered: DestId[];
   buildings: Partial<Record<BuildingId, number>>;

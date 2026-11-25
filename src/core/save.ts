@@ -50,6 +50,8 @@ function readSea(v: unknown, nowMs: number): SeaState | null {
   if (isObj(v.islandStore)) for (const [d, st] of Object.entries(v.islandStore)) if (DEST_IDS.includes(d as DestId)) islandStore[d as DestId] = readMaterials(st);
   return {
     levels: { net: L.net as number, storage: L.storage as number, light: L.light as number },
+    // Saves from before per-sea materials have none stored: the old sea starts with nothing.
+    materials: readMaterials(v.materials),
     chest: readMaterials(v.chest),
     discovered: Array.isArray(v.discovered) ? (v.discovered.filter((d) => DEST_IDS.includes(d as DestId)) as DestId[]) : [],
     buildings,

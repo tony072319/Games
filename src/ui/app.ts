@@ -367,7 +367,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     for (const m of MATERIALS) {
       if (cargo.haul[m] < 1) continue;
       floatText(`+${formatNumber(cargo.haul[m], lang)}`, boatBtn.offsetLeft - 20, boatBtn.offsetTop - 30 - i * 18, itemIcon(m));
-      flyToHud(m, from.left + from.width / 2, from.top + from.height / 3, Math.min(6, 1 + Math.floor(Math.log10(cargo.haul[m] + 1) * 1.5)), i * 90);
+      // A haul from another sea is stored there, so it does not fly into this sea's counts.
+      if (cargo.sea === state.sea) flyToHud(m, from.left + from.width / 2, from.top + from.height / 3, Math.min(6, 1 + Math.floor(Math.log10(cargo.haul[m] + 1) * 1.5)), i * 90);
       i++;
     }
     refresh();

@@ -111,8 +111,9 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
 export function unloadBoat(s: GameState): Cargo | null {
   const c = s.boat.cargo;
   if (!c) return null;
-  addMaterials(s, c.haul);
+  // Each sea keeps its own materials: a haul from an old sea goes to that sea.
   const at = seaView(s, c.sea) ?? s;
+  addMaterials(at, c.haul);
   if (!at.discovered.includes(c.dest)) at.discovered.push(c.dest);
   if (c.curio) foundCurio(s, c.curio);
   s.boat.cargo = null;
