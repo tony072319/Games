@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { T } from '../../src/core/tuning';
 import { canPassLight, materialStars, passLight, starlightFor, switchSea, SEA_DEF } from '../../src/core/seas';
 import { buildBoat, settleVoyage, startVoyage } from '../../src/core/boat';
 import { autoRate, chestCapacity, chestTotal, netRate, upgradeCost } from '../../src/core/economy';
@@ -29,14 +30,14 @@ describe('passing the light on', () => {
   });
 
   test('starlight: 10 + 2 per island found + building levels', () => {
-    expect(starlightFor(lit())).toBe(10 + 4 + 2);
+    expect(starlightFor(lit())).toBe(Math.round((10 + 4 + 2) * T.STAR_PASS_MULT));
   });
 
   test('moves to the fog sea with a fresh lighthouse, keeping the boat and the old sea; materials become starlight', () => {
     const s = lit();
     buildBoat(s);
     s.levels.speed = 3;
-    const stars = 16 + materialStars(s);
+    const stars = Math.round(16 * T.STAR_PASS_MULT) + materialStars(s);
     expect(passLight(s, 1000)).toBe(true);
     expect(s.sea).toBe('fog');
     expect(s.levels).toMatchObject({ net: 1, storage: 1, light: 1, speed: 3 });
@@ -76,14 +77,14 @@ describe('passing the light on', () => {
 });
 
 describe('sea economy', () => {
-  test('farther seas yield more and cost more; starlight adds 3% each', () => {
+  test('farther seas yield more and cost more; each starlight adds T.STAR_BONUS', () => {
     const s = newGame(0, 'zh');
     s.sea = 'fog';
     expect(netRate(s)).toBeCloseTo(autoRate(1) * SEA_DEF.fog.rate);
     expect(upgradeCost('net', 1, s).wood).toBe(15 * SEA_DEF.fog.cost);
     expect(upgradeCost('speed', 1, s).wood).toBe(150); // boat upgrades don't scale
     s.starlight = 10;
-    expect(netRate(s)).toBeCloseTo(autoRate(1) * SEA_DEF.fog.rate * 1.3);
+    expect(netRate(s)).toBeCloseTo(autoRate(1) * SEA_DEF.fog.rate * (1 + 10 * T.STAR_BONUS));
   });
 
   test('an old sea keeps filling its own chest at half speed while you are away from it', () => {
@@ -92,7 +93,7 @@ describe('sea economy', () => {
     tick(s, 1000);
     applyOffline(s, 2 * H);
     const dusk = s.seas.dusk!;
-    const rate = autoRate(5) * 1.25 * (1 + 0.03 * s.starlight); // gull rock found there
+    const rate = autoRate(5) * 1.25 * (1 + T.STAR_BONUS * s.starlight); // gull rock found there
     expect(chestTotal(dusk.chest)).toBeCloseTo(rate * 2 * 3600 * 0.5, 0);
   });
 

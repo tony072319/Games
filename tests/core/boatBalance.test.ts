@@ -21,10 +21,11 @@ describe('the boat in proportion to the net', () => {
     const rates = DS.map((d) => perMinute(s, d));
     for (const r of rates) expect(Math.abs(r / rates[0] - 1)).toBeLessThan(0.01);
   });
-  test('fully upgraded, the boat brings about 2.5 times the net', () => {
+  // Ruling (ledger, Task 3/9): the income-share targets win over "2.5×"; tuned, it lands near 1.6×.
+  test('fully upgraded, the boat brings more than the net, but not many times more', () => {
     const s = maxed();
     const ratio = perMinute(s, 'wreck') / (netRate(s) * 60);
-    expect(ratio).toBeGreaterThan(2.2);
+    expect(ratio).toBeGreaterThan(1.3);
     expect(ratio).toBeLessThan(2.8);
   });
   test('a brighter lighthouse brings the boat home sooner: light 10 is 27% shorter than light 1', () => {

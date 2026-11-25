@@ -8,12 +8,13 @@ import { BOAT_UPGRADES, MATERIALS, PANEL_UPGRADES, type DestId, type Materials, 
 import { buyUpgrade, canBuy, upgradeCost } from '../../src/core/economy';
 import { pickMaterial } from '../../src/core/flotsam';
 import { ISLAND_BUILDINGS, buildCost, canBuild, construct } from '../../src/core/islands';
-import { canPassLight, passLight } from '../../src/core/seas';
+import { canPassLight, nextSea, passLight } from '../../src/core/seas';
 import { collectChest, tick } from '../../src/core/sim';
 import { newGame, type GameState } from '../../src/core/state';
 import { TALENTS, canLearn, learn } from '../../src/core/talents';
 import { incomePerSecond } from '../../src/core/advice';
 import { tapValue } from './taps';
+import { SKY_CYCLE_MS } from '../../src/core/daycycle';
 
 const DAY = 24 * 3600 * 1000;
 const MIN = 60 * 1000;
@@ -47,6 +48,8 @@ export interface SeaReport {
   maxNet: number;
   /** A tap's value in seconds of total income, at the end of the sea. */
   tapSeconds: number;
+  /** The tap talent (doubles taps) was learned when this was measured. */
+  tapDoubled: boolean;
   starlightAfter: number;
 }
 
@@ -157,7 +160,9 @@ export function simulate(profile: Profile, opts: { seas?: number; maxDays?: numb
       share: { net: src.net / sum, boat: src.boat / sum, islands: src.islands / sum, taps: src.taps / sum },
       leftover,
       maxNet,
-      tapSeconds: inc > 0 ? tapValue(s, now) / inc : 0,
+      // Measured in daylight (cycle start), so night's bonus does not skew it.
+      tapSeconds: inc > 0 ? tapValue(s, now - (now % SKY_CYCLE_MS)) / inc : 0,
+      tapDoubled: s.talents.includes('drift3'),
       starlightAfter: 0,
     });
   };
@@ -186,6 +191,11 @@ export function simulate(profile: Profile, opts: { seas?: number; maxDays?: numb
           src.taps += v;
         }
       learnTalents(s);
+      // The last sea has nowhere to pass the light to: it is done when its lighthouse is mended.
+      if (s.levels.light >= 10 && nextSea(s) === null && seas.length === seasWanted - 1) {
+        closeSea(at);
+        break;
+      }
       if (canPassLight(s)) {
         closeSea(at);
         const before = s.starlight;

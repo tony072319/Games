@@ -62,10 +62,11 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
     c.wood = g(30, 1.8);
     c.plastic = g(10, 1.8);
   } else if (id === 'light') {
-    c.wood = g(200, 2.2);
-    c.plastic = g(80, 2.2);
-    if (L >= 2) c.rope = g(40, 2.2);
-    if (L >= 2) c.metal = g(20, 2.2, 2);
+    const k = T.LIGHT_COST_MULT;
+    c.wood = g(200 * k, T.LIGHT_GROWTH);
+    c.plastic = g(80 * k, T.LIGHT_GROWTH);
+    if (L >= 2) c.rope = g(40 * k, T.LIGHT_GROWTH);
+    if (L >= 2) c.metal = g(20 * k, T.LIGHT_GROWTH, 2);
     if (L >= 7) c.glow = g(5, 2, 7);
     // The last stretch of the lighthouse is the long climb.
     if (L >= 6) for (const m of ['wood', 'plastic', 'rope', 'metal'] as const) c[m] = Math.ceil(c[m] * Math.pow(T.LATE_LIGHT_MULT, L - 5));

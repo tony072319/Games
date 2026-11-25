@@ -1,3 +1,4 @@
+import { T } from './tuning';
 export type MaterialId = 'wood' | 'plastic' | 'rope' | 'metal' | 'glow';
 export const MATERIALS: readonly MaterialId[] = ['wood', 'plastic', 'rope', 'metal', 'glow'];
 export type Materials = Record<MaterialId, number>;
@@ -33,10 +34,25 @@ export const BUILDING_MAX = 5;
 export type SeaId = 'dusk' | 'fog' | 'aurora';
 export const SEA_IDS: readonly SeaId[] = ['dusk', 'fog', 'aurora'];
 /** How much richer (rate) and costlier (cost) each sea is than the first. */
-export const SEA_DEF: Record<SeaId, { rate: number; cost: number }> = {
+/** How rich each sea is and how dear its mending; the numbers live in tuning.ts. */
+export const SEA_DEF: Record<SeaId, { readonly rate: number; readonly cost: number }> = {
   dusk: { rate: 1, cost: 1 },
-  fog: { rate: 4, cost: 6 },
-  aurora: { rate: 16, cost: 36 },
+  fog: {
+    get rate() {
+      return T.FOG_RATE;
+    },
+    get cost() {
+      return T.FOG_COST;
+    },
+  },
+  aurora: {
+    get rate() {
+      return T.AURORA_RATE;
+    },
+    get cost() {
+      return T.AURORA_COST;
+    },
+  },
 };
 /** Each star of starlight adds this much to all production. */
 export const STARLIGHT_BONUS = 0.03;

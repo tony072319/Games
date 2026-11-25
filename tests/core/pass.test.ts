@@ -48,9 +48,7 @@ describe('talents need choosing', () => {
     expect(s.talents).toEqual([]);
     expect(s.starlight).toBe(100 - cost);
   });
-  test('the whole tree costs more than three seas usually give', () => {
-    expect(T.TALENT_COSTS.reduce((a, b) => a + b, 0) * 3).toBeGreaterThan(100);
-  });
+  // "The tree costs more than three seas give" is checked on real play in tests/sim/targets.test.ts (55–70%).
 });
 
 describe('aurora nights', () => {

@@ -15,7 +15,7 @@ export interface Talent {
   cost: number;
 }
 
-const COST = T.TALENT_COSTS;
+const COST = T.TALENT_COSTS.map((c) => Math.round(c * T.TALENT_COST_SCALE));
 const branch = (b: Talent['branch'], ids: TalentId[]): Talent[] =>
   ids.map((id, i) => ({ id, branch: b, tier: (i + 1) as Talent['tier'], cost: COST[i] }));
 
