@@ -98,6 +98,8 @@ interface Placed {
 }
 
 const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 1.6);
+/** The home island a new sea starts with reaches about this far; the default camera frames it. */
+const HOME_REACH = 4.1;
 // Pulled back so the two-ring island and its third-ring decorations fit with room around them.
 const DEFAULT_CAM = DEFAULT_TARGET.clone().add(new THREE.Vector3(13, 11, 27).sub(DEFAULT_TARGET).multiplyScalar(1.1));
 
@@ -418,6 +420,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   }
 
   // ---------- camera focus ----------
+  /** How far the home island reaches (world units); the home view pulls back as it grows. */
+  let islandReach = 0;
+  const homeScale = () => Math.max(1, islandReach / HOME_REACH) ** 0.6;
   let focusTo: { target: THREE.Vector3; dist: number; dir?: THREE.Vector3 } | null = null;
   let lastInput = performance.now();
   controls.addEventListener('start', () => {
@@ -595,6 +600,17 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       shores.length = 0;
       for (const i of next) if (i.shore) shores.push([i.x, i.z, i.shore]);
       water.setShores(shores);
+      // How far the home island reaches: the camera frames it when you go home.
+      let reach = 0;
+      for (const i of next) if (i.model === 'kk/hex_grass' && !i.key.startsWith('isle:')) reach = Math.max(reach, Math.hypot(i.x, i.z));
+      if (islandReach === 0 && reach > 0) {
+        islandReach = reach;
+        if (reach > HOME_REACH) {
+          cam.position.copy(DEFAULT_TARGET).add(DEFAULT_CAM.clone().sub(DEFAULT_TARGET).multiplyScalar(homeScale()));
+          controls.update();
+        }
+      }
+      islandReach = reach;
       syncExtra();
     },
     setSky(s, sea) {
@@ -660,7 +676,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       pending.push({ tag, at: performance.now(), updated: false });
     },
     focus(where) {
-      if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
+      if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * homeScale(), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
       else if (where === 'sea') focusTo = { target: new THREE.Vector3(0, 0, 0), dist: Math.min(70, Math.max(DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * 1.3, litRadiusWorld(light) * 2.4)), dir: new THREE.Vector3(0.42, 1, 0.72).normalize() };
       else {
         const o = tagObj.get(where);

@@ -278,5 +278,5 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
 export function flotsamPosition(item: FloatingItem, nowMs: number): { x: number; z: number } {
   const age = Math.min(1, Math.max(0, (nowMs - item.spawnedAt) / FLOAT_LIFETIME_MS));
   const lane = Math.min(1, Math.max(0, item.lane));
-  return { x: -16 + 32 * age, z: 11 + lane * 5 };
+  return { x: -16 + 32 * age, z: 9 + lane * 4 };
 }

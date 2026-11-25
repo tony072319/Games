@@ -270,7 +270,10 @@ try {
   await page.waitForTimeout(300);
   await page.locator('.decor-btn').click();
   await page.locator('.seamap.decor').waitFor();
-  if ((await page.locator('[data-decor]').count()) !== 10) fail('the decorations sheet should list 10 cards');
+  if ((await page.locator('[data-decor]').count()) !== 11) fail('the sheet should list growing the island and 10 decorations');
+  await page.locator('[data-decor="land"] .buy').click();
+  await page.waitForTimeout(300);
+  if (!(await page.locator('[data-decor="land"]').textContent())?.includes('1/')) fail('growing the island should count one tile');
   await page.locator('[data-decor="lantern"] .buy').click();
   await page.waitForTimeout(300);
   if (!(await page.locator('[data-decor="lantern"] .level').textContent())?.includes('1')) fail('placing the lantern should show tier 1');
