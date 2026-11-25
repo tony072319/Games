@@ -1,3 +1,4 @@
+import { T } from '../../src/core/tuning';
 import { describe, expect, test } from 'vitest';
 import {
   BOAT_COST,
@@ -51,9 +52,10 @@ describe('voyages', () => {
 
   test('wreck takes 15 minutes, faster with a faster boat', () => {
     const s = rich();
-    expect(voyageMs(s, 'wreck')).toBe(15 * MIN);
+    const lit = 1 - T.LIGHT_RETURN * (s.levels.light - 1);
+    expect(voyageMs(s, 'wreck')).toBeCloseTo(15 * MIN * lit);
     s.levels.speed = 2;
-    expect(voyageMs(s, 'wreck')).toBeCloseTo(15 * MIN * 0.92);
+    expect(voyageMs(s, 'wreck')).toBeCloseTo(15 * MIN * lit * (1 - T.SPEED_STEP));
   });
 
   test('a full voyage: sail, arrive, unload once, discover', () => {
@@ -99,7 +101,7 @@ describe('voyages', () => {
     const s = rich();
     const small = voyageHaul(s, 'wreck').metal;
     s.levels.cargo = 5;
-    expect(voyageHaul(s, 'wreck').metal).toBeCloseTo(small * 2);
+    expect(voyageHaul(s, 'wreck').metal).toBeCloseTo((small * (1 + 4 * T.CARGO_STEP)) / 1);
   });
 
   test('clock set before departure does not finish the voyage', () => {

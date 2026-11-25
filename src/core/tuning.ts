@@ -9,4 +9,12 @@ export const T = {
   NIGHT_TAP_BONUS: 0.5,
   /** …and finds drift by this much more often. */
   NIGHT_SPAWN_BONUS: 0.5,
+  /** A trip brings this share of the net's catch for the same minutes, before cargo. */
+  BOAT_BASE: 0.7,
+  /** Each cargo level adds this to the haul. */
+  CARGO_STEP: 0.08,
+  /** Each speed level shortens trips by this. */
+  SPEED_STEP: 0.02,
+  /** Each lighthouse level above 1 brings the boat home this much sooner. */
+  LIGHT_RETURN: 0.03,
 };

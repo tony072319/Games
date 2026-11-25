@@ -4,6 +4,7 @@ import { takeIslandStore } from './islands';
 import { curioChance, foundCurio, pickCurio } from './curios';
 import { seaView } from './seas';
 import { has } from './talents';
+import { T } from './tuning';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
 /** Lighthouse light level that repairs the dock so a boat can be built. */
@@ -47,17 +48,27 @@ export function reachable(s: GameState, d: DestId): boolean {
 }
 
 export function voyageMs(s: GameState, d: DestId): number {
-  return DESTS[d].minutes * 60_000 * Math.pow(0.92, s.levels.speed - 1) * (1 - 0.04 * (s.buildings.boatshed ?? 0)) * (has(s, 'voy1') ? 0.85 : 1);
+  return (
+    DESTS[d].minutes *
+    60_000 *
+    Math.pow(1 - T.SPEED_STEP, s.levels.speed - 1) *
+    (1 - 0.04 * (s.buildings.boatshed ?? 0)) *
+    (has(s, 'voy1') ? 0.85 : 1) *
+    // The brighter the lighthouse, the easier the way home.
+    (1 - T.LIGHT_RETURN * (s.levels.light - 1))
+  );
 }
 
 export function cargoMultiplier(s: GameState): number {
-  return 1 + 0.25 * (s.levels.cargo - 1);
+  return 1 + T.CARGO_STEP * (s.levels.cargo - 1);
 }
 
 /** What one trip to d brings back right now (scales with the net, so trips stay worthwhile). */
 export function voyageHaul(s: GameState, d: DestId): Materials {
   const dest = DESTS[d];
-  const total = netRate(s) * dest.minutes * 60 * 0.8 * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1);
+  // In the fog the boat only finds what the lighthouse lights: full haul at light 10.
+  const fog = s.sea === 'fog' ? s.levels.light / 10 : 1;
+  const total = netRate(s) * dest.minutes * 60 * T.BOAT_BASE * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1) * fog;
   const h = emptyMaterials();
   for (const m of MATERIALS) h[m] = total * (dest.mix[m] ?? 0);
   if (d === 'firefly') h.glow = 2 + s.levels.cargo;
