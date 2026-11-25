@@ -1,3 +1,5 @@
+import { T } from '../src/core/tuning';
+import { starPercent } from '../src/core/seas';
 import { describe, expect, test } from 'vitest';
 import { detectLang, formatNumber, t } from '../src/i18n';
 import zh from '../src/i18n/zh.json';
@@ -37,5 +39,18 @@ describe('formatNumber', () => {
   test('huge numbers use e notation', () => {
     expect(formatNumber(1e21, 'en')).toMatch(/e21$/);
     expect(formatNumber(1e21, 'zh')).toMatch(/e21$/);
+  });
+});
+
+describe('the starlight bonus text follows the tuning', () => {
+  test('no fixed "3%" left; the percent comes from T.STAR_BONUS', () => {
+    for (const lang of ['zh', 'en'] as const) {
+      for (const key of ['pass.gain', 'tree.passive']) {
+        const text = t(lang, key, { n: 5, p: starPercent() });
+        expect(text, `${lang} ${key}`).not.toContain('3%');
+        expect(text, `${lang} ${key}`).toContain(`${starPercent()}%`);
+      }
+    }
+    expect(starPercent()).toBe(String(Math.round(T.STAR_BONUS * 1000) / 10));
   });
 });

@@ -1,3 +1,4 @@
+import { starPercent } from '../core/seas';
 import type { GameState, Lang } from '../core/state';
 import { TALENTS, has, learn, lockReason, resetCost, resetTalents, talentPoints, type TalentId } from '../core/talents';
 import { formatNumber, t } from '../i18n';
@@ -25,7 +26,7 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
   head.append(title, close);
   const points = el('p', 'tree-points');
   const passive = el('p', 'tree-passive');
-  passive.textContent = t(lang, 'tree.passive');
+  passive.textContent = t(lang, 'tree.passive', { p: starPercent() });
   const cols = el('div', 'tree-cols');
   const foot = el('div', 'tree-foot');
   box.append(head, points, passive, cols, foot);

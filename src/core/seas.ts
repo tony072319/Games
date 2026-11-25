@@ -18,6 +18,11 @@ export function canPassLight(s: GameState): boolean {
   return s.levels.light >= 10 && next !== null && !s.reached.includes(next);
 }
 
+/** What one star adds to production, in percent, for the text (e.g. "0.4"). */
+export function starPercent(): string {
+  return String(Math.round(T.STAR_BONUS * 1000) / 10);
+}
+
 /** Starlight earned for leaving this sea lit: 10, +2 per island found, + every island building level. */
 export function starlightFor(s: GameState): number {
   const blds = Object.values(s.buildings).reduce((a: number, n) => a + (n ?? 0), 0);
