@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildCost, canBuild, construct, islandStoreCap, accrueIslands, BUILDINGS, ISLAND_BUILDINGS } from '../../src/core/islands';
+import { buildCost, canBuild, construct, islandStoreCap, accrueIslands, islandRates, BUILDINGS, ISLAND_BUILDINGS } from '../../src/core/islands';
 import { buildBoat, settleVoyage, startVoyage, voyageMs } from '../../src/core/boat';
 import { chestCapacity, netRate, upgradeCost } from '../../src/core/economy';
 import { DEST_IDS } from '../../src/core/data';
@@ -49,10 +49,12 @@ describe('island production', () => {
     const s = rich();
     construct(s, 'dismantler', 0);
     accrueIslands(s, 2 * H);
-    expect(s.islandStore.wreck!.metal).toBeCloseTo(80); // 40/h at level 1
+    const perHour = islandRates(s, 'wreck').metal;
+    expect(perHour).toBeGreaterThan(0);
+    expect(s.islandStore.wreck!.metal).toBeCloseTo(2 * perHour);
     accrueIslands(s, 100 * H);
     expect(s.islandStore.wreck!.metal).toBeCloseTo(islandStoreCap(s, 'wreck').metal);
-    expect(islandStoreCap(s, 'wreck').metal).toBeCloseTo(480);
+    expect(islandStoreCap(s, 'wreck').metal).toBeCloseTo(12 * perHour);
   });
 
   test('clock moved backwards gives nothing', () => {
@@ -69,8 +71,9 @@ describe('island production', () => {
     startVoyage(s, 'wreck', 3 * H);
     accrueIslands(s, 3 * H);
     const cargo = settleVoyage(s, 3 * H + 15 * 60_000)!;
-    expect(cargo.fromIsland.metal).toBeGreaterThan(100);
-    expect(s.islandStore.wreck!.metal).toBeLessThan(15);
+    const perHour = islandRates(s, 'wreck').metal;
+    expect(cargo.fromIsland.metal).toBeGreaterThan(2.9 * perHour);
+    expect(s.islandStore.wreck!.metal).toBeLessThan(0.3 * perHour);
   });
 
   test('production continues while offline', () => {

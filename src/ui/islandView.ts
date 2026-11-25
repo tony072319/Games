@@ -119,7 +119,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
     if (lvl < BUILDING_MAX) {
       if (perk) effect = t(lang, 'card.next', { effect: t(lang, PERK_STEP[perk][1] ? 'island.perkStepMinus' : 'island.perkStep', { n: PERK_STEP[perk][0] }) });
       else if (lvl === 0) effect = t(lang, 'card.next', { effect: t(lang, 'island.starts') });
-      else effect = t(lang, 'card.next', { effect: t(lang, 'island.more', { n: Math.round((productionPerHour(b, lvl + 1) / productionPerHour(b, lvl) - 1) * 100) }) });
+      else effect = t(lang, 'card.next', { effect: t(lang, 'island.more', { n: Math.round((productionPerHour(b, lvl + 1, state) / productionPerHour(b, lvl, state) - 1) * 100) }) });
     }
     info.append(
       upgradeCard(lang, {

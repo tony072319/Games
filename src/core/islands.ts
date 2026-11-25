@@ -1,5 +1,6 @@
 import { BUILDING_MAX, MATERIALS, SEA_DEF, type BuildingId, type DestId, type MaterialId, type Materials } from './data';
-import { seaBoost } from './economy';
+import { netRate, seaBoost } from './economy';
+import { T } from './tuning';
 import { islandMult, islandTier } from './milestones';
 import { has } from './talents';
 import { emptyMaterials, type GameState } from './state';
@@ -50,18 +51,23 @@ export function buildCost(b: BuildingId, level: number, s?: GameState): Material
   return c;
 }
 
-/** Items per hour a producer makes at a level. */
-export function productionPerHour(b: BuildingId, level: number): number {
+/**
+ * Items per hour a producer makes at a level: a share of the net's own catch per level, so the
+ * islands stay worth building as the net grows. Glow jars keep their small fixed rate.
+ */
+export function productionPerHour(b: BuildingId, level: number, s?: GameState): number {
   const def = BUILDINGS[b];
   if (!def.perHour || level <= 0) return 0;
-  return def.perHour * level * Math.pow(1.25, level - 1);
+  if (def.makes === 'glow' || !s) return def.perHour * level;
+  const netOwn = netRate(s) / seaBoost(s);
+  return netOwn * 3600 * T.BUILDING_PCT * level;
 }
 
 export function islandRates(s: GameState, d: DestId): Materials {
   const r = emptyMaterials();
   for (const b of ISLAND_BUILDINGS[d]) {
     const def = BUILDINGS[b];
-    if (def.makes) r[def.makes] += productionPerHour(b, buildingLevel(s, b));
+    if (def.makes) r[def.makes] += productionPerHour(b, buildingLevel(s, b), s);
   }
   const boost = seaBoost(s) * islandMult(islandTier(s, d)) * (has(s, 'isl3') ? 1.3 : 1);
   for (const m of MATERIALS) r[m] *= boost;

@@ -17,4 +17,6 @@ export const T = {
   SPEED_STEP: 0.02,
   /** Each lighthouse level above 1 brings the boat home this much sooner. */
   LIGHT_RETURN: 0.03,
+  /** Each level of an island producer makes this share of the net's own catch (before the sea's richness). */
+  BUILDING_PCT: 0.04,
 };
