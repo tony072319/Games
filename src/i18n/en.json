@@ -279,8 +279,8 @@
   "tree.title": "Starlight tree",
   "tree.points": "Starlight to spend: {n} ✦ (of {total})",
   "tree.passive": "Each star still adds 3% to everything you produce, for good.",
-  "tree.reset": "Reset all",
-  "tree.resetConfirm": "Take back all your starlight and spend it again? Nothing is lost.",
+  "tree.reset": "Reset all ({n} starlight)",
+  "tree.resetConfirm": "Take back all your starlight and spend it again? It costs {n} starlight.",
   "tree.learn": "Light",
   "tree.learned": "Lit",
   "tree.cost": "{n} ✦",
@@ -341,5 +341,6 @@
   "upg.recycle.name": "Recycler",
   "upg.recycle.desc": "Turns spare bottles into rope and spare wood into parts.",
   "upg.recycle.next.build": "Once built: spare bottles become rope, spare wood becomes parts.",
-  "upg.recycle.next.faster": "Next level: converts faster."
+  "upg.recycle.next.faster": "Next level: converts faster.",
+  "pass.mats": "Your materials stay behind; they become {m} of those stars."
 }

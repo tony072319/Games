@@ -279,8 +279,8 @@
   "tree.title": "星光天赋树",
   "tree.points": "可用星光：{n} ✦（共 {total}）",
   "tree.passive": "每颗星光仍然让所有产出永久 +3%。",
-  "tree.reset": "全部重置",
-  "tree.resetConfirm": "把星光全部收回来，重新分配？不会有损失。",
+  "tree.reset": "全部重置（{n} 星光）",
+  "tree.resetConfirm": "把星光全部收回来，重新分配？这要花 {n} 颗星光。",
   "tree.learn": "点亮",
   "tree.learned": "已点亮",
   "tree.cost": "{n} ✦",
@@ -341,5 +341,6 @@
   "upg.recycle.name": "回收站",
   "upg.recycle.desc": "把多出来的瓶子编成绳子，木头换成零件。",
   "upg.recycle.next.build": "建好后：多出来的瓶子变绳子，木头变零件。",
-  "upg.recycle.next.faster": "下一级：换得更快。"
+  "upg.recycle.next.faster": "下一级：换得更快。",
+  "pass.mats": "身上的材料带不走，它们会化作其中 {m} 颗星光。"
 }

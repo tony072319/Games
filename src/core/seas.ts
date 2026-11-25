@@ -1,3 +1,5 @@
+import { MATERIALS } from './data';
+import { T } from './tuning';
 import { SEA_IDS, type SeaId } from './data';
 import { fillChest } from './economy';
 import { accrueIslands } from './islands';
@@ -19,7 +21,14 @@ export function canPassLight(s: GameState): boolean {
 /** Starlight earned for leaving this sea lit: 10, +2 per island found, + every island building level. */
 export function starlightFor(s: GameState): number {
   const blds = Object.values(s.buildings).reduce((a: number, n) => a + (n ?? 0), 0);
-  return 10 + 2 * s.discovered.length + blds;
+  return Math.round((10 + 2 * s.discovered.length + blds) * T.STAR_PASS_MULT);
+}
+
+/** The materials you leave behind become starlight: one star per tenfold, capped. */
+export function materialStars(s: GameState): number {
+  const total = MATERIALS.reduce((a, m) => a + Math.max(0, s.materials[m]), 0);
+  if (!Number.isFinite(total)) return T.MAT_STAR_CAP;
+  return Math.min(T.MAT_STAR_CAP, Math.floor(Math.log10(1 + total)));
 }
 
 /** Take the current sea's fields out of the top level. */
@@ -100,7 +109,9 @@ export function passLight(s: GameState, nowMs: number): boolean {
   if (!canPassLight(s)) return false;
   const next = nextSea(s)!;
   accrueIslands(s, nowMs);
-  s.starlight += starlightFor(s);
+  s.starlight += starlightFor(s) + materialStars(s);
+  // Nothing comes along but the boat, the starlight and the book: the new sea starts fresh.
+  for (const m of MATERIALS) s.materials[m] = 0;
   s.seas[s.sea] = snapshot(s, nowMs);
   restore(s, next, freshSea(nowMs));
   // The star branch's last talent: the new lighthouse is already mended to the dock.

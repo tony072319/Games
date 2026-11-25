@@ -18,7 +18,7 @@ import { CURIOS, chestFind, foundCurio } from '../core/curios';
 import { BUILDINGS, construct } from '../core/islands';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, skyAt, tintSky } from './sky';
-import { canPassLight, nextSea, passLight, starlightFor, switchSea } from '../core/seas';
+import { canPassLight, materialStars, nextSea, passLight, starlightFor, switchSea } from '../core/seas';
 import { nextGoal, type Goal } from '../core/advice';
 import { canBuy } from '../core/economy';
 import { formatEta } from '../i18n';
@@ -211,7 +211,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const p2 = el('p');
     p2.textContent = t(lang, 'pass.keep');
     const p3 = el('p', 'perk');
-    p3.textContent = t(lang, 'pass.gain', { n: starlightFor(state) });
+    p3.textContent = t(lang, 'pass.gain', { n: starlightFor(state) + materialStars(state) });
+    const p4 = el('p');
+    p4.textContent = t(lang, 'pass.mats', { m: materialStars(state) });
     const actions = el('div', 'actions');
     const wait = el('button');
     wait.textContent = t(lang, 'pass.wait');
@@ -227,7 +229,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       travel(from, state.sea);
     });
     actions.append(wait, go);
-    box.append(h, p1, p2, p3, actions);
+    box.append(h, p1, p2, p3, p4, actions);
     overlay.append(box);
     game.append(overlay);
   }

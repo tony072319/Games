@@ -33,4 +33,17 @@ export const T = {
   RECYCLE_SURPLUS: 10,
   PLASTIC_PER_ROPE: 3,
   WOOD_PER_METAL: 5,
+  /** Each star of starlight adds this to everything you make. */
+  STAR_BONUS: 0.03,
+  /** Starlight for leaving a sea lit is the old formula times this. */
+  STAR_PASS_MULT: 1,
+  /** Materials left behind turn into up to this many stars (one per tenfold). */
+  MAT_STAR_CAP: 8,
+  /** Talent prices by tier. */
+  TALENT_COSTS: [3, 6, 12, 20] as const,
+  /** Resetting talents costs this share of what was spent (at least one star). */
+  RESET_SHARE: 0.1,
+  /** Under the aurora at night, this share of finds are glow, worth this much each. */
+  AURORA_GLOW_CHANCE: 0.15,
+  AURORA_GLOW_AMOUNT: 1,
 };

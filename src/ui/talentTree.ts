@@ -1,5 +1,5 @@
 import type { GameState, Lang } from '../core/state';
-import { TALENTS, has, learn, lockReason, resetTalents, talentPoints, type TalentId } from '../core/talents';
+import { TALENTS, has, learn, lockReason, resetCost, resetTalents, talentPoints, type TalentId } from '../core/talents';
 import { formatNumber, t } from '../i18n';
 import { dismiss, el } from './dom';
 
@@ -78,7 +78,7 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
     if (state.talents.length > 0) {
       const reset = el('button', 'btn-ghost');
       reset.type = 'button';
-      reset.textContent = t(lang, 'tree.reset');
+      reset.textContent = t(lang, 'tree.reset', { n: resetCost(state) });
       reset.addEventListener('click', () =>
         confirmReset(() => {
           resetTalents(state);
@@ -99,7 +99,7 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
     const h = el('h2');
     h.textContent = t(lang, 'tree.resetTitle');
     const text = el('p');
-    text.textContent = t(lang, 'tree.resetConfirm');
+    text.textContent = t(lang, 'tree.resetConfirm', { n: resetCost(state) });
     const actions = el('div', 'actions');
     const no = el('button', 'btn-ghost');
     no.type = 'button';
@@ -107,7 +107,7 @@ export function createTalentTree(lang: Lang, state: GameState, act: TalentTreeAc
     no.addEventListener('click', () => dismiss(o));
     const yes = el('button', 'btn-primary');
     yes.type = 'button';
-    yes.textContent = t(lang, 'tree.reset');
+    yes.textContent = t(lang, 'tree.reset', { n: resetCost(state) });
     yes.addEventListener('click', () => {
       dismiss(o);
       ok();

@@ -1,4 +1,4 @@
-import { MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, SEA_DEF, STARLIGHT_BONUS, type Materials, type UpgradeId } from './data';
+import { MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, SEA_DEF, type Materials, type UpgradeId } from './data';
 import { emptyMaterials, type GameState } from './state';
 import { netMilestoneMult } from './milestones';
 import { curioBonus } from './curios';
@@ -43,7 +43,7 @@ export function netRate(state: GameState): number {
 
 /** The current sea's richness times the starlight bonus. */
 export function seaBoost(state: GameState): number {
-  return SEA_DEF[state.sea].rate * (1 + STARLIGHT_BONUS * state.starlight) * curioBonus(state) * (has(state, 'prod3') ? 1.2 : 1);
+  return SEA_DEF[state.sea].rate * (1 + T.STAR_BONUS * state.starlight) * curioBonus(state) * (has(state, 'prod3') ? 1.2 : 1);
 }
 
 /**

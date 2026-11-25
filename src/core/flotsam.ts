@@ -50,6 +50,8 @@ export function updateField(field: FlotsamField, nowMs: number, rng: () => numbe
   const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished);
   if (nowMs - field.lastSpawnAt >= interval && field.items.length < MAX_FLOATING) {
     const item: FloatingItem = { id: field.nextId++, material: pickMaterial(rng()), spawnedAt: nowMs, lane: rng() };
+    // Under the aurora at night, some of what drifts by is glow.
+    if (state?.sea === 'aurora' && rng() < T.AURORA_GLOW_CHANCE * nightness(nowMs)) item.material = 'glow';
     if (state && rng() < curioChance(state, 'drift') && pickCurio(state, 'drift', () => 0) !== null) item.curio = true;
     field.items.push(item);
     field.lastSpawnAt = nowMs;
@@ -73,7 +75,7 @@ export function collect(
       return { material: item.material, amount: 0, curio: found };
     }
   }
-  const amount = tapYield(state, state.lastActiveAt);
+  const amount = item.material === 'glow' ? T.AURORA_GLOW_AMOUNT : tapYield(state, state.lastActiveAt);
   state.materials[item.material] += amount;
   state.stats.tapped += 1;
   return { material: item.material, amount };

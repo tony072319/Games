@@ -1,5 +1,6 @@
+import { T } from '../../src/core/tuning';
 import { describe, expect, test } from 'vitest';
-import { TALENTS, canLearn, has, learn, resetTalents, talentPoints } from '../../src/core/talents';
+import { TALENTS, canLearn, has, learn, resetCost, resetTalents, talentPoints } from '../../src/core/talents';
 import { buildBoat, startVoyage, voyageHaul, voyageMs } from '../../src/core/boat';
 import { chestCapacity, netRate, tapYield } from '../../src/core/economy';
 import { islandRates } from '../../src/core/islands';
@@ -15,15 +16,15 @@ const withStars = (n: number): GameState => {
 };
 
 describe('learning', () => {
-  test('12 talents in 3 branches of 4, costs 2/4/8/14', () => {
+  test('12 talents in 3 branches of 4, priced by tier', () => {
     expect(TALENTS).toHaveLength(12);
-    expect(TALENTS.filter((x) => x.branch === 'fire').map((x) => x.cost)).toEqual([2, 4, 8, 14]);
+    expect(TALENTS.filter((x) => x.branch === 'fire').map((x) => x.cost)).toEqual([...T.TALENT_COSTS]);
   });
   test('in order, with points, and deeper ones need farther seas', () => {
     const s = withStars(100);
     expect(canLearn(s, 'chest2')).toBe(false); // net1 first
     expect(learn(s, 'net1')).toBe(true);
-    expect(talentPoints(s)).toBe(98);
+    expect(talentPoints(s)).toBe(100 - T.TALENT_COSTS[0]);
     expect(learn(s, 'chest2')).toBe(true);
     expect(canLearn(s, 'prod3')).toBe(false); // needs the fog sea
     s.reached.push('fog');
@@ -31,19 +32,20 @@ describe('learning', () => {
     expect(canLearn(s, 'autoChest')).toBe(false); // needs the aurora sea
     s.reached.push('aurora');
     expect(learn(s, 'autoChest')).toBe(true);
-    expect(talentPoints(s)).toBe(100 - 28);
+    expect(talentPoints(s)).toBe(100 - T.TALENT_COSTS.reduce((a, b) => a + b, 0));
   });
   test('not enough points', () => {
     const s = withStars(1);
     expect(learn(s, 'net1')).toBe(false);
   });
-  test('reset gives every point back', () => {
+  test('reset gives the points back, less its small price', () => {
     const s = withStars(10);
     learn(s, 'net1');
     learn(s, 'voy1');
+    const cost = resetCost(s);
     resetTalents(s);
     expect(s.talents).toEqual([]);
-    expect(talentPoints(s)).toBe(10);
+    expect(talentPoints(s)).toBe(10 - cost);
   });
 });
 

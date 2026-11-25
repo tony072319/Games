@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { canPassLight, passLight, starlightFor, switchSea, SEA_DEF } from '../../src/core/seas';
+import { canPassLight, materialStars, passLight, starlightFor, switchSea, SEA_DEF } from '../../src/core/seas';
 import { buildBoat, settleVoyage, startVoyage } from '../../src/core/boat';
 import { autoRate, chestCapacity, chestTotal, netRate, upgradeCost } from '../../src/core/economy';
 import { construct } from '../../src/core/islands';
@@ -32,18 +32,18 @@ describe('passing the light on', () => {
     expect(starlightFor(lit())).toBe(10 + 4 + 2);
   });
 
-  test('moves to the fog sea with a fresh lighthouse, keeping materials, boat and old sea', () => {
+  test('moves to the fog sea with a fresh lighthouse, keeping the boat and the old sea; materials become starlight', () => {
     const s = lit();
     buildBoat(s);
     s.levels.speed = 3;
-    const wood = s.materials.wood;
+    const stars = 16 + materialStars(s);
     expect(passLight(s, 1000)).toBe(true);
     expect(s.sea).toBe('fog');
     expect(s.levels).toMatchObject({ net: 1, storage: 1, light: 1, speed: 3 });
     expect(s.discovered).toEqual([]);
     expect(s.buildings).toEqual({});
-    expect(s.starlight).toBe(16);
-    expect(s.materials.wood).toBe(wood);
+    expect(s.starlight).toBe(stars);
+    expect(s.materials.wood).toBe(0);
     expect(s.boat.built).toBe(true);
     expect(s.seas.dusk?.levels.light).toBe(10);
     expect(s.seas.dusk?.discovered).toContain('wreck');
@@ -53,6 +53,7 @@ describe('passing the light on', () => {
   test('switching back shows the old sea as it was; starlight is not paid twice', () => {
     const s = lit();
     passLight(s, 0);
+    const paid = s.starlight;
     switchSea(s, 'dusk', 0);
     expect(s.sea).toBe('dusk');
     expect(s.levels.light).toBe(10);
@@ -60,7 +61,7 @@ describe('passing the light on', () => {
     expect(canPassLight(s)).toBe(false); // fog already reached
     switchSea(s, 'fog', 0);
     expect(s.levels.light).toBe(1);
-    expect(s.starlight).toBe(16);
+    expect(s.starlight).toBe(paid);
   });
 
   test('the last sea cannot be passed on', () => {
@@ -132,7 +133,7 @@ describe('save', () => {
     const r = loadGame(kv, 0, 'zh');
     expect(r.status).toBe('loaded');
     expect(r.state.sea).toBe('fog');
-    expect(r.state.starlight).toBe(16);
+    expect(r.state.starlight).toBe(s.starlight);
     expect(r.state.seas.dusk?.levels.light).toBe(10);
     expect(loadGame({ getItem: () => '{"version":1,"materials":{},"levels":{}}', setItem() {} }, 0, 'zh').state.sea).toBe('dusk');
   });

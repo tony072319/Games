@@ -1,7 +1,8 @@
+import { T } from './tuning';
 import { curioTuning } from './curios';
 import type { GameState } from './state';
 
-/** The starlight tree: three branches of four. Each star is one point; points can be reset for free. */
+/** The starlight tree: three branches of four. Each star is one point; a reset costs a little starlight. */
 export type TalentId =
   | 'net1' | 'chest2' | 'prod3' | 'autoChest'
   | 'voy1' | 'haul2' | 'isl3' | 'autoBoat'
@@ -14,7 +15,7 @@ export interface Talent {
   cost: number;
 }
 
-const COST = [2, 4, 8, 14];
+const COST = T.TALENT_COSTS;
 const branch = (b: Talent['branch'], ids: TalentId[]): Talent[] =>
   ids.map((id, i) => ({ id, branch: b, tier: (i + 1) as Talent['tier'], cost: COST[i] }));
 
@@ -51,8 +52,19 @@ export function learn(s: GameState, id: TalentId): boolean {
   return true;
 }
 
-export function resetTalents(s: GameState): void {
+/** Starlight a reset costs: a tenth of what is spent on talents, at least one. */
+export function resetCost(s: GameState): number {
+  const spent = s.talents.reduce((a, id) => a + TALENT_BY_ID[id].cost, 0);
+  return spent === 0 ? 0 : Math.max(1, Math.ceil(spent * T.RESET_SHARE));
+}
+
+/** Take every talent back; the points return, less the reset's small price. */
+export function resetTalents(s: GameState): boolean {
+  const cost = resetCost(s);
+  if (cost === 0 || s.starlight < cost) return false;
   s.talents = [];
+  s.starlight -= cost;
+  return true;
 }
 
 // The star branch tunes how curios turn up.
