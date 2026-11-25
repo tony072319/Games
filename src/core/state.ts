@@ -66,6 +66,8 @@ export interface GameState {
   curios: string[];
   /** Starlight talents learned. */
   talents: import('./talents').TalentId[];
+  /** Until when the polished lamp brings more finds (0 = not polished). */
+  polishUntil: number;
 }
 
 export function emptyMaterials(): Materials {
@@ -94,5 +96,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     starlight: 0,
     curios: [],
     talents: [],
+    polishUntil: 0,
   };
 }

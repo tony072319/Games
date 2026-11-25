@@ -162,6 +162,8 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     if (r.length !== data.reached.length) dropped = true;
     state.reached = Array.from(new Set<SeaId>(['dusk', ...r, state.sea]));
   } else state.reached = Array.from(new Set<SeaId>(['dusk', state.sea]));
+  if (typeof data.polishUntil === 'number' && Number.isFinite(data.polishUntil) && data.polishUntil >= 0) state.polishUntil = data.polishUntil;
+  else if ('polishUntil' in data) dropped = true;
   if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
   else if ('starlight' in data) dropped = true;
   if (isObj(data.seas)) {

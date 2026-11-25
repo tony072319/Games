@@ -55,9 +55,9 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
   const c = emptyMaterials();
   const g = (base: number, r: number, from = 1) => Math.ceil(base * Math.pow(r, L - from));
   if (id === 'net') {
-    c.wood = g(15, 1.6);
-    if (L >= 3) c.rope = g(5, 1.6, 3);
-    if (L >= 6) c.metal = g(2, 1.6, 6);
+    c.wood = g(15, T.NET_COST_GROWTH);
+    if (L >= 3) c.rope = g(5, T.NET_COST_GROWTH, 3);
+    if (L >= 6) c.metal = g(2, T.NET_COST_GROWTH, 6);
   } else if (id === 'storage') {
     c.wood = g(30, 1.8);
     c.plastic = g(10, 1.8);
@@ -67,6 +67,8 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
     if (L >= 2) c.rope = g(40, 2.2);
     if (L >= 2) c.metal = g(20, 2.2, 2);
     if (L >= 7) c.glow = g(5, 2, 7);
+    // The last stretch of the lighthouse is the long climb.
+    if (L >= 6) for (const m of ['wood', 'plastic', 'rope', 'metal'] as const) c[m] = Math.ceil(c[m] * Math.pow(T.LATE_LIGHT_MULT, L - 5));
     if (state?.discovered.includes('oldlight')) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * 0.8);
     const desk = state?.buildings.desk ?? 0;
     if (desk) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * (1 - 0.03 * desk));

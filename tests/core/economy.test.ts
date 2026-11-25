@@ -1,3 +1,4 @@
+import { T } from '../../src/core/tuning';
 import { describe, expect, test } from 'vitest';
 import { autoRate, buyUpgrade, canBuy, netRate, offlineCapSeconds, tapYield, upgradeCost } from '../../src/core/economy';
 import { newGame } from '../../src/core/state';
@@ -16,7 +17,7 @@ describe('formulas', () => {
   });
   test('upgrade costs', () => {
     expect(upgradeCost('net', 1)).toEqual({ wood: 15, plastic: 0, rope: 0, metal: 0, glow: 0 });
-    expect(upgradeCost('net', 3)).toEqual({ wood: 39, plastic: 0, rope: 5, metal: 0, glow: 0 });
+    expect(upgradeCost('net', 3)).toEqual({ wood: Math.ceil(15 * T.NET_COST_GROWTH ** 2), plastic: 0, rope: 5, metal: 0, glow: 0 });
     expect(upgradeCost('storage', 1)).toEqual({ wood: 30, plastic: 10, rope: 0, metal: 0, glow: 0 });
   });
 });

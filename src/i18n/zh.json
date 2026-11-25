@@ -335,5 +335,7 @@
   "credits.CC0": "CC0 公共领域",
   "credits.free": "免费商用",
   "credits.close": "好的",
-  "world.loading": "正在点亮小岛… {n}%"
+  "world.loading": "正在点亮小岛… {n}%",
+  "polish.do": "擦亮灯（{n} 萤光）· 半小时内漂来更多",
+  "polish.on": "灯擦亮了 · 还剩 {m} 分钟"
 }

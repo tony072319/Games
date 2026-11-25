@@ -31,6 +31,8 @@ import { showArrival } from './offlinePopup';
 import { arrivalLines } from '../core/arrival';
 import { createPanel, type Panel } from './upgrades';
 import { openCredits } from './credits';
+import { canPolish, isPolished, polish } from '../core/polish';
+import { T } from '../core/tuning';
 
 export interface AppOptions {
   now: () => number;
@@ -66,6 +68,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let goalKey = '';
   let goal: Goal | null = null;
   let lightShown = -1;
+  let polishBtn!: HTMLButtonElement;
+  let polishKey = '';
   let wasFast = false;
   let chestKey = '';
   /** The 3D world; null when this browser cannot draw it. */
@@ -656,8 +660,21 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     goalBar.type = 'button';
     goalBar.addEventListener('click', followGoal);
     goalKey = '';
+    // Polishing the lamp with glow: more finds for a while.
+    polishBtn = el('button', 'btn-quiet polish-btn');
+    polishBtn.type = 'button';
+    polishBtn.addEventListener('click', () => {
+      if (!polish(state, opts.now())) return;
+      sound.play('upgrade');
+      world?.pulse('light');
+      sparkle(hitEl('light'));
+      polishKey = '';
+      save();
+      refresh();
+    });
+    polishKey = '';
     const side = el('div', 'side');
-    side.append(goalBar, toolbar, panel.el);
+    side.append(goalBar, toolbar, polishBtn, panel.el);
     game.append(hud.el, stage, side);
     book = null;
     tree = null;
@@ -933,7 +950,22 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     boatBtn.classList.toggle('laden', laden);
   }
 
+  function renderPolish() {
+    const lang = state.settings.lang;
+    const now = opts.now();
+    const show = state.discovered.includes('firefly') || state.materials.glow > 0;
+    const on = isPolished(state, now);
+    const label = on ? t(lang, 'polish.on', { m: Math.ceil((state.polishUntil - now) / 60000) }) : t(lang, 'polish.do', { n: T.POLISH_GLOW });
+    const key = `${show}:${label}:${canPolish(state, now)}`;
+    if (key === polishKey) return;
+    polishKey = key;
+    polishBtn.style.display = show ? '' : 'none';
+    polishBtn.textContent = `✨ ${label}`;
+    polishBtn.disabled = !canPolish(state, now);
+  }
+
   function refresh() {
+    renderPolish();
     renderBoat();
     renderBubbles();
     renderGlints();

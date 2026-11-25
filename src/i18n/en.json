@@ -335,5 +335,7 @@
   "credits.CC0": "CC0 public domain",
   "credits.free": "free for commercial use",
   "credits.close": "OK",
-  "world.loading": "Lighting up the island… {n}%"
+  "world.loading": "Lighting up the island… {n}%",
+  "polish.do": "Polish the lamp ({n} glow) · more finds for half an hour",
+  "polish.on": "Lamp polished · {m} min left"
 }

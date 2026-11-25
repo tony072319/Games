@@ -19,4 +19,12 @@ export const T = {
   LIGHT_RETURN: 0.03,
   /** Each level of an island producer makes this share of the net's own catch (before the sea's richness). */
   BUILDING_PCT: 0.04,
+  /** Net upgrade cost grows by this each level (was 1.6; the net now reaches 40+ every sea). */
+  NET_COST_GROWTH: 1.22,
+  /** Lighthouse levels 7–10 cost this much more per level past 6. */
+  LATE_LIGHT_MULT: 1.6,
+  /** Polishing the lamp: glow it costs, how long it lasts, and how many more finds drift by. */
+  POLISH_GLOW: 3,
+  POLISH_MS: 30 * 60 * 1000,
+  POLISH_SPAWN_BONUS: 0.6,
 };

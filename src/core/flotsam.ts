@@ -9,6 +9,7 @@ import {
 import { tapYield } from './economy';
 import { T } from './tuning';
 import { nightness } from './daycycle';
+import { isPolished } from './polish';
 import type { GameState } from './state';
 import { curioChance, foundCurio, pickCurio } from './curios';
 
@@ -45,7 +46,8 @@ export function pickMaterial(r: number): MaterialId {
 export function updateField(field: FlotsamField, nowMs: number, rng: () => number, state?: GameState): void {
   field.items = field.items.filter((i) => nowMs - i.spawnedAt <= FLOAT_LIFETIME_MS);
   // Finds drift by more often at night.
-  const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs));
+  const polished = state && isPolished(state, nowMs) ? T.POLISH_SPAWN_BONUS : 0;
+  const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished);
   if (nowMs - field.lastSpawnAt >= interval && field.items.length < MAX_FLOATING) {
     const item: FloatingItem = { id: field.nextId++, material: pickMaterial(rng()), spawnedAt: nowMs, lane: rng() };
     if (state && rng() < curioChance(state, 'drift') && pickCurio(state, 'drift', () => 0) !== null) item.curio = true;
