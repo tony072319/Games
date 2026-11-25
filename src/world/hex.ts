@@ -1,3 +1,4 @@
+import { DECOR_IDS, type DecorId } from '../core/decor';
 /**
  * The world sits on a hex grid (pointy tops along z, like the KayKit tiles):
  * the home island in the middle, the sea around it, islands further out.
@@ -70,3 +71,19 @@ export const DEST_HEX: Record<DestId, Hex> = {
 /** The pier leaves the island from this tile, heading out along PIER_DIR (x, z). */
 export const PIER_TILE: Hex = [0, 1];
 export const PIER_DIR: [number, number] = [0.55, 1];
+
+/**
+ * Where each decoration goes: a new small tile in the second ring around home, in ring order,
+ * skipping the tiles in the pier's way.
+ */
+export const DECOR_SLOTS: Record<DecorId, Hex> = (() => {
+  const [px, pz] = hexToWorld(...PIER_TILE);
+  const len = Math.hypot(...PIER_DIR);
+  const free = ring(2).filter(([q, r]) => {
+    const [x, z] = hexToWorld(q, r);
+    const along = ((x - px) * PIER_DIR[0] + (z - pz) * PIER_DIR[1]) / len;
+    const off = Math.abs((x - px) * PIER_DIR[1] - (z - pz) * PIER_DIR[0]) / len;
+    return along < 0 || off > 1.6;
+  });
+  return Object.fromEntries(DECOR_IDS.map((id, i) => [id, free[i]])) as Record<DecorId, Hex>;
+})();

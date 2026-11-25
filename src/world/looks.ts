@@ -1,3 +1,4 @@
+import type { DecorId } from '../core/decor';
 /**
  * What each upgrade level looks like in the world (spec §10): every level adds or swaps something.
  * Offsets are in world units from the thing's anchor point; y is height above the ground.
@@ -197,3 +198,58 @@ export function buildingParts(b: BuildingId, level: number): Part[] {
   if (level >= 5) parts.push({ part: 'flag', model: 'kk/flag_yellow', dx: -0.6, dz: 0.4, size: 1.0 });
   return parts;
 }
+
+/** Decorations, tier 1..3 (index = tier - 1); parts are placed around the centre of the decoration's tile. */
+const p = (part: string, model: ModelId, dx = 0, dz = 0, extra: Partial<Part> = {}): Part => ({ part, model, dx, dz, ...extra });
+export const DECOR_LOOKS: Record<DecorId, Part[][]> = {
+  lantern: [
+    [p('a', 'lh/signal_lamp_post')],
+    [p('a', 'harbor/dock_post_lantern', 0, 0, { glow: 'lantern' })],
+    [p('a', 'winter/lantern_xmas', 0, 0, { glow: 'lantern' }), p('b', 'nature/grass_tuft', 0.5, 0.3)],
+  ],
+  flowers: [
+    [p('a', 'nature/flower_yellow')],
+    [p('a', 'nature/flower_yellow', -0.3), p('b', 'nature/flower_red', 0.3, 0.2)],
+    [p('a', 'nature/flower_yellow', -0.4), p('b', 'nature/flower_red', 0.3, 0.3), p('c', 'nature/flower_purple', 0.1, -0.4), p('d', 'nature/bush_round', -0.5, 0.5)],
+  ],
+  bench: [
+    [p('a', 'kk/pallet')],
+    [p('a', 'kk/crate_long_A'), p('b', 'kk/sack', 0.5, 0.3)],
+    [p('a', 'huts/hammock', 0, 0, { rotY: 0.6 })],
+  ],
+  flags: [
+    [p('a', 'kk/flag_blue')],
+    [p('a', 'kk/flag_blue', -0.4), p('b', 'kk/flag_yellow', 0.4, 0.2)],
+    [p('a', 'kp/flag-high-pennant'), p('b', 'kk/flag_yellow', 0.6, 0.3)],
+  ],
+  well: [
+    [p('a', 'kk/building_well_blue')],
+    [p('a', 'viking/well')],
+    [p('a', 'viking/well'), p('b', 'kpet/animal-bunny', 0.6, 0.4, { rotY: -0.8 })],
+  ],
+  garden: [
+    [p('a', 'nature/fern'), p('b', 'nature/fern', 0.4, 0.3)],
+    [p('a', 'huts/banana_plant'), p('b', 'nature/fern', 0.5, 0.3)],
+    [p('a', 'nature/palm_tree', -0.2), p('b', 'volcano/coconut_cluster', 0.5, 0.4)],
+  ],
+  hut: [
+    [p('a', 'kk/tent')],
+    [p('a', 'viking/small_hut')],
+    [p('a', 'volcano/thatch_hut', 0, 0, { glow: 'window' })],
+  ],
+  torches: [
+    [p('a', 'tiki/tiki_torch', 0, 0, { glow: 'fire' })],
+    [p('a', 'tiki/tiki_torch', -0.4, 0, { glow: 'fire' }), p('b', 'tiki/tiki_torch', 0.4, 0.2, { glow: 'fire' })],
+    [p('a', 'tiki/tiki_torch', -0.5, 0, { glow: 'fire' }), p('b', 'tiki/tiki_torch', 0.5, 0.1, { glow: 'fire' }), p('c', 'tiki/tiki_torch', 0, 0.5, { glow: 'fire' })],
+  ],
+  lights: [
+    [p('a', 'huts/rope_fence')],
+    [p('a', 'tiki/string_lights', 0, 0, { glow: 'lantern' })],
+    [p('a', 'tiki/string_lights', 0, 0, { glow: 'lantern' }), p('b', 'lh/telescope_stand', 0.6, 0.4)],
+  ],
+  tower: [
+    [p('a', 'kk/building_stage_A')],
+    [p('a', 'kk/building_tower_A_blue')],
+    [p('a', 'viking/watchtower')],
+  ],
+};

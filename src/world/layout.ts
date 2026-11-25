@@ -1,3 +1,4 @@
+import { DECOR_IDS } from '../core/decor';
 /**
  * What the world should contain for a game state: a flat list of placed models.
  * Pure, so it can be tested; the renderer diffs it by `key`.
@@ -8,8 +9,8 @@ import type { FloatingItem } from '../core/flotsam';
 import { ISLAND_BUILDINGS, buildingLevel } from '../core/islands';
 import type { GameState } from '../core/state';
 import { MODELS, type ModelId } from './assets';
-import { DEST_HEX, HOME_TILES, PIER_DIR, PIER_TILE, hexToWorld, litRadius, hexDist, type Hex } from './hex';
-import { CHEST_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
+import { DECOR_SLOTS, DEST_HEX, HOME_TILES, PIER_DIR, PIER_TILE, hexToWorld, litRadius, hexDist, type Hex } from './hex';
+import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
 export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | `island:${DestId}` | `bld:${BuildingId}`;
 
@@ -121,6 +122,16 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   if (light >= 8) deco.push({ part: 'hammock', model: 'huts/hammock', ...offset(at(0, -1, 0.6, 0.5)), rotY: 0.9 });
   const [tx, tz] = at(-1, 0, 0.2, -0.5);
   place(items, 'deco', deco.map((p) => (p.part === 'tree1' ? p : { ...p, dx: p.dx - tx, dz: p.dz - tz })), tx, tz, 0);
+
+  // Decorations: each on its own new tile around the island (the island grows as you decorate).
+  for (const id of DECOR_IDS) {
+    const tier = s.decor[id];
+    if (!tier) continue;
+    const slot = DECOR_SLOTS[id];
+    tile(items, `decor:${id}:tile`, slot, GROUND[s.sea]);
+    const [dx, dz] = hexToWorld(...slot);
+    place(items, `decor:${id}:${tier}`, DECOR_LOOKS[id][tier - 1], dx, dz, 0);
+  }
 
   // Dock and boat.
   const hasDock = light >= 3 || s.boat.built;
