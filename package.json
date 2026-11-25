@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "e2e": "node e2e/smoke.mjs"
+    "e2e": "node e2e/smoke.mjs",
+    "sim": "vitest run tests/sim --reporter=verbose"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
