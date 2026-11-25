@@ -4,7 +4,8 @@
  */
 import type { SeaId } from '../core/data';
 
-export const SKY_CYCLE_MS = 20 * 60 * 1000;
+import { SKY_CYCLE_MS } from '../core/daycycle';
+export { SKY_CYCLE_MS };
 
 export interface Sky {
   skyTop: string;

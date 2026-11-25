@@ -7,6 +7,7 @@ describe('simulator reproduces the feedback (current numbers)', () => {
   const r = simulate(IDEAL, { seas: 2, maxDays: 60 });
   test('report', () => console.log(formatReport(r)));
   test('the boat brings most of the income in the first sea', () => expect(r.seas[0].share.boat).toBeGreaterThan(0.6));
-  test('a tap in the fog sea is worth almost nothing', () => expect(r.seas[1]?.tapSeconds ?? 99).toBeLessThan(2));
+  // Fixed in Task 2: taps now pay by real income.
+  test('a tap in the fog sea is worth at least 10 s of income', () => expect(r.seas[1]?.tapSeconds ?? 0).toBeGreaterThanOrEqual(10));
   test('the first pass gives a pile of starlight', () => expect(r.seas[0].starlightAfter).toBeGreaterThanOrEqual(40));
 });

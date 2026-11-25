@@ -12,7 +12,7 @@ describe('formulas', () => {
     expect(offlineCapSeconds(11)).toBe(43200);
   });
   test('tap yield is at least 1', () => {
-    expect(tapYield(1)).toBe(1);
+    expect(tapYield(newGame(0, 'zh'), 0)).toBeGreaterThanOrEqual(1);
   });
   test('upgrade costs', () => {
     expect(upgradeCost('net', 1)).toEqual({ wood: 15, plastic: 0, rope: 0, metal: 0, glow: 0 });

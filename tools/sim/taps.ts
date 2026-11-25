@@ -3,6 +3,5 @@ import { tapYield } from '../../src/core/economy';
 import type { GameState } from '../../src/core/state';
 
 export function tapValue(s: GameState, nowMs: number): number {
-  void nowMs;
-  return tapYield(s.levels.net, s);
+  return tapYield(s, nowMs);
 }

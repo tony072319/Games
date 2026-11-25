@@ -78,10 +78,10 @@ describe('effects', () => {
 
     learn(s, 'cur1');
     learn(s, 'rare2');
-    const tap = tapYield(s.levels.net);
+    const tap = tapYield(s, 0);
     learn(s, 'drift3');
     expect(has(s, 'drift3')).toBe(true);
-    expect(tapYield(s.levels.net, s)).toBe(tap * 2);
+    expect(tapYield(s, 0)).toBe(tap * 2);
   });
 
   test('a new sea starts with the lighthouse at 3', () => {

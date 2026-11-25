@@ -5,6 +5,9 @@ import { curioBonus } from './curios';
 import { has } from './talents';
 
 /** Items per second the net collects automatically. */
+import { T } from './tuning';
+import { nightness } from './daycycle';
+
 export function autoRate(netLevel: number): number {
   return 0.1 * netLevel * Math.pow(1.1, netLevel - 1);
 }
@@ -15,8 +18,10 @@ export function offlineCapSeconds(storageLevel: number): number {
 }
 
 /** Amount gained from tapping one drifting item: worth about 10 seconds of the net (twice that with the drift talent). */
-export function tapYield(netLevel: number, state?: GameState): number {
-  return Math.max(1, Math.round(autoRate(netLevel) * 10)) * (state && has(state, 'drift3') ? 2 : 1);
+/** What one tap on a drifting find pays: seconds of what you really earn now, more at night. */
+export function tapYield(state: GameState, nowMs: number): number {
+  const base = netRate(state) * T.TAP_SECONDS * (1 + T.NIGHT_TAP_BONUS * nightness(nowMs));
+  return Math.max(1, Math.round(base)) * (has(state, 'drift3') ? 2 : 1);
 }
 
 /** Hours of netting the chest holds, with the talent's extra two hours. */
