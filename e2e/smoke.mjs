@@ -265,6 +265,9 @@ try {
   await page.locator('.book').waitFor({ state: 'detached', timeout: 2000 });
 
   // Decorations: ten cards; placing one moves it to tier 1 and the island shows it.
+  if (await page.locator('.decor-btn').isVisible()) fail('decorations should wait for the dock (lighthouse 3)');
+  await dbg('灯塔修满');
+  await page.waitForTimeout(300);
   await page.locator('.decor-btn').click();
   await page.locator('.seamap.decor').waitFor();
   if ((await page.locator('[data-decor]').count()) !== 10) fail('the decorations sheet should list 10 cards');
