@@ -1,5 +1,6 @@
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
-import { canBuy, isMaxLevel, priceOf, upgradeCost, upgradeLocked } from '../core/economy';
+import { canBuy, inParts, isMaxLevel, priceOf, upgradeCost, upgradeLocked } from '../core/economy';
+import { T } from '../core/tuning';
 import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
 import { affordState, etaSeconds, nextEffect } from '../core/advice';
@@ -30,6 +31,13 @@ export function effectText(state: GameState, id: UpgradeId, lang: Lang): string 
   if (!e) return undefined;
   if (e.kind === 'unlock') return t(lang, e.key!);
   return t(lang, 'card.next', { effect: t(lang, `effect.${id}`, { n: e.value! }) });
+}
+
+/** From level 5 the lighthouse is mended in parts: "零件 2/4 · 下一个：刷漆". */
+export function lightPartsProgress(state: GameState, lang: Lang): { label: string; value: number } | undefined {
+  if (!inParts(state, 'light') || isMaxLevel(state, 'light')) return undefined;
+  const n = state.lightParts;
+  return { label: t(lang, 'card.parts', { n, total: T.LIGHT_PARTS, name: t(lang, `part.${(n % 4) + 1}`) }), value: n / T.LIGHT_PARTS };
 }
 
 /** Toward the next net milestone (10/20/30/40/50). */
@@ -63,7 +71,7 @@ function signature(state: GameState, ids: readonly UpgradeId[]): string {
       const cost = priceOf(state, id);
       const eta = etaSeconds(state, cost);
       // Redraw when affordability changes, or when the "about N minutes" label would.
-      return `${id}${state.levels[id]}${upgradeLocked(state, id) ? 'L' : ''}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
+      return `${id}${state.levels[id]}${id === 'light' ? `.${state.lightParts}` : ''}${upgradeLocked(state, id) ? 'L' : ''}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
     })
     .join('|');
 }
@@ -91,7 +99,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
           desc: t(lang, `upg.${id}.desc`),
           note: id === 'light' ? lightNote(state, lang) : undefined,
           effect: effectText(state, id, lang),
-          progress: id === 'net' ? netProgress(state.levels.net, lang) : undefined,
+          progress: id === 'net' ? netProgress(state.levels.net, lang) : id === 'light' ? lightPartsProgress(state, lang) : undefined,
           cost: cost,
           have: state.materials,
           buyLabel: t(lang, 'ui.buy'),

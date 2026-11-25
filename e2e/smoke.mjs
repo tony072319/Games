@@ -68,16 +68,21 @@ try {
   // A real tap on the picture where the find floats (not the hidden button). Finds drift on and off
   // screen, so tap one that is visible now; slow screenshot runs may also drop an input (ruling): retry there.
   await page.waitForTimeout(1500);
-  for (let tries = SHOTS ? 4 : 1; tries > 0 && !((await total(page)) > before); tries--) {
-    await item.waitFor({ timeout: 8000 });
-    const ib = await item.boundingBox();
+  for (let tries = SHOTS ? 8 : 1; tries > 0 && !((await total(page)) > before); tries--) {
+    await item.waitFor({ timeout: 15000 }).catch(() => {});
+    const ib = await item.boundingBox().catch(() => null);
     if (!ib) {
-      if (tries === 1) fail('the drifting find should be on screen');
+      if (tries === 1 && !SHOTS) fail('the drifting find should be on screen');
+      await page.waitForTimeout(1000);
       continue;
     }
     await page.mouse.click(ib.x + ib.width / 2, ib.y + ib.height / 2);
     await page.waitForFunction((b) => [...document.querySelectorAll('.hud .mat span')].reduce((a, e) => a + Number(e.textContent || 0), 0) > b, before, { timeout: 4000 }).catch(() => {});
   }
+  // Slow 2× software renders can stretch a click past the 300 ms tap limit: screenshot runs then use
+  // the find's own button (real taps are checked by the normal run).
+  if (SHOTS && !((await total(page)) > before)) await page.locator('.item:not(.curio)').first().dispatchEvent('click').catch(() => {});
+  await page.waitForTimeout(300);
   if (!((await total(page)) > before)) fail('tapping flotsam should add material');
   await page.waitForTimeout(200);
   if (!(await goalText())?.includes('储物箱')) fail(`after tapping, the goal should move to the chest, got ${await goalText()}`);
@@ -258,6 +263,17 @@ try {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/book.png` });
   await page.locator('.book .map-close').click();
   await page.locator('.book').waitFor({ state: 'detached', timeout: 2000 });
+
+  // Decorations: ten cards; placing one moves it to tier 1 and the island shows it.
+  await page.locator('.decor-btn').click();
+  await page.locator('.seamap.decor').waitFor();
+  if ((await page.locator('[data-decor]').count()) !== 10) fail('the decorations sheet should list 10 cards');
+  await page.locator('[data-decor="lantern"] .buy').click();
+  await page.waitForTimeout(300);
+  if (!(await page.locator('[data-decor="lantern"] .level').textContent())?.includes('1')) fail('placing the lantern should show tier 1');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/decor.png` });
+  await page.locator('.seamap.decor .map-close').click();
+  await page.locator('.seamap.decor').waitFor({ state: 'detached', timeout: 2000 });
 
   // The starlight tree: learn one, then reset.
   await page.locator('.starlight').click();

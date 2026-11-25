@@ -13,6 +13,8 @@ import { boatModel } from '../world/looks';
 import { createSeaMap, type SeaMap } from './seaMap';
 import { createIslandView, type IslandView } from './islandView';
 import { createBook, type Book } from './book';
+import { createDecorSheet, type DecorSheet } from './decor';
+import { decorate, type DecorId } from '../core/decor';
 import { createTalentTree } from './talentTree';
 import { CURIOS, chestFind, foundCurio } from '../core/curios';
 import { BUILDINGS, construct } from '../core/islands';
@@ -90,6 +92,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let chipsKey = '';
   let islandView: IslandView | null = null;
   let book: Book | null = null;
+  let decorSheet: DecorSheet | null = null;
+  let decorBtn!: HTMLButtonElement;
   let bookBtn!: HTMLButtonElement;
   /** Something new went into the book since it was last opened. */
   let newFind = false;
@@ -302,6 +306,25 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     refresh();
   }
 
+  function openDecor() {
+    if (decorSheet) return;
+    const lang = state.settings.lang;
+    decorSheet = createDecorSheet(lang, state, {
+      buy: (id: DecorId) => {
+        if (!decorate(state, id)) return;
+        sound.play('upgrade');
+        toast(t(lang, 'decor.toast', { name: t(lang, `decor.${id}.${state.decor[id]}`) }));
+        save();
+        refresh();
+      },
+      close: () => {
+        if (decorSheet) dismiss(decorSheet.el);
+        decorSheet = null;
+      },
+    });
+    game.append(decorSheet.el);
+  }
+
   function openMap() {
     if (seaMap) return;
     const lang = state.settings.lang;
@@ -471,7 +494,18 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   function onBuy(id: UpgradeId) {
+    const levelBefore = state.levels[id];
     if (!buyUpgrade(state, id)) return;
+    if (state.levels[id] === levelBefore) {
+      // One lighthouse part, not a whole level yet.
+      const lang = state.settings.lang;
+      save();
+      sound.play('upgrade');
+      toast(t(lang, 'toast.part', { name: t(lang, `part.${state.lightParts}`), n: state.lightParts, total: T.LIGHT_PARTS }));
+      refresh();
+      world?.pulse('light');
+      return;
+    }
     if (id === 'net') tutorialDone(2);
     save();
     sound.play('upgrade');
@@ -656,7 +690,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     passBtn.textContent = `✦ ${t(lang, 'pass.short')}`;
     passBtn.title = t(lang, 'pass.button');
     passBtn.addEventListener('click', confirmPass);
-    toolbar.append(mapBtn, bookBtn, seasBtn, passBtn);
+    decorBtn = el('button', 'btn-bar decor-btn');
+    decorBtn.type = 'button';
+    decorBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.7 4.4 12.6l.7-4L2.2 5.8l4-.6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+    decorBtn.append(t(lang, 'decor.open'));
+    decorBtn.addEventListener('click', openDecor);
+    toolbar.append(mapBtn, bookBtn, decorBtn, seasBtn, passBtn);
     chipsKey = '';
     // On wide screens this column sits to the right of the scene.
     goalBar = el('button', 'goal');
@@ -680,6 +719,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     side.append(goalBar, toolbar, polishBtn, panel.el);
     game.append(hud.el, stage, side);
     book = null;
+    decorSheet = null;
     tree = null;
     if (seaMap || islandView) {
       seaMap = null;
@@ -980,6 +1020,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     renderSeas();
     mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
     seaMap?.update(state);
+    decorSheet?.update(state);
     islandView?.update(state);
     renderChest();
     hud.update(state);
