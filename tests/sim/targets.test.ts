@@ -57,8 +57,7 @@ describe('choices that matter', () => {
     for (const s of normal.seas) for (const [m, v] of Object.entries(s.leftover)) expect(v ?? 0, `${s.sea} ${m}`).toBeLessThanOrEqual(20);
   });
   test('the net reaches 40 in every sea', () => {
-    // Ruling (late-sea content, Task 3): decorations now share the dusk sea's budget; the net ends at 39–41.
-    for (const s of normal.seas) expect(s.maxNet, s.sea).toBeGreaterThanOrEqual(39);
+    for (const s of normal.seas) expect(s.maxNet, s.sea).toBeGreaterThanOrEqual(40);
   });
   test('three seas buy 55–70% of the talent tree', () => {
     expect(normal.talentFill).toBeGreaterThanOrEqual(0.55);

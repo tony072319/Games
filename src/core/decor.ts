@@ -37,6 +37,7 @@ export function decorCost(s: GameState, id: DecorId): Materials | null {
 }
 
 export function canDecorate(s: GameState, id: DecorId): boolean {
+  if (s.levels.light < T.DECOR_FROM_LIGHT) return false;
   const c = decorCost(s, id);
   return !!c && MATERIALS.every((m) => s.materials[m] >= c[m]);
 }

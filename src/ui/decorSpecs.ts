@@ -1,7 +1,8 @@
 /** What each decoration card shows (no DOM, so it can be tested on its own). */
 import { DECOR_IDS, DECOR_TIERS, canDecorate, decorCost, type DecorId } from '../core/decor';
 import type { GameState, Lang } from '../core/state';
-import { affordState } from '../core/advice';
+import { affordState, etaSeconds } from '../core/advice';
+import { MATERIALS } from '../core/data';
 import { t } from '../i18n';
 import type { CardSpec } from './card';
 import { etaText } from './upgrades';
@@ -15,6 +16,16 @@ const HUE: Record<DecorId, string> = {
 export function decorThumb(id: DecorId, tier: number): string {
   const dots = Array.from({ length: DECOR_TIERS }, (_, i) => `<circle cx="${10 + i * 6}" cy="25" r="2" fill="${i < tier ? '#fff6d8' : '#ffffff33'}"/>`).join('');
   return `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="14" r="9" fill="${HUE[id]}"/><path d="M16 8l2 4 4 .5-3 3 .8 4-3.8-2-3.8 2 .8-4-3-3 4-.5z" fill="#fff8e8" opacity="0.85"/>${dots}</svg>`;
+}
+
+/** Redraw when a tier, what is affordable, or the "about N minutes" label would change. */
+export function decorSignature(state: GameState): string {
+  return DECOR_IDS.map((id) => {
+    const c = decorCost(state, id);
+    if (!c) return `${id}x`;
+    const eta = etaSeconds(state, c);
+    return `${state.decor[id] ?? 0}:` + MATERIALS.map((m) => (state.materials[m] >= c[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
+  }).join('|');
 }
 
 export function decorSpecs(lang: Lang, state: GameState, buy: (id: DecorId) => void): CardSpec[] {

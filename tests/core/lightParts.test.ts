@@ -38,6 +38,13 @@ describe('the lighthouse is mended part by part from level 5', () => {
     expect(seen).toEqual([1, 2, 3, 0]);
     expect(s.levels.light).toBe(6);
   });
+  test('four parts cost exactly the level: the last part pays what is left', () => {
+    const s = rich(7);
+    const level = upgradeCost('light', 7, s);
+    const before = { ...s.materials };
+    for (let i = 0; i < 4; i++) buyUpgrade(s, 'light');
+    for (const m of MATERIALS) expect(before[m] - s.materials[m], m).toBe(level[m]);
+  });
   test('four parts cost at least the level and less than level + 4', () => {
     const s = rich(7);
     const level = upgradeCost('light', 7, s);

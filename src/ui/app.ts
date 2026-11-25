@@ -1015,6 +1015,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     renderGoal();
     renderLight();
     bookBtn.classList.toggle('badge', newFind);
+    decorBtn.style.display = state.levels.light >= T.DECOR_FROM_LIGHT ? '' : 'none';
     mapBtn.classList.toggle('badge', !!state.boat.cargo);
     passBtn.style.display = canPassLight(state) ? '' : 'none';
     renderSeas();

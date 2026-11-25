@@ -106,12 +106,18 @@ export function inParts(state: GameState, id: UpgradeId): boolean {
   return id === 'light' && state.levels.light >= T.LIGHT_PARTS_FROM;
 }
 
-/** What the button buys now: one lighthouse part (a share of the level, rounded up) or one level. */
+/**
+ * What the button buys now: one lighthouse part or one level. Parts are a share of the level rounded
+ * up in steps, so the four together cost exactly the level.
+ */
 export function priceOf(state: GameState, id: UpgradeId): Materials {
   const level = upgradeCost(id, state.levels[id], state);
   if (!inParts(state, id)) return level;
+  // Part i pays the step from i/n to (i+1)/n of the level, rounded up: the parts add up exactly.
+  const i = Math.min(state.lightParts, T.LIGHT_PARTS - 1);
+  const n = T.LIGHT_PARTS;
   const c = emptyMaterials();
-  for (const m of MATERIALS) c[m] = Math.ceil(level[m] / T.LIGHT_PARTS);
+  for (const m of MATERIALS) c[m] = Math.ceil(((i + 1) * level[m]) / n) - Math.ceil((i * level[m]) / n);
   return c;
 }
 

@@ -10,6 +10,7 @@ import { T } from '../../src/core/tuning';
 
 const rich = (): GameState => {
   const s = newGame(0, 'zh');
+  s.levels.light = 3;
   for (const m of MATERIALS) s.materials[m] = 1e15;
   return s;
 };
@@ -59,6 +60,7 @@ describe('decorations', () => {
     passLight(s, 0);
     expect(s.decor).toEqual({});
     for (const m of MATERIALS) s.materials[m] = 1e15;
+    s.levels.light = 3;
     decorate(s, 'tower');
     switchSea(s, 'dusk', 1000);
     expect(s.decor).toEqual({ hut: 1 });
@@ -86,5 +88,16 @@ describe('decorations', () => {
     const before = [netRate(s), chestCapacity(s), voyageHaul(s, 'wreck').wood];
     for (const id of DECOR_IDS) decorate(s, id);
     expect([netRate(s), chestCapacity(s), voyageHaul(s, 'wreck').wood]).toEqual(before);
+  });
+});
+
+describe('decorations open with the dock', () => {
+  test('locked below lighthouse level 3', () => {
+    const s = rich();
+    s.levels.light = 2;
+    expect(canDecorate(s, 'lantern')).toBe(false);
+    expect(decorate(s, 'lantern')).toBe(false);
+    s.levels.light = T.DECOR_FROM_LIGHT;
+    expect(decorate(s, 'lantern')).toBe(true);
   });
 });

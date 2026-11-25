@@ -3,7 +3,9 @@ import { MATERIALS } from '../../src/core/data';
 import { DECOR_IDS, DECOR_TIERS } from '../../src/core/decor';
 import { newGame } from '../../src/core/state';
 import { T } from '../../src/core/tuning';
-import { decorSpecs } from '../../src/ui/decorSpecs';
+import { priceOf } from '../../src/core/economy';
+import { decorSignature, decorSpecs } from '../../src/ui/decorSpecs';
+import { lightNote } from '../../src/ui/upgrades';
 import { lightPartsProgress } from '../../src/ui/upgrades';
 import zh from '../../src/i18n/zh.json';
 import en from '../../src/i18n/en.json';
@@ -49,5 +51,26 @@ describe('lighthouse parts on the card', () => {
     expect(p.value).toBeCloseTo(2 / T.LIGHT_PARTS);
     expect(p.label).toContain('2/4');
     expect(p.label).toContain((zh as Record<string, string>)['part.3']);
+  });
+});
+
+describe('freshness', () => {
+  test('the sheet redraws as "about N minutes" counts down', () => {
+    const s = newGame(0, 'zh');
+    s.levels.light = 3;
+    s.levels.net = 10;
+    const a = decorSignature(s);
+    s.materials.wood += 50;
+    s.materials.plastic += 30;
+    expect(decorSignature(s)).not.toBe(a);
+  });
+  test('the glow hint follows the part price, not the whole level', () => {
+    const s = newGame(0, 'zh');
+    s.levels.light = 7;
+    const part = priceOf(s, 'light').glow;
+    s.materials.glow = part;
+    expect(lightNote(s, 'zh')).toBeUndefined();
+    s.materials.glow = part - 1;
+    expect(lightNote(s, 'zh')).toBeDefined();
   });
 });

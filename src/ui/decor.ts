@@ -1,10 +1,9 @@
 /** The decorations sheet: one card per decoration, like the upgrade panel. */
-import { MATERIALS } from '../core/data';
-import { DECOR_IDS, decorCost, type DecorId } from '../core/decor';
+import type { DecorId } from '../core/decor';
 import type { GameState, Lang } from '../core/state';
 import { t } from '../i18n';
 import { upgradeCard } from './card';
-import { decorSpecs } from './decorSpecs';
+import { decorSignature, decorSpecs } from './decorSpecs';
 import { el } from './dom';
 
 export interface DecorSheet {
@@ -31,10 +30,7 @@ export function createDecorSheet(lang: Lang, state: GameState, opts: { buy(id: D
   let last = '';
 
   function update(s: GameState) {
-    const sig = DECOR_IDS.map((id) => {
-      const c = decorCost(s, id);
-      return `${s.decor[id] ?? 0}:` + (c ? MATERIALS.map((m) => (s.materials[m] >= c[m] ? 1 : 0)).join('') : 'x');
-    }).join('|');
+    const sig = decorSignature(s);
     if (sig === last) return;
     last = sig;
     list.replaceChildren(...decorSpecs(lang, s, opts.buy).map((spec) => upgradeCard(lang, spec)));

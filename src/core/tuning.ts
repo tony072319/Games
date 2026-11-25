@@ -12,7 +12,7 @@ export const T = {
   /** …and finds drift by this much more often. */
   NIGHT_SPAWN_BONUS: 0.5,
   /** A trip brings this share of the net's catch for the same minutes, before cargo. */
-  BOAT_BASE: 0.37,
+  BOAT_BASE: 0.459,
   /** Each cargo level adds this to the haul. */
   CARGO_STEP: 0.08,
   /** Each speed level shortens trips by this. */
@@ -20,7 +20,7 @@ export const T = {
   /** Each lighthouse level above 1 brings the boat home this much sooner. */
   LIGHT_RETURN: 0.03,
   /** Each level of an island producer makes this share of the net's own catch (before the sea's richness). */
-  BUILDING_PCT: 0.0651,
+  BUILDING_PCT: 0.0724,
   /** Net upgrade cost grows by this each level (was 1.6; the net now reaches 40+ every sea). */
   NET_COST_GROWTH: 1.4,
   /** Lighthouse levels 7–10 cost this much more per level past 6. */
@@ -31,6 +31,8 @@ export const T = {
   /** Island decorations: price of the first one, and how much dearer each next one is. */
   DECOR_BASE: 304,
   DECOR_GROWTH: 1.3,
+  /** Decorations open with the dock (lighthouse level 3), after the first steps. */
+  DECOR_FROM_LIGHT: 3,
   LIGHT_PARTS_FROM: 5,
   POLISH_GLOW: 3,
   POLISH_MS: 30 * 60 * 1000,
@@ -42,9 +44,9 @@ export const T = {
   PLASTIC_PER_ROPE: 3,
   WOOD_PER_METAL: 5,
   /** Each star of starlight adds this to everything you make. */
-  STAR_BONUS: 0.00427,
+  STAR_BONUS: 0.00395,
   /** Starlight for leaving a sea lit is the old formula times this. */
-  STAR_PASS_MULT: 0.306,
+  STAR_PASS_MULT: 0.275,
   /** Materials left behind turn into up to this many stars (one per tenfold). */
   MAT_STAR_CAP: 8,
   /** Talent prices by tier. */
@@ -56,12 +58,12 @@ export const T = {
   AURORA_GLOW_AMOUNT: 1,
   /** Each sea's richness and the price of mending there, relative to the dusk sea. */
   FOG_RATE: 1.77,
-  FOG_COST: 16,
-  AURORA_RATE: 3,
-  AURORA_COST: 75,
+  FOG_COST: 12.5,
+  AURORA_RATE: 3.4,
+  AURORA_COST: 71,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
-  LIGHT_COST_MULT: 1.31,
-  LIGHT_GROWTH: 2.5,
+  LIGHT_COST_MULT: 0.95,
+  LIGHT_GROWTH: 2.75,
   /** Talent prices are TALENT_COSTS times this. */
   TALENT_COST_SCALE: 1,
 };

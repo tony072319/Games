@@ -1,5 +1,5 @@
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
-import { canBuy, inParts, isMaxLevel, priceOf, upgradeCost, upgradeLocked } from '../core/economy';
+import { canBuy, inParts, isMaxLevel, priceOf, upgradeLocked } from '../core/economy';
 import { T } from '../core/tuning';
 import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
@@ -19,9 +19,9 @@ export interface Panel {
 }
 
 /** The lighthouse needs glowshards from level 7: say where they come from. */
-function lightNote(state: GameState, lang: Lang): string | undefined {
+export function lightNote(state: GameState, lang: Lang): string | undefined {
   if (state.levels.light >= MAX_LEVEL.light) return undefined;
-  const cost = upgradeCost('light', state.levels.light, state);
+  const cost = priceOf(state, 'light');
   return cost.glow > 0 && state.materials.glow < cost.glow ? t(lang, 'upg.light.next.glow') : undefined;
 }
 
@@ -37,7 +37,7 @@ export function effectText(state: GameState, id: UpgradeId, lang: Lang): string 
 export function lightPartsProgress(state: GameState, lang: Lang): { label: string; value: number } | undefined {
   if (!inParts(state, 'light') || isMaxLevel(state, 'light')) return undefined;
   const n = state.lightParts;
-  return { label: t(lang, 'card.parts', { n, total: T.LIGHT_PARTS, name: t(lang, `part.${(n % 4) + 1}`) }), value: n / T.LIGHT_PARTS };
+  return { label: t(lang, 'card.parts', { n, total: T.LIGHT_PARTS, name: t(lang, `part.${(n % T.LIGHT_PARTS) + 1}`) }), value: n / T.LIGHT_PARTS };
 }
 
 /** Toward the next net milestone (10/20/30/40/50). */
