@@ -130,6 +130,8 @@ try {
   if (!(await page.locator('.arrival-line.line-chest').count())) fail('arrival report should list the chest');
   if (!(await page.locator('.arrival-line.line-cap').count())) fail('arrival report should say the chest filled up');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/popup-zh.png` });
+  // Until rewarded ads exist, the report has one button: collect.
+  if ((await page.locator('.popup .actions button').count()) !== 1) fail(`the arrival report should have one collect button, found ${await page.locator('.popup .actions button').count()}`);
   await page.locator('.popup .btn-primary').click();
   await page.locator('.popup').waitFor({ state: 'detached', timeout: 2000 }).catch(() => fail('popup should close'));
   if (!((await savedTotal()) > beforeAway + 100)) fail('collecting from the popup should empty the chest into materials');

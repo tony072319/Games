@@ -1,3 +1,4 @@
+import { T } from '../core/tuning';
 import type { ArrivalLine } from '../core/arrival';
 import { MATERIALS, type DestId, type Materials, type UpgradeId } from '../core/data';
 import type { Lang } from '../core/state';
@@ -67,7 +68,8 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
   box.append(list);
 
   const actions = el('div', 'actions');
-  const take = el('button', 'btn-ghost');
+  // With ads off, collecting is the one action, so it is the primary button.
+  const take = el('button', T.ADS_ENABLED ? 'btn-ghost' : 'btn-primary');
   take.type = 'button';
   take.textContent = t(lang, 'offline.collect');
   const dbl = el('button', 'btn-primary');
@@ -79,7 +81,8 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
   };
   take.addEventListener('click', () => close(false));
   dbl.addEventListener('click', () => close(true));
-  actions.append(take, dbl);
+  actions.append(take);
+  if (T.ADS_ENABLED) actions.append(dbl);
   box.append(actions);
   overlay.append(box);
   container.append(overlay);

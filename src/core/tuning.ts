@@ -3,6 +3,8 @@
  * The simulator (tools/sim) checks the design targets against these.
  */
 export const T = {
+  /** Rewarded ads are not in yet: the "take double" button stays hidden until they are (author decision 1A). */
+  ADS_ENABLED: false,
   /** A tap on a drifting find pays this many seconds of current income. */
   TAP_SECONDS: 12,
   /** At deep night a tap pays this much more… */
