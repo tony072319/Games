@@ -52,7 +52,7 @@ function pierStart(): [number, number] {
   const [x, z] = hexToWorld(...PIER_TILE);
   return [x + PDX * 0.9, z + PDZ * 0.9];
 }
-const PIER_PLANKS = 3;
+const PIER_PLANKS = 5;
 const PLANK = 1.6;
 
 function pierEnd(): [number, number] {

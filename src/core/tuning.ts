@@ -33,6 +33,9 @@ export const T = {
   DECOR_GROWTH: 1.3,
   /** Decorations open with the dock (lighthouse level 3), after the first steps. */
   DECOR_FROM_LIGHT: 3,
+  /** Expanding the island: the first tile's price and how much dearer each next one is. */
+  LAND_BASE: 400,
+  LAND_GROWTH: 1.15,
   LIGHT_PARTS_FROM: 5,
   POLISH_GLOW: 3,
   POLISH_MS: 30 * 60 * 1000,

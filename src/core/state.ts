@@ -29,6 +29,7 @@ export interface SeaState {
   materials: Materials;
   lightParts: number;
   decor: Partial<Record<import('./decor').DecorId, number>>;
+  land: number;
   chest: Materials;
   discovered: DestId[];
   buildings: Partial<Record<BuildingId, number>>;
@@ -76,6 +77,8 @@ export interface GameState {
   lightParts: number;
   /** Island decorations bought in this sea (tier 1..3). */
   decor: Partial<Record<import('./decor').DecorId, number>>;
+  /** Tiles the island has grown by in this sea. */
+  land: number;
 }
 
 export function emptyMaterials(): Materials {
@@ -107,5 +110,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     polishUntil: 0,
     lightParts: 0,
     decor: {},
+    land: 0,
   };
 }

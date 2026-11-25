@@ -72,20 +72,32 @@ export const DEST_HEX: Record<DestId, Hex> = {
 export const PIER_TILE: Hex = [0, 2];
 export const PIER_DIR: [number, number] = [0.55, 1];
 
-/** Ring-3 tiles clear of the pier's way, in ring order. */
-function freeRing3(): Hex[] {
+/** Is this tile clear of the pier and the boat tied up at its end? `room` is the half-width kept free. */
+function clearOfPier([q, r]: Hex, room: number): boolean {
   const [px, pz] = hexToWorld(...PIER_TILE);
   const len = Math.hypot(...PIER_DIR);
-  return ring(3).filter(([q, r]) => {
-    const [x, z] = hexToWorld(q, r);
-    const along = ((x - px) * PIER_DIR[0] + (z - pz) * PIER_DIR[1]) / len;
-    const off = Math.abs((x - px) * PIER_DIR[1] - (z - pz) * PIER_DIR[0]) / len;
-    return along < 0 || off > 1.6;
-  });
+  const [x, z] = hexToWorld(q, r);
+  const along = ((x - px) * PIER_DIR[0] + (z - pz) * PIER_DIR[1]) / len;
+  const off = Math.abs((x - px) * PIER_DIR[1] - (z - pz) * PIER_DIR[0]) / len;
+  return along < 0 || off > room;
+}
+
+/** Ring-3 tiles clear of the pier's way, in ring order. */
+function freeRing3(): Hex[] {
+  return ring(3).filter((h) => clearOfPier(h, 1.6));
 }
 
 /** Where each decoration goes: its own new tile in the third ring, spread evenly around the island. */
 export const DECOR_SLOTS: Record<DecorId, Hex> = (() => {
   const free = freeRing3();
   return Object.fromEntries(DECOR_IDS.map((id, i) => [id, free[Math.floor((i * free.length) / DECOR_IDS.length)]])) as Record<DecorId, Hex>;
+})();
+
+/**
+ * Where the island grows when you expand it, in order: the rest of ring 3, then ring 4, keeping the
+ * pier and the moored boat clear.
+ */
+export const LAND_TILES: readonly Hex[] = (() => {
+  const taken = new Set(Object.values(DECOR_SLOTS).map((h) => h.join()));
+  return [...freeRing3().filter((h) => !taken.has(h.join())), ...ring(4).filter((h) => clearOfPier(h, 2.8))];
 })();

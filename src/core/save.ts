@@ -1,6 +1,7 @@
 import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type BuildingId, type DestId, type Materials, type SeaId } from './data';
 import { T } from './tuning';
 import { readDecor } from './decor';
+import { readLand } from './land';
 import { BUILDINGS } from './islands';
 import { CURIO_BY_ID } from './curios';
 import { TALENT_BY_ID, type TalentId } from './talents';
@@ -61,6 +62,7 @@ function readSea(v: unknown, nowMs: number): SeaState | null {
     materials: readMaterials(v.materials),
     lightParts: readParts(v.lightParts),
     decor: readDecor(v.decor),
+    land: readLand(v.land),
     chest: readMaterials(v.chest),
     discovered: Array.isArray(v.discovered) ? (v.discovered.filter((d) => DEST_IDS.includes(d as DestId)) as DestId[]) : [],
     buildings,
@@ -177,6 +179,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   else if ('polishUntil' in data) dropped = true;
   state.lightParts = readParts(data.lightParts);
   state.decor = readDecor(data.decor);
+  state.land = readLand(data.land);
   if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
   else if ('starlight' in data) dropped = true;
   if (isObj(data.seas)) {
