@@ -352,10 +352,6 @@
   "decor.toast": "{name} 摆好了",
   "card.parts": "零件 {n}/{total} · 下一个：{name}",
   "toast.part": "{name} 修好了（{n}/{total}）",
-  "part.1": "换透镜",
-  "part.2": "修栏杆",
-  "part.3": "刷漆",
-  "part.4": "加固",
   "decor.lantern.1": "灯笼",
   "decor.lantern.2": "彩绘灯笼",
   "decor.lantern.3": "发光灯笼",
@@ -391,5 +387,15 @@
   "land.count": "已扩建 {n}/{max} 块",
   "land.full": "小岛已经长到最大了",
   "land.buy": "扩建",
-  "land.toast": "小岛又大了一块（{n}/{max}）"
+  "land.toast": "小岛又大了一块（{n}/{max}）",
+  "part.1": "换透镜",
+  "part.2": "擦玻璃",
+  "part.3": "修栏杆",
+  "part.4": "补台阶",
+  "part.5": "刷底漆",
+  "part.6": "刷面漆",
+  "part.7": "换灯芯",
+  "part.8": "加固塔身",
+  "part.9": "修屋顶",
+  "part.10": "试灯"
 }

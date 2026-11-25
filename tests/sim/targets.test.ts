@@ -24,9 +24,9 @@ describe('pacing for a normal player (3 visits a day)', () => {
     expect(normal.seas[2]?.days).toBeGreaterThanOrEqual(28);
     expect(normal.seas[2]?.days).toBeLessThanOrEqual(42);
   });
-  // Lighthouse parts and decorations give the long later seas something to buy (late-sea content plan).
+  // Lighthouse parts, decorations and growing the island give the long later seas something to buy.
   test('most visits have something to buy', () => {
-    const floor = [0.85, 0.7, 0.5];
+    const floor = [0.85, 0.85, 0.75];
     normal.seas.forEach((s, i) => expect(s.buyRatio, s.sea).toBeGreaterThanOrEqual(floor[i]));
   });
 });

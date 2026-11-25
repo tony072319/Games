@@ -36,7 +36,7 @@ describe('decorations sheet', () => {
     expect(lantern.canBuy).toBe(false);
   });
   test('every decoration name and the part names exist in both languages', () => {
-    const keys = ['land.title', 'land.desc', 'land.count', 'land.full', 'land.toast', 'decor.open', 'decor.title', 'decor.desc', 'decor.done', 'card.parts', ...DECOR_IDS.flatMap((id) => [1, 2, 3].map((n) => `decor.${id}.${n}`)), ...[1, 2, 3, 4].map((n) => `part.${n}`)];
+    const keys = ['land.title', 'land.desc', 'land.count', 'land.full', 'land.toast', 'decor.open', 'decor.title', 'decor.desc', 'decor.done', 'card.parts', ...DECOR_IDS.flatMap((id) => [1, 2, 3].map((n) => `decor.${id}.${n}`)), ...Array.from({ length: T.LIGHT_PARTS }, (_, i) => `part.${i + 1}`)];
     for (const k of keys) {
       expect((zh as Record<string, string>)[k], `zh ${k}`).toBeTruthy();
       expect((en as Record<string, string>)[k], `en ${k}`).toBeTruthy();
@@ -53,7 +53,7 @@ describe('lighthouse parts on the card', () => {
     s.lightParts = 2;
     const p = lightPartsProgress(s, 'zh')!;
     expect(p.value).toBeCloseTo(2 / T.LIGHT_PARTS);
-    expect(p.label).toContain('2/4');
+    expect(p.label).toContain(`2/${T.LIGHT_PARTS}`);
     expect(p.label).toContain((zh as Record<string, string>)['part.3']);
   });
 });

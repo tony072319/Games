@@ -22,20 +22,20 @@ export const T = {
   /** Each level of an island producer makes this share of the net's own catch (before the sea's richness). */
   BUILDING_PCT: 0.0724,
   /** Net upgrade cost grows by this each level (was 1.6; the net now reaches 40+ every sea). */
-  NET_COST_GROWTH: 1.4,
+  NET_COST_GROWTH: 1.37,
   /** Lighthouse levels 7–10 cost this much more per level past 6. */
   LATE_LIGHT_MULT: 3.31,
   /** Polishing the lamp: glow it costs, how long it lasts, and how many more finds drift by. */
   /** From this lighthouse level on, each level is mended in this many parts (same total price). */
-  LIGHT_PARTS: 4,
+  LIGHT_PARTS: 10,
   /** Island decorations: price of the first one, and how much dearer each next one is. */
   DECOR_BASE: 304,
   DECOR_GROWTH: 1.3,
   /** Decorations open with the dock (lighthouse level 3), after the first steps. */
   DECOR_FROM_LIGHT: 3,
   /** Expanding the island: the first tile's price and how much dearer each next one is. */
-  LAND_BASE: 400,
-  LAND_GROWTH: 1.15,
+  LAND_BASE: 2000000,
+  LAND_GROWTH: 1.05,
   LIGHT_PARTS_FROM: 5,
   POLISH_GLOW: 3,
   POLISH_MS: 30 * 60 * 1000,
@@ -61,11 +61,11 @@ export const T = {
   AURORA_GLOW_AMOUNT: 1,
   /** Each sea's richness and the price of mending there, relative to the dusk sea. */
   FOG_RATE: 1.77,
-  FOG_COST: 12.5,
+  FOG_COST: 16.5,
   AURORA_RATE: 3.4,
-  AURORA_COST: 71,
+  AURORA_COST: 95,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
-  LIGHT_COST_MULT: 0.95,
+  LIGHT_COST_MULT: 0.8,
   LIGHT_GROWTH: 2.75,
   /** Talent prices are TALENT_COSTS times this. */
   TALENT_COST_SCALE: 1,

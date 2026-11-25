@@ -15,6 +15,7 @@ import { TALENTS, canLearn, learn } from '../../src/core/talents';
 import { incomePerSecond } from '../../src/core/advice';
 import { tapValue } from './taps';
 import { DECOR_IDS, canDecorate, decorCost, decorate } from '../../src/core/decor';
+import { canExpand, expand, landCost } from '../../src/core/land';
 import { SKY_CYCLE_MS } from '../../src/core/daycycle';
 
 const DAY = 24 * 3600 * 1000;
@@ -104,10 +105,11 @@ function shop(s: GameState): number {
       bought++;
       continue;
     }
-    // Last, decorations with what is left, cheapest first (they only change the picture).
-    const decs = DECOR_IDS.filter((d) => canDecorate(s, d));
-    decs.sort((a, b) => total(decorCost(s, a)!) - total(decorCost(s, b)!));
-    if (decs[0] && decorate(s, decs[0])) {
+    // Last, decorations and new ground with what is left, cheapest first (they only change the picture).
+    const looks: { cost: number; buy: () => boolean }[] = DECOR_IDS.filter((d) => canDecorate(s, d)).map((d) => ({ cost: total(decorCost(s, d)!), buy: () => decorate(s, d) }));
+    if (canExpand(s)) looks.push({ cost: total(landCost(s)!), buy: () => expand(s) });
+    looks.sort((a, b) => a.cost - b.cost);
+    if (looks[0]?.buy()) {
       bought++;
       continue;
     }

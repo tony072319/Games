@@ -352,10 +352,6 @@
   "decor.toast": "{name} placed",
   "card.parts": "Part {n}/{total} · next: {name}",
   "toast.part": "{name} done ({n}/{total})",
-  "part.1": "New lens",
-  "part.2": "Railing",
-  "part.3": "Fresh paint",
-  "part.4": "Bracing",
   "decor.lantern.1": "Lantern",
   "decor.lantern.2": "Painted lantern",
   "decor.lantern.3": "Glowing lantern",
@@ -391,5 +387,15 @@
   "land.count": "Grown {n}/{max} tiles",
   "land.full": "The island is as big as it gets",
   "land.buy": "Grow",
-  "land.toast": "The island grew a tile ({n}/{max})"
+  "land.toast": "The island grew a tile ({n}/{max})",
+  "part.1": "New lens",
+  "part.2": "Clean glass",
+  "part.3": "Railing",
+  "part.4": "Steps",
+  "part.5": "Undercoat",
+  "part.6": "Top coat",
+  "part.7": "New wick",
+  "part.8": "Brace the tower",
+  "part.9": "Roof",
+  "part.10": "Test the light"
 }

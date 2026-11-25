@@ -31,18 +31,18 @@ describe('the lighthouse is mended part by part from level 5', () => {
     const part = priceOf(s, 'light');
     for (const m of MATERIALS) expect(part[m]).toBe(Math.ceil(level[m] / T.LIGHT_PARTS));
     const seen: number[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < T.LIGHT_PARTS; i++) {
       expect(buyUpgrade(s, 'light')).toBe(true);
       seen.push(s.lightParts);
     }
-    expect(seen).toEqual([1, 2, 3, 0]);
+    expect(seen).toEqual([...Array.from({ length: T.LIGHT_PARTS - 1 }, (_, i) => i + 1), 0]);
     expect(s.levels.light).toBe(6);
   });
   test('four parts cost exactly the level: the last part pays what is left', () => {
     const s = rich(7);
     const level = upgradeCost('light', 7, s);
     const before = { ...s.materials };
-    for (let i = 0; i < 4; i++) buyUpgrade(s, 'light');
+    for (let i = 0; i < T.LIGHT_PARTS; i++) buyUpgrade(s, 'light');
     for (const m of MATERIALS) expect(before[m] - s.materials[m], m).toBe(level[m]);
   });
   test('four parts cost at least the level and less than level + 4', () => {
@@ -50,13 +50,13 @@ describe('the lighthouse is mended part by part from level 5', () => {
     const level = upgradeCost('light', 7, s);
     const part = priceOf(s, 'light');
     for (const m of MATERIALS) {
-      expect(part[m] * 4).toBeGreaterThanOrEqual(level[m]);
-      expect(part[m] * 4).toBeLessThan(level[m] + 4);
+      expect(part[m] * T.LIGHT_PARTS).toBeGreaterThanOrEqual(level[m]);
+      expect(part[m] * T.LIGHT_PARTS).toBeLessThan(level[m] + T.LIGHT_PARTS);
     }
   });
   test('the fourth part at level 9 makes 10, and the light can be passed on', () => {
     const s = rich(9);
-    s.lightParts = 3;
+    s.lightParts = T.LIGHT_PARTS - 1;
     expect(buyUpgrade(s, 'light')).toBe(true);
     expect(s.levels.light).toBe(10);
     expect(canPassLight(s)).toBe(true);
@@ -78,7 +78,7 @@ describe('the lighthouse is mended part by part from level 5', () => {
     s.lightParts = 3;
     saveGame(kv, s);
     expect(loadGame(kv, 0, 'zh').state.lightParts).toBe(3);
-    for (const bad of [7, -1, 2.5]) {
+    for (const bad of [T.LIGHT_PARTS, -1, 2.5]) {
       const data = JSON.parse(kv.getItem(SAVE_KEY)!);
       data.lightParts = bad;
       const r = loadGame({ getItem: () => JSON.stringify(data), setItem() {} }, 0, 'zh');
