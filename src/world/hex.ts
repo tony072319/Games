@@ -45,12 +45,12 @@ export function ring(n: number): Hex[] {
   return out;
 }
 
-/** The home island when a sea is new: the lighthouse tile and its six neighbours. */
-export const HOME_TILES: readonly Hex[] = [[0, 0], ...ring(1)];
+/** The home island when a sea is new: two rings around the lighthouse, with room between things. */
+export const HOME_TILES: readonly Hex[] = [[0, 0], ...ring(1), ...ring(2)];
 
 /** How many tiles out the lighthouse lights the sea. */
 export function litRadius(light: number): number {
-  return light + 2;
+  return light + 4;
 }
 
 export function litRadiusWorld(light: number): number {
@@ -59,31 +59,33 @@ export function litRadiusWorld(light: number): number {
 
 /**
  * Where each island lies: exactly at the edge the light first reaches
- * (DESTS needLight + 2 tiles), at four different bearings, none on the pier side.
+ * (DESTS needLight + 4 tiles), at four different bearings, none on the pier side.
  */
 export const DEST_HEX: Record<DestId, Hex> = {
-  wreck: [-5, 5],
-  gullrock: [0, -6],
-  oldlight: [7, -7],
-  firefly: [-8, 4],
+  wreck: [-7, 7],
+  gullrock: [0, -8],
+  oldlight: [9, -9],
+  firefly: [-10, 5],
 };
 
 /** The pier leaves the island from this tile, heading out along PIER_DIR (x, z). */
-export const PIER_TILE: Hex = [0, 1];
+export const PIER_TILE: Hex = [0, 2];
 export const PIER_DIR: [number, number] = [0.55, 1];
 
-/**
- * Where each decoration goes: a new small tile in the second ring around home, in ring order,
- * skipping the tiles in the pier's way.
- */
-export const DECOR_SLOTS: Record<DecorId, Hex> = (() => {
+/** Ring-3 tiles clear of the pier's way, in ring order. */
+function freeRing3(): Hex[] {
   const [px, pz] = hexToWorld(...PIER_TILE);
   const len = Math.hypot(...PIER_DIR);
-  const free = ring(2).filter(([q, r]) => {
+  return ring(3).filter(([q, r]) => {
     const [x, z] = hexToWorld(q, r);
     const along = ((x - px) * PIER_DIR[0] + (z - pz) * PIER_DIR[1]) / len;
     const off = Math.abs((x - px) * PIER_DIR[1] - (z - pz) * PIER_DIR[0]) / len;
     return along < 0 || off > 1.6;
   });
-  return Object.fromEntries(DECOR_IDS.map((id, i) => [id, free[i]])) as Record<DecorId, Hex>;
+}
+
+/** Where each decoration goes: its own new tile in the third ring, spread evenly around the island. */
+export const DECOR_SLOTS: Record<DecorId, Hex> = (() => {
+  const free = freeRing3();
+  return Object.fromEntries(DECOR_IDS.map((id, i) => [id, free[Math.floor((i * free.length) / DECOR_IDS.length)]])) as Record<DecorId, Hex>;
 })();

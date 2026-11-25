@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import type { Palette } from './palette';
 
-export const MAX_SHORES = 40;
+export const MAX_SHORES = 64;
 
 export interface Water {
   mesh: THREE.Mesh;

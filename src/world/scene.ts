@@ -98,7 +98,8 @@ interface Placed {
 }
 
 const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 1.6);
-const DEFAULT_CAM = new THREE.Vector3(13, 11, 27);
+// Pulled back so the two-ring island and its third-ring decorations fit with room around them.
+const DEFAULT_CAM = DEFAULT_TARGET.clone().add(new THREE.Vector3(13, 11, 27).sub(DEFAULT_TARGET).multiplyScalar(1.1));
 
 export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const renderer = new THREE.WebGLRenderer({ antialias: true });

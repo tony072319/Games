@@ -9,7 +9,7 @@ import type { FloatingItem } from '../core/flotsam';
 import { ISLAND_BUILDINGS, buildingLevel } from '../core/islands';
 import type { GameState } from '../core/state';
 import { MODELS, type ModelId } from './assets';
-import { DECOR_SLOTS, DEST_HEX, HOME_TILES, PIER_DIR, PIER_TILE, hexToWorld, litRadius, hexDist, type Hex } from './hex';
+import { DECOR_SLOTS, DEST_HEX, TILE_W, HOME_TILES, PIER_DIR, PIER_TILE, hexToWorld, litRadius, hexDist, type Hex } from './hex';
 import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
 export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | `island:${DestId}` | `bld:${BuildingId}`;
@@ -105,21 +105,21 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   };
 
   place(items, `light:${light}`, LIGHT_LOOKS[light] ?? LIGHT_LOOKS[10], 0, 0, 0, 'light');
-  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...at(1, -1, 0.1, 0.1), 0);
-  place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...at(1, 0, 0.2, 0.2), 0, 'chest');
-  const [nx, nz] = at(0, 1, 0.7, -0.1);
+  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...at(1, -2, 0.1, 0.1), 0);
+  place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...at(2, -1, 0, 0.2), 0, 'chest');
+  const [nx, nz] = at(-1, 2, 0.3, -0.1);
   place(items, `net:${Math.min(50, s.levels.net)}`, netParts(s.levels.net), nx, nz, 0, 'net');
 
   // Greenery that comes with a brighter light.
   const deco: Part[] = [
     { part: 'tree1', model: 'nature/round_tree', dx: 0, dz: 0 },
-    { part: 'tree2', model: 'nature/pine_tree', ...offset(at(0, -1, -0.3, -0.2)) },
+    { part: 'tree2', model: 'nature/pine_tree', ...offset(at(-1, -1, -0.3, -0.2)) },
   ];
   if (light >= 2) deco.push({ part: 'fire', model: 'viking/firepit', ...offset(at(-1, 1, 0.4, 0.3)), glow: 'fire' });
-  if (light >= 3) deco.push({ part: 'flowers', model: 'nature/flower_yellow', ...offset(at(-1, 1, -0.4, -0.2)) });
-  if (light >= 4) deco.push({ part: 'bush', model: 'nature/bush_berries', ...offset(at(1, -1, 0.7, -0.6)) });
-  if (light >= 6) deco.push({ part: 'mill', model: 'kk/building_windmill_blue', ...offset(at(-1, 0, -0.2, 0)), tint: 0xfff0e0 });
-  if (light >= 8) deco.push({ part: 'hammock', model: 'huts/hammock', ...offset(at(0, -1, 0.6, 0.5)), rotY: 0.9 });
+  if (light >= 3) deco.push({ part: 'flowers', model: 'nature/flower_yellow', ...offset(at(-2, 1, -0.2, 0)) });
+  if (light >= 4) deco.push({ part: 'bush', model: 'nature/bush_berries', ...offset(at(2, -2, 0, 0)) });
+  if (light >= 6) deco.push({ part: 'mill', model: 'kk/building_windmill_blue', ...offset(at(-2, 0, -0.2, 0)), tint: 0xfff0e0 });
+  if (light >= 8) deco.push({ part: 'hammock', model: 'huts/hammock', ...offset(at(1, -1, 0.2, 0.3)), rotY: 0.9 });
   const [tx, tz] = at(-1, 0, 0.2, -0.5);
   place(items, 'deco', deco.map((p) => (p.part === 'tree1' ? p : { ...p, dx: p.dx - tx, dz: p.dz - tz })), tx, tz, 0);
 
@@ -155,12 +155,12 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   }
 
   // Life: a few who live here, more as the light grows.
-  const [hx, hz] = at(1, -1, -0.6, 0.8);
+  const [hx, hz] = at(1, -2, -0.6, 0.9);
   if (light >= 2) items.push({ key: 'life:keeper', model: 'kc/character-male-a', x: hx, y: 0, z: hz, rotY: 0.3, anim: 'idle' });
-  const [cx, cz] = at(0, 1, -0.6, -0.3);
+  const [cx, cz] = at(1, 1, -0.2, 0);
   items.push({ key: 'life:cat', model: 'kpet/animal-cat', x: cx, y: 0, z: cz, rotY: 1.2 });
   if (light >= 4) {
-    const [kx, kz] = at(-1, 1, -0.5, 0.4);
+    const [kx, kz] = at(-2, 2, 0, 0);
     items.push({ key: 'life:chick', model: 'kpet/animal-chick', x: kx, y: 0, z: kz, rotY: -0.6 });
   }
   if (light >= 7) items.push({ key: 'life:parrot', model: 'kpet/animal-parrot', x: 0.9, y: 1.35, z: 0.7, rotY: 0 });
@@ -194,7 +194,17 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     });
   }
 
+  inlandNoShore(items);
   return items.filter((i) => MODELS[i.model] !== undefined);
+}
+
+/** Ground tiles with ground on all six sides are inland: only the outline meets the water. */
+function inlandNoShore(items: WorldItem[]) {
+  const grid = (x: number, z: number) => `${Math.round(x * 4)},${Math.round(z * 4)}`;
+  const ground = items.filter((i) => i.model === 'kk/hex_grass');
+  const at = new Set(ground.map((g) => grid(g.x, g.z)));
+  const around = [0, 1, 2, 3, 4, 5].map((k) => [Math.cos((k * Math.PI) / 3) * TILE_W, Math.sin((k * Math.PI) / 3) * TILE_W]);
+  for (const g of ground) if (around.every(([dx, dz]) => at.has(grid(g.x + dx, g.z + dz)))) delete g.shore;
 }
 
 function offset([x, z]: [number, number]): { dx: number; dz: number } {
@@ -223,5 +233,5 @@ export function boatPosition(s: GameState, nowMs: number): { x: number; z: numbe
 export function flotsamPosition(item: FloatingItem, nowMs: number): { x: number; z: number } {
   const age = Math.min(1, Math.max(0, (nowMs - item.spawnedAt) / FLOAT_LIFETIME_MS));
   const lane = Math.min(1, Math.max(0, item.lane));
-  return { x: -14 + 28 * age, z: 6 + lane * 5 };
+  return { x: -16 + 32 * age, z: 11 + lane * 5 };
 }

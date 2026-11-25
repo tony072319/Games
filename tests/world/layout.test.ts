@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { boatPosition, flotsamPosition, worldLayout, type WorldItem } from '../../src/world/layout';
 import { MODELS } from '../../src/world/assets';
-import { DEST_HEX, hexToWorld, PIER_DIR, PIER_TILE } from '../../src/world/hex';
+import { DEST_HEX, hexDist, hexToWorld, PIER_DIR, PIER_TILE } from '../../src/world/hex';
+import { DECOR_IDS } from '../../src/core/decor';
+import { MAX_SHORES } from '../../src/world/water';
 import { emptyMaterials, newGame, type GameState } from '../../src/core/state';
 import { FLOAT_LIFETIME_MS } from '../../src/core/data';
 
@@ -132,11 +134,39 @@ describe('boat on a voyage', () => {
   });
 });
 
+describe('room on the island', () => {
+  test('the pier starts from the edge of the two-ring island', () => {
+    expect(hexDist(...PIER_TILE)).toBe(2);
+  });
+  test('drifting finds float clear of the island and everything decorated on it', () => {
+    const s = game((g) => {
+      g.levels.light = 10;
+      for (const id of DECOR_IDS) g.decor[id] = 3;
+    });
+    const land = worldLayout(s, NOW).filter((i) => i.model === 'kk/hex_grass');
+    for (const lane of [0, 0.5, 1])
+      for (let t = 0; t <= 1; t += 0.05) {
+        const p = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
+        for (const g of land) expect(Math.hypot(p.x - g.x, p.z - g.z)).toBeGreaterThan(2);
+      }
+  });
+  test('the water gets the island\'s outline, not every tile', () => {
+    const s = game((g) => {
+      g.levels.light = 10;
+      for (const id of DECOR_IDS) g.decor[id] = 3;
+    });
+    const shores = worldLayout(s, NOW).filter((i) => i.shore);
+    expect(shores.length).toBeLessThanOrEqual(MAX_SHORES);
+    // The centre tile is inland: no shore of its own.
+    expect(worldLayout(s, NOW).find((i) => i.key.startsWith('home:0,0'))?.shore).toBeUndefined();
+  });
+});
+
 describe('flotsam drift', () => {
   const item = { id: 1, material: 'wood' as const, spawnedAt: NOW, lane: 0 };
   test('crosses the sea from left to right over its life', () => {
-    expect(flotsamPosition(item, NOW).x).toBeCloseTo(-14);
-    expect(flotsamPosition(item, NOW + FLOAT_LIFETIME_MS).x).toBeCloseTo(14);
+    expect(flotsamPosition(item, NOW).x).toBeCloseTo(-16);
+    expect(flotsamPosition(item, NOW + FLOAT_LIFETIME_MS).x).toBeCloseTo(16);
   });
   test('near lane is closer to the camera, and nothing is NaN', () => {
     const far = flotsamPosition({ ...item, lane: 0 }, NOW + 1000);

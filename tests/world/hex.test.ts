@@ -17,15 +17,16 @@ describe('hex grid', () => {
     for (const [q, r] of ring(3)) expect(hexDist(q, r)).toBe(3);
   });
 
-  test('home island starts as the centre and its six neighbours', () => {
-    expect(HOME_TILES).toHaveLength(7);
+  test('home island starts two rings wide, with room to spare', () => {
+    expect(HOME_TILES).toHaveLength(19);
+    expect(Math.max(...HOME_TILES.map(([q, r]) => hexDist(q, r)))).toBe(2);
     expect(HOME_TILES.filter(([q, r]) => hexDist(q, r) === 0)).toHaveLength(1);
   });
 
   test('each island sits exactly where the light first reaches it', () => {
     for (const d of DESTS_IDS) {
       const [q, r] = DEST_HEX[d];
-      expect(hexDist(q, r), d).toBe(DESTS[d].needLight + 2);
+      expect(hexDist(q, r), d).toBe(DESTS[d].needLight + 4);
       expect(litRadius(DESTS[d].needLight)).toBeGreaterThanOrEqual(hexDist(q, r));
       expect(litRadius(DESTS[d].needLight - 1)).toBeLessThan(hexDist(q, r));
     }
@@ -46,7 +47,7 @@ describe('hex grid', () => {
   });
 
   test('lit radius in world units', () => {
-    expect(litRadius(3)).toBe(5);
-    expect(litRadiusWorld(3)).toBe(10);
+    expect(litRadius(3)).toBe(7);
+    expect(litRadiusWorld(3)).toBe(14);
   });
 });

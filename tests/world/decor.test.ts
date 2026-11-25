@@ -24,10 +24,10 @@ describe('decorations in the world', () => {
     expect(parts.length).toBeGreaterThan(0);
     for (const p of parts) expect(Math.hypot(p.x - x, p.z - z)).toBeLessThan(1.2);
   });
-  test('ten different slots in the second ring, none on the pier', () => {
+  test('ten different slots in the third ring, none on the pier', () => {
     const slots = DECOR_IDS.map((id) => DECOR_SLOTS[id]);
     expect(new Set(slots.map((h) => h.join())).size).toBe(10);
-    for (const h of slots) expect(hexDist(...h)).toBe(2);
+    for (const h of slots) expect(hexDist(...h)).toBe(3);
     // Away from the line the pier takes from its tile.
     const [px, pz] = hexToWorld(...PIER_TILE);
     const len = Math.hypot(...PIER_DIR);
