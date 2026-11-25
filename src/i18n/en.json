@@ -337,5 +337,9 @@
   "credits.close": "OK",
   "world.loading": "Lighting up the island… {n}%",
   "polish.do": "Polish the lamp ({n} glow) · more finds for half an hour",
-  "polish.on": "Lamp polished · {m} min left"
+  "polish.on": "Lamp polished · {m} min left",
+  "upg.recycle.name": "Recycler",
+  "upg.recycle.desc": "Turns spare bottles into rope and spare wood into parts.",
+  "upg.recycle.next.build": "Once built: spare bottles become rope, spare wood becomes parts.",
+  "upg.recycle.next.faster": "Next level: converts faster."
 }

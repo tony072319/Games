@@ -121,7 +121,7 @@ describe('saves from before the boat', () => {
     expect(r.status).toBe('loaded');
     expect(r.state.materials.wood).toBe(50);
     expect(r.state.materials.glow).toBe(0);
-    expect(r.state.levels).toEqual({ net: 7, storage: 3, light: 1, speed: 1, cargo: 1 });
+    expect(r.state.levels).toEqual({ net: 7, storage: 3, light: 1, recycle: 0, speed: 1, cargo: 1 });
     expect(r.state.boat).toEqual({ built: false, voyage: null, cargo: null });
     expect(r.state.discovered).toEqual([]);
   });

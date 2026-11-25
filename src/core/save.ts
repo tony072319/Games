@@ -99,7 +99,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   if (!isObj(data.levels)) dropped = true;
   for (const u of UPGRADES) {
     const v = levels[u];
-    if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_LEVEL[u]) state.levels[u] = v;
+    if (typeof v === 'number' && Number.isInteger(v) && v >= (u === 'recycle' ? 0 : 1) && v <= MAX_LEVEL[u]) state.levels[u] = v;
     else if (u in levels) dropped = true;
   }
 

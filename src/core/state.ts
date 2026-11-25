@@ -81,7 +81,7 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     version: 1,
     materials: emptyMaterials(),
     chest: emptyMaterials(),
-    levels: { net: 1, storage: 1, light: 1, speed: 1, cargo: 1 },
+    levels: { net: 1, storage: 1, light: 1, recycle: 0, speed: 1, cargo: 1 },
     lastActiveAt: nowMs,
     settings: { lang, sound: true, calm: false, mini: false },
     stats: { tapped: 0, tutorial: 0 },

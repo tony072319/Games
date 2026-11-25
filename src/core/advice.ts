@@ -1,6 +1,6 @@
 import { DESTS, DOCK_LIGHT, canSail } from './boat';
 import { DEST_IDS, MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, PANEL_UPGRADES, type Materials, type UpgradeId } from './data';
-import { autoRate, canBuy, chestCapacity, chestTotal, isMaxLevel, netRate, upgradeCost } from './economy';
+import { autoRate, canBuy, chestCapacity, chestTotal, isMaxLevel, netRate, upgradeCost, upgradeLocked } from './economy';
 import { emptyMaterials, type GameState } from './state';
 
 /** What the net brings in per second, by material (island production not counted). */
@@ -50,11 +50,12 @@ export function nextEffect(s: GameState, id: UpgradeId): Effect | null {
     const key = L + 1 === DOCK_LIGHT ? 'dock' : L + 1 === MAX_LEVEL.light ? 'end' : 'reach';
     return { kind: 'unlock', key: `upg.light.next.${key}` };
   }
+  if (id === 'recycle') return { kind: 'unlock', key: L === 0 ? 'upg.recycle.next.build' : 'upg.recycle.next.faster' };
   if (id === 'speed') return { kind: 'percent', value: 8 };
   return { kind: 'percent', value: Math.round(25 / (1 + 0.25 * (L - 1))) };
 }
 
-export type GoalTarget = 'flotsam' | 'chest' | 'boat' | 'net' | 'storage' | 'light' | 'map';
+export type GoalTarget = 'flotsam' | 'chest' | 'boat' | 'net' | 'storage' | 'light' | 'recycle' | 'map';
 
 export interface Goal {
   key: string;
@@ -82,7 +83,7 @@ export function nextGoal(s: GameState): Goal {
   let best: UpgradeId | null = null;
   let bestEta = Infinity;
   for (const id of PANEL_UPGRADES) {
-    if (isMaxLevel(s, id)) continue;
+    if (isMaxLevel(s, id) || upgradeLocked(s, id)) continue;
     const eta = etaSeconds(s, upgradeCost(id, s.levels[id], s));
     if (eta !== null && eta < bestEta) {
       best = id;

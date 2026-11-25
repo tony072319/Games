@@ -905,7 +905,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (!goal) return;
     const g = goal.target;
     if (g === 'map') return openMap();
-    if (g === 'net' || g === 'storage' || g === 'light') panel.show(g);
+    if (g === 'net' || g === 'storage' || g === 'light' || g === 'recycle') panel.show(g);
     const spotOn: Element | null =
       g === 'chest' ? chestBtn : g === 'boat' ? boatBtn : g === 'flotsam' ? flotsamLayer : g === 'storage' ? chestBtn : stage.querySelector(`.hit[data-hit="${g}"]`);
     if (!spotOn) return;

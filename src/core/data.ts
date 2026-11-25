@@ -5,12 +5,12 @@ export type Materials = Record<MaterialId, number>;
 /** Share of drifting items that are each material. Must sum to 1. Glow never drifts: only the boat finds it. */
 export const MATERIAL_WEIGHTS: Materials = { wood: 0.5, plastic: 0.3, rope: 0.15, metal: 0.05, glow: 0 };
 
-export type UpgradeId = 'net' | 'storage' | 'light' | 'speed' | 'cargo';
-export const UPGRADES: readonly UpgradeId[] = ['net', 'storage', 'light', 'speed', 'cargo'];
+export type UpgradeId = 'net' | 'storage' | 'light' | 'recycle' | 'speed' | 'cargo';
+export const UPGRADES: readonly UpgradeId[] = ['net', 'storage', 'light', 'recycle', 'speed', 'cargo'];
 /** Upgrades shown in the main panel; the boat's live on the sea map. */
-export const PANEL_UPGRADES: readonly UpgradeId[] = ['net', 'storage', 'light'];
+export const PANEL_UPGRADES: readonly UpgradeId[] = ['net', 'storage', 'light', 'recycle'];
 export const BOAT_UPGRADES: readonly UpgradeId[] = ['speed', 'cargo'];
-export const MAX_LEVEL: Record<UpgradeId, number> = { net: 50, storage: 11, light: 10, speed: 10, cargo: 10 };
+export const MAX_LEVEL: Record<UpgradeId, number> = { net: 50, storage: 11, light: 10, recycle: 10, speed: 10, cargo: 10 };
 
 export type DestId = 'wreck' | 'gullrock' | 'oldlight' | 'firefly';
 export const DEST_IDS: readonly DestId[] = ['wreck', 'gullrock', 'oldlight', 'firefly'];

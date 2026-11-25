@@ -27,4 +27,10 @@ export const T = {
   POLISH_GLOW: 3,
   POLISH_MS: 30 * 60 * 1000,
   POLISH_SPAWN_BONUS: 0.6,
+  /** The recycler: lighthouse level that unlocks it, source items per second per level, how much surplus it keeps. */
+  RECYCLE_LIGHT: 4,
+  RECYCLE_RATE: 0.5,
+  RECYCLE_SURPLUS: 10,
+  PLASTIC_PER_ROPE: 3,
+  WOOD_PER_METAL: 5,
 };

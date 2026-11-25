@@ -80,6 +80,10 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
   if (id === 'speed') {
     c.wood = g(150, 1.9);
     c.metal = g(30, 1.9);
+  } else if (id === 'recycle') {
+    c.wood = g(400, 1.8, 0);
+    c.metal = g(60, 1.8, 0);
+    if (L >= 5) c.glow = 2 * (L - 4);
   } else if (id === 'cargo') {
     c.wood = g(120, 1.9);
     c.rope = g(40, 1.9);
@@ -91,8 +95,13 @@ export function isMaxLevel(state: GameState, id: UpgradeId): boolean {
   return state.levels[id] >= MAX_LEVEL[id];
 }
 
+/** Upgrades that are not offered yet (the recycler waits for lighthouse 4). */
+export function upgradeLocked(state: GameState, id: UpgradeId): boolean {
+  return id === 'recycle' && state.levels.light < T.RECYCLE_LIGHT;
+}
+
 export function canBuy(state: GameState, id: UpgradeId): boolean {
-  if (isMaxLevel(state, id)) return false;
+  if (isMaxLevel(state, id) || upgradeLocked(state, id)) return false;
   const cost = upgradeCost(id, state.levels[id], state);
   return MATERIALS.every((m) => state.materials[m] >= cost[m]);
 }

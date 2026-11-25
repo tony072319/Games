@@ -1,5 +1,5 @@
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
-import { canBuy, isMaxLevel, upgradeCost } from '../core/economy';
+import { canBuy, isMaxLevel, upgradeCost, upgradeLocked } from '../core/economy';
 import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
 import { affordState, etaSeconds, nextEffect } from '../core/advice';
@@ -52,6 +52,7 @@ export function upgradeThumb(id: UpgradeId, state: GameState): string {
   if (id === 'net') return `<svg viewBox="14 336 134 160" aria-hidden="true">${netSvg(L)}</svg>`;
   if (id === 'storage') return chestSvg(0, L);
   if (id === 'light') return `<svg viewBox="128 218 104 104" aria-hidden="true">${towerSvg(L)}</svg>`;
+  if (id === 'recycle') return `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5l5 8h-3v5h-4v-5h-3z M7 25l3-9 3 5-2 1 3 4z M25 25l-3-9-3 5 2 1-3 4z" fill="#8fd0b0"/></svg>`;
   return boatSvg(id === 'cargo', state.levels.cargo);
 }
 
@@ -62,7 +63,7 @@ function signature(state: GameState, ids: readonly UpgradeId[]): string {
       const cost = upgradeCost(id, state.levels[id], state);
       const eta = etaSeconds(state, cost);
       // Redraw when affordability changes, or when the "about N minutes" label would.
-      return `${id}${state.levels[id]}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
+      return `${id}${state.levels[id]}${upgradeLocked(state, id) ? 'L' : ''}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
     })
     .join('|');
 }
@@ -79,6 +80,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
   function render(state: GameState) {
     root.replaceChildren();
     for (const id of ids) {
+      if (upgradeLocked(state, id)) continue;
       const cost = isMaxLevel(state, id) ? null : upgradeCost(id, state.levels[id], state);
       root.append(
         upgradeCard(lang, {

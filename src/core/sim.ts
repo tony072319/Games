@@ -6,6 +6,7 @@ import { autoSail, settleVoyage } from './boat';
 import { has } from './talents';
 import { chestCapacity, chestTotal } from './economy';
 import { accrueIslands } from './islands';
+import { recycle } from './recycle';
 import { emptyMaterials, type GameState } from './state';
 
 export interface OfflineReport {
@@ -23,6 +24,7 @@ export function applyOffline(state: GameState, nowMs: number): OfflineReport {
   settleVoyage(state, nowMs);
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
   const { creditedSeconds, gained } = fillChest(state, seconds);
+  recycle(state, seconds);
   state.lastActiveAt = nowMs;
   return { seconds, creditedSeconds, gained };
 }
@@ -52,6 +54,7 @@ export function tick(state: GameState, nowMs: number): OfflineReport | null {
   const dt = (nowMs - state.lastActiveAt) / 1000;
   if (dt >= 0 && dt <= LIVE_DT_MAX_SECONDS) {
     fillChest(state, dt);
+    recycle(state, dt);
     // With the auto-chest talent, a full chest empties itself while the game is open.
     if (has(state, 'autoChest') && chestTotal(state.chest) >= chestCapacity(state) * 0.999) collectChest(state);
     state.lastActiveAt = nowMs;

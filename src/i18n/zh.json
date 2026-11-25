@@ -337,5 +337,9 @@
   "credits.close": "好的",
   "world.loading": "正在点亮小岛… {n}%",
   "polish.do": "擦亮灯（{n} 萤光）· 半小时内漂来更多",
-  "polish.on": "灯擦亮了 · 还剩 {m} 分钟"
+  "polish.on": "灯擦亮了 · 还剩 {m} 分钟",
+  "upg.recycle.name": "回收站",
+  "upg.recycle.desc": "把多出来的瓶子编成绳子，木头换成零件。",
+  "upg.recycle.next.build": "建好后：多出来的瓶子变绳子，木头变零件。",
+  "upg.recycle.next.faster": "下一级：换得更快。"
 }
