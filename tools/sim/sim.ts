@@ -129,6 +129,17 @@ function chooseDest(s: GameState, untilNext: number): DestId | null {
 }
 
 export function simulate(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: number } = {}): SimReport {
+  // Core calls that default to Math.random (voyage rewards) must repeat too: seed it for the run.
+  const realRandom = Math.random;
+  Math.random = mulberry((opts.seed ?? 7) + 1);
+  try {
+    return run(profile, opts);
+  } finally {
+    Math.random = realRandom;
+  }
+}
+
+function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: number }): SimReport {
   const seasWanted = opts.seas ?? 3;
   const maxDays = opts.maxDays ?? 200;
   const rng = mulberry(opts.seed ?? 7);
