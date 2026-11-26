@@ -23,7 +23,7 @@ const groundAt = (items: ReturnType<typeof worldLayout>, x: number, z: number) =
 describe('the island grows', () => {
   test('expanding makes the home ground bigger', () => {
     const r = (land: number) => worldLayout(full(land), NOW).find((i) => i.ground?.kind === 'home')!.ground!.radius;
-    expect(r(LAND_MAX)).toBeGreaterThan(r(0) * 1.3);
+    expect(r(LAND_MAX)).toBeGreaterThan(r(0) * 1.2);
     expect(r(5)).toBeGreaterThan(r(4));
   });
   test('fully grown: shores fit, finds float over open water', () => {

@@ -4,13 +4,15 @@ import { DECOR_IDS } from '../core/decor';
  * Pure, so it can be tested; the renderer diffs it by `key`.
  */
 import { DESTS, boatOf } from '../core/boat';
+import { townShown } from '../core/town';
+import { TOWN_SLOTS, townWalkers } from './town';
 import { FLOAT_LIFETIME_MS, type BuildingId, type DestId } from '../core/data';
 import type { FloatingItem } from '../core/flotsam';
 import { ISLAND_BUILDINGS, buildingLevel } from '../core/islands';
 import type { GameState } from '../core/state';
 import { MODELS, type ModelId } from './assets';
 import { DEST_HEX, hexToWorld, litRadius, hexDist } from './hex';
-import { DEST_SHAPES, heightAt, homeShape, outline, type Shape } from './terrain';
+import { DEST_SHAPES, heightAt, homeShape, outline, ringPoint, type Shape } from './terrain';
 import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
 export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | `island:${DestId}` | `bld:${BuildingId}`;
@@ -30,7 +32,7 @@ export interface WorldItem {
   /** Blend the colours toward this colour by this much (snow, fog), for when a tint is not enough. */
   wash?: [number, number];
   tag?: Tag;
-  glow?: 'lamp' | 'window' | 'lantern' | 'fire';
+  glow?: 'lamp' | 'window' | 'pane' | 'lantern' | 'fire';
   anim?: string;
   /** Land: the renderer adds a sandy rim and foam around it (radius in world units). */
   shore?: number;
@@ -93,6 +95,8 @@ function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az
 
 /** Ground colour per sea: fresh grass at dusk, muted in the fog, snowy under the aurora. */
 export const GROUND: Record<GameState['sea'], [number, number] | undefined> = { dusk: undefined, fog: [0x9aa49a, 0.45], aurora: [0xf4f8ff, 0.8] };
+/** The town's buildings take a lighter touch of the sea's colour (grey stone in the fog, snow on the roofs). */
+const TOWN_WASH: Record<GameState['sea'], [number, number] | undefined> = { dusk: undefined, fog: [0x9aa49a, 0.22], aurora: [0xf4f8ff, 0.3] };
 
 /** One sculpted island. Its key changes with its shape and colour, so the renderer rebuilds it then. */
 function ground(items: WorldItem[], key: string, shape: Shape, wash?: [number, number], tag?: Tag) {
@@ -101,9 +105,7 @@ function ground(items: WorldItem[], key: string, shape: Shape, wash?: [number, n
 
 /** Decorations stand round the island's shore, evenly spaced, leaving the pier side free. */
 export function decorSpot(i: number, land: number): [number, number] {
-  const a = ((50 + i * 30) * Math.PI) / 180;
-  const r = 4.4 + land * 0.08;
-  return [Math.cos(a) * r, Math.sin(a) * r];
+  return ringPoint(homeShape(land), 0.84, ((78 + i * 28) * Math.PI) / 180);
 }
 
 export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
@@ -114,36 +116,36 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   // Home island: one piece of sculpted ground that grows as you expand it.
   const home = homeShape(s.land);
   ground(items, 'home', home, GROUND[s.sea]);
-  const at = (q: number, r: number, dx = 0, dz = 0): [number, number] => {
-    const [x, z] = hexToWorld(q, r);
-    return [x + dx, z + dz];
-  };
+  // Places on the island by ring (share of the radius) and angle; the island's rings are tiers.
+  const on = (frac: number, a: number): [number, number] => ringPoint(home, frac, a);
 
   place(items, `light:${light}`, LIGHT_LOOKS[light] ?? LIGHT_LOOKS[10], 0, 0, 0, 'light');
-  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...at(1, -2, 0.1, 0.1), 0);
-  place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...at(2, -1, 0, 0.2), 0, 'chest');
-  const [nx, nz] = at(-1, 2, 0.3, -0.1);
+  // The keeper's house beside the lighthouse on the peak; chest and net down at the harbour by the pier.
+  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.14, -2.0), 0);
+  place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...on(0.84, 0.72), 0, 'chest');
+  const [nx, nz] = on(0.85, 1.0);
   place(items, `net:${Math.min(50, s.levels.net)}`, netParts(s.levels.net), nx, nz, 0, 'net');
 
-  // Greenery that comes with a brighter light.
-  const deco: Part[] = [
-    { part: 'tree1', model: 'nature/round_tree', dx: 0, dz: 0 },
-    { part: 'tree2', model: 'nature/pine_tree', ...offset(at(-1, -1, -0.3, -0.2)) },
+  // Greenery and things that come with a brighter light, on the peak and the town terrace.
+  const deco: [string, ModelId, number, number, Partial<Part>?][] = [
+    ['tree1', 'nature/round_tree', 0.2, 2.6],
+    ['tree2', 'nature/pine_tree', 0.21, -0.9],
   ];
-  if (light >= 2) deco.push({ part: 'fire', model: 'viking/firepit', ...offset(at(-1, 1, 0.4, 0.3)), glow: 'fire' });
-  if (light >= 3) deco.push({ part: 'flowers', model: 'nature/flower_yellow', ...offset(at(-2, 1, -0.2, 0)) });
-  if (light >= 4) deco.push({ part: 'bush', model: 'nature/bush_berries', ...offset(at(2, -2, 0, 0)) });
-  if (light >= 6) deco.push({ part: 'mill', model: 'kk/building_windmill_blue', ...offset(at(-2, 0, -0.2, 0)), tint: 0xfff0e0 });
-  if (light >= 8) deco.push({ part: 'hammock', model: 'huts/hammock', ...offset(at(1, -1, 0.2, 0.3)), rotY: 0.9 });
-  const [tx, tz] = at(-1, 0, 0.2, -0.5);
-  place(items, 'deco', deco.map((p) => (p.part === 'tree1' ? p : { ...p, dx: p.dx - tx, dz: p.dz - tz })), tx, tz, 0);
+  if (light >= 2) deco.push(['fire', 'viking/firepit', 0.6, 1.25, { glow: 'fire' }]);
+  if (light >= 3) deco.push(['flowers', 'nature/flower_yellow', 0.18, 1.5]);
+  if (light >= 4) deco.push(['bush', 'nature/bush_berries', 0.4, -0.5]);
+  if (light >= 6) deco.push(['mill', 'kk/building_windmill_blue', 0.6, -2.75, { tint: 0xfff0e0 }]);
+  if (light >= 8) deco.push(['hammock', 'huts/hammock', 0.62, 2.2, { rotY: 0.9 }]);
+  for (const [part, model, frac, a, extra] of deco) {
+    const [px, pz] = on(frac, a);
+    place(items, 'deco', [{ part, model, dx: 0, dz: 0, ...extra }], px, pz, 0);
+  }
 
   // The ground won by expanding: now and then a tuft of grass or flowers on it.
   const TUFTS: ModelId[] = ['nature/grass_tuft', 'nature/flower_yellow', 'lh/beach_grass', 'nature/flower_purple', 'nature/bush_round'];
   for (let i = 1; i <= s.land; i++) {
     const a = i * 2.39996;
-    const r = 5.6 + (i % 5) * 0.45;
-    const [lx, lz] = [Math.cos(a) * r, Math.sin(a) * r];
+    const [lx, lz] = on(0.74 + (i % 4) * 0.035, a);
     if (heightAt(home, lx, lz) > 0.2 && Math.abs(Math.atan2(lz, lx) - Math.atan2(PDZ, PDX)) > 0.35) items.push({ key: `land:${i}:tuft`, model: TUFTS[i % TUFTS.length], x: lx, y: 0, z: lz, rotY: i });
   }
 
@@ -154,6 +156,17 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     const [dx, dz] = decorSpot(DECOR_IDS.indexOf(id), s.land);
     place(items, `decor:${id}:${tier}`, DECOR_LOOKS[id][tier - 1], dx, dz, 0);
   }
+
+  // The town: built place by place as the sea's work goes on; people stroll its street.
+  const shown = townShown(s, TOWN_SLOTS.length);
+  const townWash = TOWN_WASH[s.sea];
+  for (let i = 0; i < shown; i++) {
+    const sl = TOWN_SLOTS[i];
+    const [x, z] = sl.at(s.land);
+    const model = sl.models[s.sea];
+    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: sl.glow, wash: townWash });
+  }
+  for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
 
   // Dock and boat.
   const hasDock = light >= 3 || s.boat.built;
@@ -184,12 +197,12 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   }
 
   // Life: a few who live here, more as the light grows.
-  const [hx, hz] = at(1, -2, -0.6, 0.9);
+  const [hx, hz] = on(0.12, -1.45);
   if (light >= 2) items.push({ key: 'life:keeper', model: 'kc/character-male-a', x: hx, y: 0, z: hz, rotY: 0.3, anim: 'idle' });
-  const [cx, cz] = at(1, 1, -0.2, 0);
+  const [cx, cz] = on(0.83, 0.88);
   items.push({ key: 'life:cat', model: 'kpet/animal-cat', x: cx, y: 0, z: cz, rotY: 1.2 });
   if (light >= 4) {
-    const [kx, kz] = at(-2, 2, 0, 0);
+    const [kx, kz] = on(0.58, 1.6);
     items.push({ key: 'life:chick', model: 'kpet/animal-chick', x: kx, y: 0, z: kz, rotY: -0.6 });
   }
   if (light >= 7) items.push({ key: 'life:parrot', model: 'kpet/animal-parrot', x: 0.9, y: 1.35, z: 0.7, rotY: 0 });
@@ -265,9 +278,6 @@ export function shoresOf(items: WorldItem[]): [number, number, number][] {
 }
 
 
-function offset([x, z]: [number, number]): { dx: number; dz: number } {
-  return { dx: x, dz: z };
-}
 
 /** Where the boat is: tied up at the pier, or on its way to an island and back. */
 export function boatPosition(s: GameState, nowMs: number, n: 0 | 1 = 0): { x: number; z: number; rotY: number; atDock: boolean } {
@@ -283,12 +293,12 @@ export function boatPosition(s: GameState, nowMs: number, n: 0 | 1 = 0): { x: nu
   return { x, z, rotY: Math.atan2(dx, dz), atDock: false };
 }
 
-/** Sailing room around home: just outside the fully grown island. */
-const SEA_RING = 11;
 
 /** From the mooring out to open water, around the island at SEA_RING, then in to stop short of the island. */
 function boatRoute(dest: DestId, land: number, n: 0 | 1 = 0): [number, number][] {
   const [mx, mz] = mooring(land, n);
+  // Sailing room: just outside the island's widest lobe.
+  const SEA_RING = homeShape(land).radius * 1.17 + 2;
   const [ix, iz] = hexToWorld(...DEST_HEX[dest]);
   const a0 = Math.atan2(mz, mx);
   const a1 = Math.atan2(iz, ix);

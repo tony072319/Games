@@ -20,7 +20,7 @@ import { shoresOf, type Tag, type WorldItem, type boatPosition } from './layout'
 import { terrainGeometry } from './terrain';
 
 /** Ground colours for sculpted islands (the sea's wash is applied on top). */
-const GROUND_COLOURS = { sand: 0xf2dca0, grass: 0x8cc25a, rock: 0xa39a8c };
+const GROUND_COLOURS = { sand: 0xf2dca0, grass: 0x8cc25a, rock: 0xa39a8c, path: 0xcdb48a };
 import { paletteFor, type Palette } from './palette';
 import { createSky } from './sky3d';
 import { disposeToon, toonMaterial, toonRamp } from './toon';
@@ -278,12 +278,14 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       pl.userData.base = 8;
       lights.push(pl);
       add(pl);
-    } else if (g === 'window') {
+    } else if (g === 'window' || g === 'pane') {
       const w = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.05), glowMat(0xffb860));
       w.userData.ownGeometry = true;
       w.position.set(c.x + 0.25, box.min.y + 0.75, box.max.z - 0.05);
       w.rotation.y = p.item.rotY;
       add(w);
+      // A pane only glows; a lit window also casts a little light (kept few: lights are costly).
+      if (g === 'pane') return;
       const pl = new THREE.PointLight(0xffa860, 2.5, 3.5);
       pl.position.copy(w.position).add(new THREE.Vector3(0, 0, 0.4));
       pl.userData.base = 2.5;

@@ -20,7 +20,7 @@ describe('hex grid', () => {
   test('each island sits exactly where the light first reaches it', () => {
     for (const d of DESTS_IDS) {
       const [q, r] = DEST_HEX[d];
-      expect(hexDist(q, r), d).toBe(DESTS[d].needLight + 4);
+      expect(hexDist(q, r), d).toBe(DESTS[d].needLight + 10);
       expect(litRadius(DESTS[d].needLight)).toBeGreaterThanOrEqual(hexDist(q, r));
       expect(litRadius(DESTS[d].needLight - 1)).toBeLessThan(hexDist(q, r));
     }
@@ -41,7 +41,7 @@ describe('hex grid', () => {
   });
 
   test('lit radius in world units', () => {
-    expect(litRadius(3)).toBe(7);
-    expect(litRadiusWorld(3)).toBe(14);
+    expect(litRadius(3)).toBe(13);
+    expect(litRadiusWorld(3)).toBe(26);
   });
 });

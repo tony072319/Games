@@ -32,7 +32,18 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-function radiusAt(s: Shape, a: number): number {
+/** The home island's rings, as shares of its radius: harbour flats, the town terrace (and its street), the peak's edge. */
+export const HARBOUR_RING = 0.8;
+export const TOWN_RING = 0.5;
+export const PEAK_RING = 0.27;
+
+/** A point a share `frac` of the way out from the centre, at angle `a`. */
+export function ringPoint(s: Shape, frac: number, a: number): [number, number] {
+  const r = radiusAt(s, a) * frac;
+  return [s.cx + Math.cos(a) * r, s.cz + Math.sin(a) * r];
+}
+
+export function radiusAt(s: Shape, a: number): number {
   let k = 1;
   for (const [amp, f, ph] of s.lobes) k += amp * Math.sin(f * a + ph);
   return s.radius * k;
@@ -52,6 +63,7 @@ export function heightAt(s: Shape, x: number, z: number): number {
   const a = Math.atan2(dz, dx);
   const t = Math.hypot(dx, dz) / radiusAt(s, a);
   if (t >= 1) return -0.2 - (t - 1) * 2;
+  if (s.kind === 'home') return withCliff(s, a, t, homeHeight(s, x, z, a, t));
   // The beach: from the waterline up to BEACH_TOP.
   const beach = BEACH_TOP * Math.min(1, (1 - t) / (1 - BEACH));
   const inland = smooth(BEACH, BEACH - 0.32, t);
@@ -67,7 +79,26 @@ export function heightAt(s: Shape, x: number, z: number): number {
     default:
       h = beach + inland * (s.plateau + 0.45 * hills(s, x, z));
   }
-  // Cliffs: on one side the high ground runs right to the edge and drops into the sea.
+  return withCliff(s, a, t, h);
+}
+
+/**
+ * The home island in tiers, like a hill town: a narrow beach, the harbour flats, a rock wall up to
+ * the town terrace, another up to the peak where the lighthouse stands. The walls wander a little.
+ */
+function homeHeight(s: Shape, x: number, z: number, a: number, t: number): number {
+  const beach = BEACH_TOP * Math.min(1, (1 - t) / 0.07);
+  if (t > 0.93) return beach;
+  const w1 = 0.68 + 0.025 * Math.sin(3 * a + 0.7);
+  const w2 = PEAK_RING + 0.02 * Math.sin(4 * a + 2);
+  const harbour = BEACH_TOP + 0.27 * smooth(0.93, 0.88, t);
+  const town = 1.6 * smooth(w1 + 0.015, w1 - 0.015, t);
+  const peak = 1.9 * smooth(w2 + 0.02, w2 - 0.02, t) + 0.5 * smooth(w2, 0, t);
+  return harbour + town + peak + 0.12 * hills(s, x, z) * smooth(0.93, 0.85, t);
+}
+
+/** Cliffs: on one side the high ground runs right to the edge and drops into the sea. */
+function withCliff(s: Shape, a: number, t: number, h: number): number {
   const [ca, cw] = s.cliff;
   if (cw > 0) {
     let da = Math.abs(a - ca) % (2 * Math.PI);
@@ -98,14 +129,15 @@ export function homeShape(land: number): Shape {
     kind: 'home',
     cx: 0,
     cz: 0,
-    radius: 6 + Math.max(0, land) * 0.08,
+    radius: 13 + Math.max(0, land) * 0.1,
     lobes: [
       [0.08, 3, 0.4],
       [0.05, 5, 2.1],
       [0.03, 7, 4.0],
     ],
-    plateau: 0.35,
-    cliff: [-2.2, 0.28],
+    // The town terrace's height: the back cliff rises to it.
+    plateau: 2.1,
+    cliff: [-2.2, 0.22],
     seed: 1.3,
   };
 }
@@ -129,13 +161,15 @@ export interface GroundColours {
   rock: number;
   /** Sea tint for the ground: [colour, amount]. */
   wash?: [number, number];
+  /** The town's street (home island only). */
+  path?: number;
 }
 
 /**
  * The island's ground as a low-poly mesh with one colour per face: sand near the water, grass
  * inland, rock where it is steep. Polar grid out a little past the waterline (that part is under water).
  */
-export function terrainGeometry(s: Shape, c: GroundColours, rings = 22, spokes = 72): THREE.BufferGeometry {
+export function terrainGeometry(s: Shape, c: GroundColours, rings = s.kind === 'home' ? 64 : 22, spokes = s.kind === 'home' ? 108 : 72): THREE.BufferGeometry {
   const tMax = 1.08;
   const pt = (i: number, j: number): [number, number, number] => {
     const t = (i / rings) * tMax;
@@ -154,6 +188,7 @@ export function terrainGeometry(s: Shape, c: GroundColours, rings = 22, spokes =
   const sand = tone(c.sand);
   const grass = tone(c.grass);
   const rock = tone(c.rock);
+  const path = tone(c.path ?? c.sand);
   const pos: number[] = [];
   const col: number[] = [];
   const tri = (p: [number, number, number][]) => {
@@ -162,7 +197,14 @@ export function terrainGeometry(s: Shape, c: GroundColours, rings = 22, spokes =
     const span = top - Math.min(...ys);
     const run = Math.max(0.05, Math.hypot(p[0][0] - p[1][0], p[0][2] - p[1][2]), Math.hypot(p[1][0] - p[2][0], p[1][2] - p[2][2]));
     const steep = span / run;
-    const base = steep > 0.75 || (s.kind === 'rock' && top > 1) ? rock : top < BEACH_TOP + 0.06 ? sand : grass;
+    let base = steep > 0.75 || (s.kind === 'rock' && top > 1) ? rock : top < BEACH_TOP + 0.06 ? sand : grass;
+    // The town's street: a ring of packed earth round the terrace.
+    if (s.kind === 'home' && c.path !== undefined && base === grass) {
+      const mx = (p[0][0] + p[1][0] + p[2][0]) / 3 - s.cx;
+      const mz = (p[0][2] + p[1][2] + p[2][2]) / 3 - s.cz;
+      const tt = Math.hypot(mx, mz) / radiusAt(s, Math.atan2(mz, mx));
+      if (Math.abs(tt - TOWN_RING) < 0.035) base = path;
+    }
     // A little per-face variation so the ground does not look flat-printed.
     const k = 0.94 + 0.06 * Math.sin(p[0][0] * 3.1 + p[0][2] * 1.7);
     for (const q of p) {
