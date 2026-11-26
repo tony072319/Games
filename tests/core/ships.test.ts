@@ -82,3 +82,17 @@ describe('guiding a ship with the light', () => {
     expect(loadGame({ getItem: () => JSON.stringify(data), setItem() {} }, 0, 'zh').state.stats.guided).toBe(0);
   });
 });
+
+describe('near dawn', () => {
+  test('a ship still on screen can be guided until it leaves, even as the night fades', () => {
+    const s = newGame(0, 'zh');
+    const f = newShipField(0);
+    // The last moments of a night: a ship appears, then the sky starts to lighten.
+    let t = Math.floor(SKY_CYCLE_MS * 0.79);
+    while (f.ships.length === 0 && t < SKY_CYCLE_MS * 0.8) updateShips(f, (t += 500), quiet);
+    expect(f.ships).toHaveLength(1);
+    const later = t + T.SHIP_LIFE_MS * 0.8;
+    expect(nightness(later)).toBeLessThanOrEqual(0.3);
+    expect(guideShip(s, f, f.ships[0].id, later, quiet)).not.toBeNull();
+  });
+});

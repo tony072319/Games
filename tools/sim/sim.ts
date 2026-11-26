@@ -31,12 +31,14 @@ export interface Profile {
   /** Minutes each visit lasts. */
   visit: number;
   tapsPerCheck: number;
+  /** Guides a passing ship on night-time visits (default true). */
+  guide?: boolean;
 }
 
 export const IDEAL: Profile = { name: 'ideal', checks: Array.from({ length: 144 }, (_, i) => i * 10), visit: 2, tapsPerCheck: 3 };
 export const NORMAL: Profile = { name: 'normal', checks: [8 * 60, 13 * 60, 21 * 60], visit: 3, tapsPerCheck: 5 };
 /** A new player's first session: plays for fifteen minutes straight from 8:00 (every minute, tapping eight finds), then like NORMAL. */
-export const FIRST: Profile = { name: 'first', checks: [...Array.from({ length: 15 }, (_, i) => 8 * 60 + i), 13 * 60, 21 * 60], visit: 1, tapsPerCheck: 8 };
+export const FIRST: Profile = { name: 'first', checks: [...Array.from({ length: 15 }, (_, i) => 8 * 60 + i), 13 * 60, 21 * 60], visit: 1, tapsPerCheck: 8, guide: false };
 export const KEEN: Profile = { name: 'keen', checks: Array.from({ length: 16 }, (_, i) => (8 + i) * 60), visit: 3, tapsPerCheck: 10 };
 
 export type Source = 'net' | 'boat' | 'islands' | 'taps';
@@ -222,7 +224,7 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
         }
       }
       // At night the player guides one passing ship with the light.
-      if (m === 0 && nightness(at) > 0.5) {
+      if (m === 0 && profile.guide !== false && nightness(at) > 0.5) {
         const f = newShipField(at - T.SHIP_EVERY_MS);
         updateShips(f, at, rng);
         const gift = f.ships[0] ? guideShip(s, f, f.ships[0].id, at, rng) : null;

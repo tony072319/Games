@@ -49,7 +49,8 @@ export function updateShips(f: ShipField, nowMs: number, rng: () => number): voi
 /** Guide a passing ship: its thank-you is added to your materials and returned (null if it can't be guided). */
 export function guideShip(s: GameState, f: ShipField, id: number, nowMs: number, rng: () => number = Math.random): Materials | null {
   const ship = f.ships.find((x) => x.id === id);
-  if (!ship || ship.guidedAt !== undefined || nowMs - ship.spawnedAt >= T.SHIP_LIFE_MS || nightness(nowMs) <= 0.3) return null;
+  // Ships only come at night; one still crossing as dawn breaks can be guided until it leaves.
+  if (!ship || ship.guidedAt !== undefined || nowMs - ship.spawnedAt >= T.SHIP_LIFE_MS) return null;
   ship.guidedAt = nowMs;
   const gift = emptyMaterials();
   const total = netRate(s) * T.GUIDE_SECONDS;

@@ -993,7 +993,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   function renderGoal() {
     const lang = state.settings.lang;
     // The first night a ship passes (after the first-time steps): show how to guide it.
-    const shipOut = state.stats.tutorial >= TUTORIAL_STEPS && state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
+    // (Only with the 3D picture: without it there is no ship to tap.)
+    const shipOut = !!world && state.stats.tutorial >= TUTORIAL_STEPS && state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
     const g: Goal = shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);
     const p = { ...(g.params ?? {}) };
     if (typeof p.name === 'string') p.name = t(lang, `upg.${p.name}.name`);

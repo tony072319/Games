@@ -394,14 +394,18 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const seaShips = new Map<number, THREE.Object3D>();
 
   // The lighthouse beam: at night it sweeps the sea; guiding a ship, it swings onto it for a moment.
-  const beamGeo = new THREE.ConeGeometry(2.6, 30, 24, 1, true).translate(0, -15, 0).rotateZ(Math.PI / 2);
+  // Long enough to reach the ships passing far out.
+  const beamGeo = new THREE.ConeGeometry(4, 60, 24, 1, true).translate(0, -30, 0).rotateZ(Math.PI / 2);
   const beamMat = new THREE.MeshBasicMaterial({ color: 0xffe3a0, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const beam = new THREE.Mesh(beamGeo, beamMat);
   beam.visible = false;
   scene.add(beam);
   let beamAim: { x: number; z: number; until: number } | null = null;
   let beamAngle = 0;
+  /** The scene clock last seen by updateBeam (it pauses with the tab and slows in calm mode). */
+  let sceneTime = 0;
   function updateBeam(t: number, night: number) {
+    sceneTime = t;
     const tower = tagObj.get('light');
     beam.visible = !!tower && night > 0.3 && !calm;
     if (!beam.visible || !tower) return;
@@ -414,7 +418,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     let d = (want - beamAngle) % (2 * Math.PI);
     if (d > Math.PI) d -= 2 * Math.PI;
     if (d < -Math.PI) d += 2 * Math.PI;
-    beamAngle += beamAim ? d * 0.15 : d;
+    // Swing smoothly onto a guided ship and back to the sweep.
+    beamAngle += Math.abs(d) > 0.05 ? d * 0.15 : d;
     beam.rotation.set(0, beamAngle, -0.06);
     beamMat.opacity = 0.16 * Math.min(1, (night - 0.3) * 3);
   }
@@ -811,7 +816,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       return (o?.userData.tag as AnchorTag) ?? null;
     },
     aimBeam(x, z) {
-      beamAim = { x, z, until: performance.now() / 1000 + 2.5 };
+      // Measured on the scene's own clock (the one updateBeam is given).
+      beamAim = { x, z, until: sceneTime + 2.5 };
     },
     summon() {
       life?.summon();
