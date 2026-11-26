@@ -24,7 +24,7 @@ import { BUILDINGS, construct } from '../core/islands';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, skyAt, tintSky } from './sky';
 import { canPassLight, materialStars, nextSea, passLight, starlightFor, switchSea, starPercent } from '../core/seas';
-import { nextGoal, type Goal } from '../core/advice';
+import { nextGoal, type Goal, TUTORIAL_STEPS } from '../core/advice';
 import { canBuy } from '../core/economy';
 import { formatEta } from '../i18n';
 import { SEA_IDS, type SeaId } from '../core/data';
@@ -992,8 +992,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   function renderGoal() {
     const lang = state.settings.lang;
-    // The first night a ship passes: show how to guide it.
-    const shipOut = state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
+    // The first night a ship passes (after the first-time steps): show how to guide it.
+    const shipOut = state.stats.tutorial >= TUTORIAL_STEPS && state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
     const g: Goal = shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);
     const p = { ...(g.params ?? {}) };
     if (typeof p.name === 'string') p.name = t(lang, `upg.${p.name}.name`);
