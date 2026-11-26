@@ -61,6 +61,16 @@ describe('where the town stands', () => {
         }
     }
   });
+  test('every place stands on flat-enough ground (not half on a cliff)', () => {
+    for (const land of [0, 14, LAND_MAX]) {
+      const home = homeShape(land);
+      for (const [i, sl] of TOWN_SLOTS.entries()) {
+        const [x, z] = sl.at(land);
+        const hs = [[0, 0], [0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]].map(([dx, dz]) => heightAt(home, x + dx, z + dz));
+        expect(Math.max(...hs) - Math.min(...hs), `${land} slot ${i}`).toBeLessThan(0.5);
+      }
+    }
+  });
   test('walkers keep to the street, on land', () => {
     const s = grown((g) => (g.levels.light = 10));
     const home = homeShape(s.land);

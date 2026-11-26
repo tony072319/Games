@@ -5,7 +5,7 @@ import { DECOR_IDS } from '../core/decor';
  */
 import { DESTS, boatOf } from '../core/boat';
 import { townShown } from '../core/town';
-import { TOWN_SLOTS, townWalkers } from './town';
+import { TOWN_HOMES, TOWN_SLOTS, townWalkers } from './town';
 import { FLOAT_LIFETIME_MS, type BuildingId, type DestId } from '../core/data';
 import type { FloatingItem } from '../core/flotsam';
 import { ISLAND_BUILDINGS, buildingLevel } from '../core/islands';
@@ -134,7 +134,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   if (light >= 2) deco.push(['fire', 'viking/firepit', 0.6, 1.25, { glow: 'fire' }]);
   if (light >= 3) deco.push(['flowers', 'nature/flower_yellow', 0.18, 1.5]);
   if (light >= 4) deco.push(['bush', 'nature/bush_berries', 0.4, -0.5]);
-  if (light >= 6) deco.push(['mill', 'kk/building_windmill_blue', 0.6, -2.75, { tint: 0xfff0e0 }]);
+  if (light >= 6) deco.push(['mill', 'kk/building_windmill_blue', 0.55, -2.75, { tint: 0xfff0e0 }]);
   if (light >= 8) deco.push(['hammock', 'huts/hammock', 0.62, 2.2, { rotY: 0.9 }]);
   for (const [part, model, frac, a, extra] of deco) {
     const [px, pz] = on(frac, a);
@@ -164,7 +164,8 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     const sl = TOWN_SLOTS[i];
     const [x, z] = sl.at(s.land);
     const model = sl.models[s.sea];
-    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: sl.glow, wash: townWash });
+    // Only lived-in houses (in this sea's style) have lit windows.
+    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash: townWash });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
 
@@ -199,7 +200,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   // Life: a few who live here, more as the light grows.
   const [hx, hz] = on(0.12, -1.45);
   if (light >= 2) items.push({ key: 'life:keeper', model: 'kc/character-male-a', x: hx, y: 0, z: hz, rotY: 0.3, anim: 'idle' });
-  const [cx, cz] = on(0.83, 0.88);
+  const [cx, cz] = on(0.83, 0.6);
   items.push({ key: 'life:cat', model: 'kpet/animal-cat', x: cx, y: 0, z: cz, rotY: 1.2 });
   if (light >= 4) {
     const [kx, kz] = on(0.58, 1.6);

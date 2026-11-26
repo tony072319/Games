@@ -40,7 +40,8 @@ const TOWN: Record<SeaId, ModelId[]> = {
   fog: ['viking/small_hut', 'viking/longhouse', 'viking/forge', 'viking/small_hut', 'viking/storehouse', 'viking/longhouse', 'viking/small_hut', 'viking/watchtower'],
   aurora: ['winter/wood_cabin', 'winter/wood_cabin', 'viking/forge', 'winter/wood_cabin', 'viking/small_hut', 'winter/wood_cabin', 'viking/longhouse', 'viking/watchtower'],
 };
-const HOMES: ModelId[] = ['kk/building_home_A_blue', 'huts/fish_shack', 'huts/stilt_hut', 'viking/small_hut', 'viking/longhouse', 'winter/wood_cabin'];
+/** Buildings people live in: their windows light up at night. */
+export const TOWN_HOMES: ModelId[] = ['kk/building_home_A_blue', 'huts/fish_shack', 'huts/stilt_hut', 'viking/small_hut', 'viking/longhouse', 'winter/wood_cabin'];
 
 function slot(frac: number, a: number, i: number, harbour: boolean): TownSlot {
   const set = harbour ? HARBOUR : TOWN;
@@ -48,15 +49,20 @@ function slot(frac: number, a: number, i: number, harbour: boolean): TownSlot {
   // Face the street (terrace) or the sea (harbour).
   const out = harbour || frac > TOWN_RING;
   const rotY = Math.atan2(Math.cos(a), Math.sin(a)) + (out ? Math.PI : 0);
-  const lived = HOMES.includes(models.dusk);
-  return { at: (land) => ringPoint(homeShape(land), frac, a), rotY, models, harbour, glow: lived ? (i % 4 === 0 ? 'window' : 'pane') : undefined };
+  return { at: (land) => ringPoint(homeShape(land), frac, a), rotY, models, harbour, glow: i % 4 === 0 ? 'window' : 'pane' };
 }
 
 /** Every place in the town, in the order they are built. */
 export const TOWN_SLOTS: TownSlot[] = (() => {
   const harbour: [number, number][] = [];
   // Between the decorations on the harbour ring (they stand at 78° + 28° k), the pier side left free.
-  for (let k = 0; k < 9; k++) harbour.push([HARBOUR_RING + 0.03, deg(92 + 28 * k)]);
+  // (Not where the back cliff is half risen: the ground there slopes.)
+  const cliff = homeShape(0).cliff;
+  const onCliffSlope = (a: number) => !clearOf(a, [cliff[0]], cliff[1] * Math.PI * 0.4) === false && !clearOf(a, [cliff[0]], cliff[1] * Math.PI);
+  for (let k = 0; k < 9; k++) {
+    const a = deg(92 + 28 * k);
+    if (!onCliffSlope(a)) harbour.push([HARBOUR_RING + 0.03, a]);
+  }
   // And one on the far side of the pier.
   harbour.push([HARBOUR_RING + 0.03, deg(-6)]);
   const terrace: [number, number][] = [];
@@ -76,6 +82,8 @@ export const TOWN_SLOTS: TownSlot[] = (() => {
     if (harbour[i]) out.push(slot(harbour[i][0], harbour[i][1], i, true));
     if (terrace[i]) out.push(slot(terrace[i][0], terrace[i][1], i, false));
   }
+  // Last of all, two buildings up on the peak beside the lighthouse.
+  out.push(slot(0.17, 0.45, 7, false), slot(0.17, -2.95, 2, false));
   return out;
 })();
 

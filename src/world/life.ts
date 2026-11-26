@@ -4,6 +4,7 @@
  * gulls, a fish jumping, ship lights far out, clouds, and — once the light is strong — a whale and dolphins.
  */
 import * as THREE from 'three';
+import { heightAt, ringPoint, type Shape } from './terrain';
 import type { ModelId } from './assets';
 
 export interface LifeContext {
@@ -13,6 +14,8 @@ export interface LifeContext {
   cam: THREE.Camera;
   /** Where smoke rises from (top of the keeper's house), if it is there. */
   chimney: THREE.Vector3 | null;
+  /** The home island's ground, so life keeps to the air above it and the water around it. */
+  home?: Shape;
 }
 export interface Life {
   update(dt: number, t: number, ctx: LifeContext): void;
@@ -146,11 +149,15 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
       // Fireflies come out in the evening.
       fireflies.visible = ctx.night > 0.3;
       if (fireflies.visible) {
+        // Over the island, at its scale, floating above the ground beneath them.
+        const k = ctx.home ? ctx.home.radius / 6 : 1;
         for (let i = 0; i < FF; i++) {
           const [a, R, y, o] = ffSeed[i];
-          ffPos[i * 3] = Math.cos(a + t * 0.12) * R + Math.sin(t * 0.7 + o) * 0.3;
-          ffPos[i * 3 + 1] = y + Math.sin(t * 1.3 + o) * 0.25;
-          ffPos[i * 3 + 2] = Math.sin(a + t * 0.12) * R;
+          const fx = Math.cos(a + t * 0.12) * R * k + Math.sin(t * 0.7 + o) * 0.3;
+          const fz = Math.sin(a + t * 0.12) * R * k;
+          ffPos[i * 3] = fx;
+          ffPos[i * 3 + 1] = (ctx.home ? Math.max(0, heightAt(ctx.home, fx, fz)) : 0) + y + Math.sin(t * 1.3 + o) * 0.25;
+          ffPos[i * 3 + 2] = fz;
         }
         ffGeo.attributes.position.needsUpdate = true;
         ffMat.opacity = Math.min(1, (ctx.night - 0.3) * 2);
@@ -160,8 +167,13 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
       gulls.forEach((g, i) => {
         g.visible = i < nGull;
         const a = t * 0.35 + i * 2.1;
-        const R = 4 + i * 1.2;
-        g.position.set(Math.cos(a) * R, 5.2 + i * 0.6 + Math.sin(t + i) * 0.3, Math.sin(a) * R);
+        const k = ctx.home ? ctx.home.radius / 6 : 1;
+        const R = (4 + i * 1.2) * k;
+        const gx = Math.cos(a) * R;
+        const gz = Math.sin(a) * R;
+        // Well above the ground and the lighthouse.
+        const ground = ctx.home ? Math.max(0, heightAt(ctx.home, gx, gz)) : 0;
+        g.position.set(gx, ground + 5.2 + i * 0.6 + Math.sin(t + i) * 0.3, gz);
         g.rotation.y = -a;
         g.rotation.z = Math.sin(t * 6 + i) * 0.15;
       });
@@ -169,9 +181,8 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
       {
         const on = ctx.light >= 2 && !ctx.calm;
         const ph = (t * 0.35) % 3;
-        // Out in open water, beyond the fully grown island.
-        const x = -6.5;
-        const z = 11.5;
+        // Out in open water, just off the island's front-left shore.
+        const [x, z] = ctx.home ? ringPoint(ctx.home, 1.22, 2.3) : [-6.5, 11.5];
         if (on && ph < 1) {
           fish.visible = true;
           fish.position.set(x + ph * 1.6, -0.25 + Math.sin(ph * Math.PI) * 1.1, z);
@@ -204,7 +215,8 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
         } else {
           whale.visible = true;
           const a = 2.4 + k * 1.6;
-          whale.position.set(Math.cos(a) * 24, -1.1 + Math.max(0, Math.sin(k * Math.PI * 3)) * 0.8, Math.sin(a) * 24);
+          // Far out, beyond the islands.
+          whale.position.set(Math.cos(a) * 38, -1.1 + Math.max(0, Math.sin(k * Math.PI * 3)) * 0.8, Math.sin(a) * 38);
           whale.rotation.y = -a;
         }
       } else whale.visible = false;
@@ -213,7 +225,8 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
         d.visible = ctx.light >= 8 && !ctx.calm;
         if (!d.visible) return;
         const a = t * 0.16 + i * 0.5 + 4;
-        const R = 12 + i;
+        // Round the island, out past its shore.
+        const R = (ctx.home ? ctx.home.radius * 1.45 : 12) + i;
         const ph = (t * 0.9 + i * 0.7) % 3.2;
         const jump = ph < 1.2 ? Math.sin((ph / 1.2) * Math.PI) * 1.3 : -1.5;
         d.position.set(Math.cos(a) * R, -0.3 + jump, Math.sin(a) * R);

@@ -212,12 +212,18 @@ export function terrainGeometry(s: Shape, c: GroundColours, rings = s.kind === '
       col.push(base.r * k, base.g * k, base.b * k);
     }
   };
+  // Every grid point once (heights are the costly part), then the faces.
+  const grid: [number, number, number][][] = [];
+  for (let i = 0; i <= rings; i++) {
+    grid.push([]);
+    for (let j = 0; j <= spokes; j++) grid[i].push(pt(i, j));
+  }
   for (let i = 0; i < rings; i++)
     for (let j = 0; j < spokes; j++) {
-      const a = pt(i, j);
-      const b = pt(i + 1, j);
-      const d = pt(i + 1, j + 1);
-      const e = pt(i, j + 1);
+      const a = grid[i][j];
+      const b = grid[i + 1][j];
+      const d = grid[i + 1][j + 1];
+      const e = grid[i][j + 1];
       // Counter-clockwise seen from above, so the faces point up.
       if (i > 0) tri([a, e, d]);
       tri([a, d, b]);

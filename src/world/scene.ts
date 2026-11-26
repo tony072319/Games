@@ -17,7 +17,7 @@ import { MODELS, modelUrl, type ModelId } from './assets';
 import { diffItems } from './diff';
 import { TILE_D, litRadiusWorld } from './hex';
 import { shoresOf, type Tag, type WorldItem, type boatPosition } from './layout';
-import { terrainGeometry } from './terrain';
+import { terrainGeometry, type Shape } from './terrain';
 
 /** Ground colours for sculpted islands (the sea's wash is applied on top). */
 const GROUND_COLOURS = { sand: 0xf2dca0, grass: 0x8cc25a, rock: 0xa39a8c, path: 0xcdb48a };
@@ -142,7 +142,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const shadowSize = small() ? 1024 : 2048;
   key.shadow.mapSize.set(shadowSize, shadowSize);
   key.shadow.radius = 6;
-  Object.assign(key.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 90 });
+  // Wide enough for the fully grown island.
+  Object.assign(key.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });
   key.shadow.bias = -0.0006;
   scene.add(key);
   const water = createWater();
@@ -281,8 +282,11 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     } else if (g === 'window' || g === 'pane') {
       const w = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.05), glowMat(0xffb860));
       w.userData.ownGeometry = true;
-      w.position.set(c.x + 0.25, box.min.y + 0.75, box.max.z - 0.05);
-      w.rotation.y = p.item.rotY;
+      // On the building's front, whichever way it faces.
+      const r = p.item.rotY;
+      const half = Math.min(size.x, size.z) / 2;
+      w.position.set(c.x + Math.sin(r) * half, box.min.y + Math.min(0.75, size.y * 0.45), c.z + Math.cos(r) * half);
+      w.rotation.y = r;
       add(w);
       // A pane only glows; a lit window also casts a little light (kept few: lights are costly).
       if (g === 'pane') return;
@@ -483,6 +487,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   // ---------- camera focus ----------
   /** How far the home island reaches (world units); the home view pulls back as it grows. */
   let islandReach = 0;
+  /** The home island's ground (for the life around it). */
+  let homeGround: Shape | undefined;
   const homeScale = () => Math.max(1, islandReach / HOME_REACH) ** 0.6;
   let focusTo: { target: THREE.Vector3; dist: number; dir?: THREE.Vector3 } | null = null;
   let lastInput = performance.now();
@@ -578,7 +584,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       }
       if (p.item.model.includes('flag')) p.obj.rotation.y = p.item.rotY + Math.sin(t * 2.2 + p.item.x) * 0.25;
     }
-    life?.update(dt * speed, t, { night: pal.night, light, calm, cam, chimney });
+    life?.update(dt * speed, t, { night: pal.night, light, calm, cam, chimney, home: homeGround });
     if (focusTo) {
       controls.target.lerp(focusTo.target, 0.08);
       const dir = focusTo.dir ? focusTo.dir.clone() : cam.position.clone().sub(controls.target).normalize();
@@ -662,7 +668,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       shores.push(...shoresOf(next));
       water.setShores(shores);
       // How far the home island reaches: the camera frames it when you go home.
-      const reach = next.find((i) => i.ground?.kind === 'home')?.ground?.radius ?? 0;
+      homeGround = next.find((i) => i.ground?.kind === 'home')?.ground;
+      const reach = homeGround?.radius ?? 0;
       if (islandReach === 0 && reach > 0) {
         islandReach = reach;
         if (reach > HOME_REACH) {
