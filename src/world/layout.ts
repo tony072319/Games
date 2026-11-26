@@ -17,7 +17,8 @@ import { DEST_HEX, hexToWorld, litRadius, hexDist } from './hex';
 import { DEST_SHAPES, heightAt, homeShape, outline, ringPoint, type Shape } from './terrain';
 import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
-export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | `island:${DestId}` | `bld:${BuildingId}`;
+/** Things on the island you can tap. house: the keeper's house (the book); town: the town's first place (building, and where its hint shows); ground: the rest of the town, decorations and the ground (building). */
+export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | 'house' | 'town' | 'ground' | `island:${DestId}` | `bld:${BuildingId}`;
 
 export interface WorldItem {
   /** Stable for the same thing with the same look, so the renderer can keep it. */
@@ -117,13 +118,13 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
 
   // Home island: one piece of sculpted ground that grows as you expand it.
   const home = homeShape(s.land);
-  ground(items, 'home', home, GROUND[s.sea]);
+  ground(items, 'home', home, GROUND[s.sea], 'ground');
   // Places on the island by ring (share of the radius) and angle; the island's rings are tiers.
   const on = (frac: number, a: number): [number, number] => ringPoint(home, frac, a);
 
   place(items, `light:${light}`, LIGHT_LOOKS[light] ?? LIGHT_LOOKS[10], 0, 0, 0, 'light');
   // The keeper's house beside the lighthouse on the peak; chest and net down at the harbour by the pier.
-  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.14, -2.0), 0);
+  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.14, -2.0), 0, 'house');
   place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...on(0.84, 0.72), 0, 'chest');
   const [nx, nz] = on(0.85, 1.0);
   place(items, `net:${Math.min(50, s.levels.net)}`, netParts(s.levels.net), nx, nz, 0, 'net');
@@ -156,7 +157,9 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     const tier = s.decor[id];
     if (!tier) continue;
     const [dx, dz] = decorSpot(DECOR_IDS.indexOf(id), s.land);
+    const from = items.length;
     place(items, `decor:${id}:${tier}`, DECOR_LOOKS[id][tier - 1], dx, dz, 0);
+    for (let k = from; k < items.length; k++) items[k].tag = 'ground';
   }
 
   // The town: built place by place as the sea's work goes on; people stroll its street.
@@ -167,7 +170,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     const [x, z] = sl.at(s.land);
     const model = sl.models[s.sea];
     // Only lived-in houses (in this sea's style) have lit windows.
-    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash: townWash });
+    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash: townWash, tag: i === 0 ? 'town' : 'ground' });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
 
