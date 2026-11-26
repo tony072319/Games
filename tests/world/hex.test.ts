@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { DEST_HEX, HOME_TILES, hexDist, hexToWorld, litRadius, litRadiusWorld, ring } from '../../src/world/hex';
+import { DEST_HEX, hexDist, hexToWorld, litRadius, litRadiusWorld, ring } from '../../src/world/hex';
 import { DESTS } from '../../src/core/boat';
 import type { DestId } from '../../src/core/data';
 
@@ -15,12 +15,6 @@ describe('hex grid', () => {
     expect(ring(1)).toHaveLength(6);
     expect(ring(2)).toHaveLength(12);
     for (const [q, r] of ring(3)) expect(hexDist(q, r)).toBe(3);
-  });
-
-  test('home island starts two rings wide, with room to spare', () => {
-    expect(HOME_TILES).toHaveLength(19);
-    expect(Math.max(...HOME_TILES.map(([q, r]) => hexDist(q, r)))).toBe(2);
-    expect(HOME_TILES.filter(([q, r]) => hexDist(q, r) === 0)).toHaveLength(1);
   });
 
   test('each island sits exactly where the light first reaches it', () => {

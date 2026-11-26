@@ -4,85 +4,69 @@ import { DESTS } from '../../src/core/boat';
 import { FLOAT_LIFETIME_MS, type DestId } from '../../src/core/data';
 import { LAND_MAX } from '../../src/core/land';
 import { newGame } from '../../src/core/state';
-import { DECOR_SLOTS, DEST_HEX, HOME_TILES, LAND_TILES, hexDist } from '../../src/world/hex';
-import { boatPosition, flotsamPosition, worldLayout } from '../../src/world/layout';
+import { boatPosition, flotsamPosition, shoresOf, worldLayout } from '../../src/world/layout';
+import { heightAt } from '../../src/world/terrain';
 import { MAX_SHORES } from '../../src/world/water';
 
 const NOW = 1_000_000;
-const full = () => {
+const full = (land = LAND_MAX) => {
   const s = newGame(NOW, 'zh');
   s.levels.light = 10;
   s.boat.built = true;
   s.discovered.push(...(Object.keys(DESTS) as DestId[]));
   for (const id of DECOR_IDS) s.decor[id] = 3;
-  s.land = LAND_MAX;
+  s.land = land;
   return s;
 };
+const groundAt = (items: ReturnType<typeof worldLayout>, x: number, z: number) => Math.max(...items.flatMap((i) => (i.ground ? [heightAt(i.ground, x, z)] : [])));
 
-describe('the boat sails around the island, not over it', () => {
-  test('every trip keeps off the fully grown island', () => {
-    const s = full();
-    const home = worldLayout(s, NOW).filter((i) => i.model === 'kk/hex_grass' && !i.key.startsWith('isle:'));
-    for (const d of Object.keys(DESTS) as DestId[]) {
-      s.boat.voyage = { sea: 'dusk', dest: d, departAt: NOW, returnAt: NOW + 100_000 };
-      for (let t = 0.03; t < 0.97; t += 0.01) {
-        const b = boatPosition(s, NOW + t * 100_000);
-        for (const g of home) expect(Math.hypot(b.x - g.x, b.z - g.z), `${d} ${t.toFixed(2)} ${g.key}`).toBeGreaterThan(1.2);
+describe('the island grows', () => {
+  test('expanding makes the home ground bigger', () => {
+    const r = (land: number) => worldLayout(full(land), NOW).find((i) => i.ground?.kind === 'home')!.ground!.radius;
+    expect(r(LAND_MAX)).toBeGreaterThan(r(0) * 1.3);
+    expect(r(5)).toBeGreaterThan(r(4));
+  });
+  test('fully grown: shores fit, finds float over open water', () => {
+    const items = worldLayout(full(), NOW);
+    expect(shoresOf(items).length).toBeLessThanOrEqual(MAX_SHORES);
+    for (const lane of [0, 0.5, 1])
+      for (let t = 0; t <= 1; t += 0.02) {
+        const p = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
+        expect(groundAt(items, p.x, p.z), `${lane} ${t}`).toBeLessThan(-0.5);
       }
-    }
   });
 });
 
-describe('the pier stays clear', () => {
-  const planks = (s: ReturnType<typeof full>) => worldLayout(s, NOW).filter((i) => i.key.startsWith('dock:plank'));
-  test('no trip sails through the pier', () => {
+describe('the boat sails around the island, not over it', () => {
+  test('every trip stays on the water at every island size', () => {
+    for (const land of [0, LAND_MAX]) {
+      const s = full(land);
+      const items = worldLayout(s, NOW);
+      for (const d of Object.keys(DESTS) as DestId[]) {
+        s.boat.voyage = { sea: 'dusk', dest: d, departAt: NOW, returnAt: NOW + 100_000 };
+        for (let t = 0; t <= 1; t += 0.005) {
+          const b = boatPosition(s, NOW + t * 100_000);
+          expect(groundAt(items, b.x, b.z), `${land} ${d} ${t.toFixed(3)}`).toBeLessThan(-0.2);
+        }
+      }
+    }
+  });
+  test('no trip sails through the pier, and finds pass clear of it', () => {
     const s = full();
-    const ps = planks(s);
+    const items = worldLayout(s, NOW);
+    const planks = items.filter((i) => i.key.startsWith('dock:plank'));
+    const boat = boatPosition(s, NOW);
     for (const d of Object.keys(DESTS) as DestId[]) {
       s.boat.voyage = { sea: 'dusk', dest: d, departAt: NOW, returnAt: NOW + 100_000 };
       for (let t = 0.03; t < 0.97; t += 0.005) {
         const b = boatPosition(s, NOW + t * 100_000);
-        for (const p of ps) expect(Math.hypot(b.x - p.x, b.z - p.z), `${d} ${t.toFixed(3)}`).toBeGreaterThan(0.9);
+        for (const p of planks) expect(Math.hypot(b.x - p.x, b.z - p.z), `${d} ${t.toFixed(3)}`).toBeGreaterThan(0.9);
       }
     }
-  });
-  test('drifting finds pass clear of the pier and the moored boat', () => {
-    const s = full();
-    const ps = planks(s);
-    const boat = boatPosition(s, NOW);
-    const things = [...ps.map((p) => [p.x, p.z]), [boat.x, boat.z]];
     for (const lane of [0, 0.5, 1])
       for (let t = 0; t <= 1; t += 0.01) {
         const f = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
-        for (const [x, z] of things) expect(Math.hypot(f.x - x, f.z - z)).toBeGreaterThan(1);
-      }
-  });
-});
-
-describe('the island grows', () => {
-  test('as many tiles as the rules allow, all different, none on home, decorations or near an island', () => {
-    expect(LAND_TILES).toHaveLength(LAND_MAX);
-    const keys = LAND_TILES.map((h) => h.join());
-    expect(new Set(keys).size).toBe(LAND_MAX);
-    const taken = new Set([...HOME_TILES, ...Object.values(DECOR_SLOTS)].map((h) => h.join()));
-    for (const k of keys) expect(taken.has(k), k).toBe(false);
-    for (const h of LAND_TILES)
-      for (const d of Object.values(DEST_HEX)) expect(hexDist(h[0] - d[0], h[1] - d[1])).toBeGreaterThan(2);
-  });
-  test('each bought tile appears, in order', () => {
-    const s = newGame(NOW, 'zh');
-    s.land = 3;
-    const land = worldLayout(s, NOW).filter((i) => i.key.startsWith('land:'));
-    expect(land.filter((i) => i.model === 'kk/hex_grass')).toHaveLength(3);
-  });
-  test('fully grown and decorated: shores fit, finds float clear of land', () => {
-    const items = worldLayout(full(), NOW);
-    expect(items.filter((i) => i.shore).length).toBeLessThanOrEqual(MAX_SHORES);
-    const ground = items.filter((i) => i.model === 'kk/hex_grass');
-    for (const lane of [0, 0.5, 1])
-      for (let t = 0; t <= 1; t += 0.05) {
-        const p = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
-        for (const g of ground) expect(Math.hypot(p.x - g.x, p.z - g.z)).toBeGreaterThan(1.5);
+        for (const [x, z] of [...planks.map((p) => [p.x, p.z]), [boat.x, boat.z]]) expect(Math.hypot(f.x - x, f.z - z)).toBeGreaterThan(1);
       }
   });
 });

@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import { DECOR_IDS, DECOR_TIERS } from '../../src/core/decor';
+import { LAND_MAX } from '../../src/core/land';
 import { newGame } from '../../src/core/state';
 import { MODELS } from '../../src/world/assets';
-import { DECOR_SLOTS, PIER_DIR, PIER_TILE, hexDist, hexToWorld } from '../../src/world/hex';
-import { worldLayout } from '../../src/world/layout';
+import { decorSpot, worldLayout } from '../../src/world/layout';
 import { DECOR_LOOKS } from '../../src/world/looks';
+import { heightAt, homeShape } from '../../src/world/terrain';
 
 const NOW = 1_000_000;
 
@@ -12,30 +13,22 @@ describe('decorations in the world', () => {
   test('nothing bought, nothing shown', () => {
     expect(worldLayout(newGame(NOW, 'zh'), NOW).some((i) => i.key.startsWith('decor:'))).toBe(false);
   });
-  test('a lantern at tier 2 stands on its own new tile at its slot', () => {
+  test('a lantern at tier 2 stands at its spot, on the ground', () => {
     const s = newGame(NOW, 'zh');
     s.decor.lantern = 2;
-    const items = worldLayout(s, NOW).filter((i) => i.key.startsWith('decor:lantern:'));
-    const [x, z] = hexToWorld(...DECOR_SLOTS.lantern);
-    const tile = items.find((i) => i.key.startsWith('decor:lantern:tile'));
-    expect(tile).toBeDefined();
-    expect([tile!.x, tile!.z]).toEqual([x, z]);
-    const parts = items.filter((i) => i.key.startsWith('decor:lantern:2:'));
+    const parts = worldLayout(s, NOW).filter((i) => i.key.startsWith('decor:lantern:2:'));
     expect(parts.length).toBeGreaterThan(0);
-    for (const p of parts) expect(Math.hypot(p.x - x, p.z - z)).toBeLessThan(1.2);
+    const [x, z] = decorSpot(0, 0);
+    for (const p of parts) {
+      expect(Math.hypot(p.x - x, p.z - z)).toBeLessThan(1.2);
+      expect(p.y).toBeGreaterThan(0);
+    }
   });
-  test('ten different slots in the third ring, none on the pier', () => {
-    const slots = DECOR_IDS.map((id) => DECOR_SLOTS[id]);
-    expect(new Set(slots.map((h) => h.join())).size).toBe(10);
-    for (const h of slots) expect(hexDist(...h)).toBe(3);
-    // Away from the line the pier takes from its tile.
-    const [px, pz] = hexToWorld(...PIER_TILE);
-    const len = Math.hypot(...PIER_DIR);
-    for (const h of slots) {
-      const [x, z] = hexToWorld(...h);
-      const along = ((x - px) * PIER_DIR[0] + (z - pz) * PIER_DIR[1]) / len;
-      const off = Math.abs((x - px) * PIER_DIR[1] - (z - pz) * PIER_DIR[0]) / len;
-      expect(along < 0 || off > 1.6, h.join()).toBe(true);
+  test('every spot is on land at every island size, and spots are apart', () => {
+    for (const land of [0, 10, LAND_MAX]) {
+      const spots = DECOR_IDS.map((_, i) => decorSpot(i, land));
+      for (const [x, z] of spots) expect(heightAt(homeShape(land), x, z)).toBeGreaterThan(0.05);
+      for (let i = 1; i < spots.length; i++) expect(Math.hypot(spots[i][0] - spots[i - 1][0], spots[i][1] - spots[i - 1][1])).toBeGreaterThan(1.8);
     }
   });
   test('every tier has a look made of known models', () => {

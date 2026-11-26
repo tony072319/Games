@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { boatPosition, flotsamPosition, worldLayout, type WorldItem } from '../../src/world/layout';
+import { boatPosition, flotsamPosition, shoresOf, worldLayout, type WorldItem } from '../../src/world/layout';
 import { MODELS } from '../../src/world/assets';
-import { DEST_HEX, hexDist, hexToWorld, PIER_DIR, PIER_TILE } from '../../src/world/hex';
+import { DEST_HEX, hexToWorld } from '../../src/world/hex';
+import { DEST_SHAPES, heightAt, homeShape } from '../../src/world/terrain';
 import { DECOR_IDS } from '../../src/core/decor';
 import { MAX_SHORES } from '../../src/world/water';
 import { emptyMaterials, newGame, type GameState } from '../../src/core/state';
@@ -80,7 +81,8 @@ describe('world layout', () => {
   test('an island the light reaches but the boat has not found is a dark shape', () => {
     const lit = worldLayout(game((s) => (s.levels.light = 4)), NOW).filter((i) => i.tag === 'island:gullrock');
     expect(lit.length).toBeGreaterThan(0);
-    expect(lit.every((i) => i.tint === 0x556070)).toBe(true);
+    // A dark ground and a dark landmark: everything there is in shadow.
+    expect(lit.every((i) => i.tint === 0x556070 || i.wash?.[0] === 0x556070)).toBe(true);
     expect(worldLayout(game((s) => (s.levels.light = 3)), NOW).some((i) => i.tag === 'island:gullrock')).toBe(false);
   });
 
@@ -97,7 +99,7 @@ describe('world layout', () => {
         }),
         NOW,
       );
-      for (const i of items) expect(MODELS[i.model], i.model).toBeDefined();
+      for (const i of items) expect(i.ground ?? MODELS[i.model], i.model).toBeDefined();
       expect(new Set(items.map((i) => i.key)).size).toBe(items.length);
     }
   });
@@ -121,44 +123,40 @@ describe('boat on a voyage', () => {
   test('half way it is at the island, and it is back at the pier when it returns', () => {
     const mid = boatPosition(s, NOW + 50_000);
     const [ix, iz] = hexToWorld(...DEST_HEX.wreck);
-    expect(Math.hypot(mid.x - ix, mid.z - iz)).toBeLessThan(2.5);
+    // Moored just off its beach.
+    expect(Math.hypot(mid.x - ix, mid.z - iz)).toBeLessThan(DEST_SHAPES.wreck.radius * 1.4 + 1);
     const back = boatPosition(s, NOW + 100_000);
     expect(back.x).toBeCloseTo(pierEnd.x, 1);
   });
 
-  test('docked boat sits at the pier end', () => {
-    const [px, pz] = hexToWorld(...PIER_TILE);
+  test('docked boat sits off the island, out to the right by the pier', () => {
     expect(pierEnd.atDock).toBe(true);
-    expect(Math.sign(pierEnd.x - px)).toBe(Math.sign(PIER_DIR[0]));
-    expect(pierEnd.z).toBeGreaterThan(pz);
+    expect(pierEnd.x).toBeGreaterThan(5);
+    expect(heightAt(homeShape(0), pierEnd.x, pierEnd.z)).toBeLessThan(0);
   });
 });
 
-describe('room on the island', () => {
-  test('the pier starts from the edge of the two-ring island', () => {
-    expect(hexDist(...PIER_TILE)).toBe(2);
+describe('a real island', () => {
+  const full = game((g) => {
+    g.levels.light = 10;
+    for (const id of DECOR_IDS) g.decor[id] = 3;
   });
-  test('drifting finds float clear of the island and everything decorated on it', () => {
-    const s = game((g) => {
-      g.levels.light = 10;
-      for (const id of DECOR_IDS) g.decor[id] = 3;
-    });
-    const land = worldLayout(s, NOW).filter((i) => i.model === 'kk/hex_grass');
-    for (const lane of [0, 0.5, 1])
-      for (let t = 0; t <= 1; t += 0.05) {
-        const p = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
-        for (const g of land) expect(Math.hypot(p.x - g.x, p.z - g.z)).toBeGreaterThan(2);
-      }
+  test('no grid: one piece of sculpted ground for home', () => {
+    const items = worldLayout(full, NOW);
+    expect(items.some((i) => i.model === 'kk/hex_grass')).toBe(false);
+    expect(items.filter((i) => i.ground?.kind === 'home')).toHaveLength(1);
   });
-  test('the water gets the island\'s outline, not every tile', () => {
-    const s = game((g) => {
-      g.levels.light = 10;
-      for (const id of DECOR_IDS) g.decor[id] = 3;
-    });
-    const shores = worldLayout(s, NOW).filter((i) => i.shore);
-    expect(shores.length).toBeLessThanOrEqual(MAX_SHORES);
-    // The centre tile is inland: no shore of its own.
-    expect(worldLayout(s, NOW).find((i) => i.key.startsWith('home:0,0'))?.shore).toBeUndefined();
+  test('things stand on the ground under them', () => {
+    const items = worldLayout(full, NOW);
+    const home = homeShape(full.land);
+    for (const i of items.filter((x) => x.key.startsWith('house') || x.key.startsWith('decor:') || x.key.startsWith('chest:'))) {
+      const h = heightAt(home, i.x, i.z);
+      expect(h, i.key).toBeGreaterThan(0);
+      expect(i.y, i.key).toBeGreaterThanOrEqual(h - 1e-9);
+    }
+  });
+  test('the water foams along the outlines, within the shader limit', () => {
+    expect(shoresOf(worldLayout(full, NOW)).length).toBeLessThanOrEqual(MAX_SHORES);
   });
 });
 

@@ -98,7 +98,7 @@ export function homeShape(land: number): Shape {
     kind: 'home',
     cx: 0,
     cz: 0,
-    radius: 5 + Math.max(0, land) * 0.13,
+    radius: 6 + Math.max(0, land) * 0.08,
     lobes: [
       [0.08, 3, 0.4],
       [0.05, 5, 2.1],

@@ -16,7 +16,11 @@ import type { Sky } from '../ui/sky';
 import { MODELS, modelUrl, type ModelId } from './assets';
 import { diffItems } from './diff';
 import { TILE_D, litRadiusWorld } from './hex';
-import type { Tag, WorldItem, boatPosition } from './layout';
+import { shoresOf, type Tag, type WorldItem, type boatPosition } from './layout';
+import { terrainGeometry } from './terrain';
+
+/** Ground colours for sculpted islands (the sea's wash is applied on top). */
+const GROUND_COLOURS = { sand: 0xf2dca0, grass: 0x8cc25a, rock: 0xa39a8c };
 import { paletteFor, type Palette } from './palette';
 import { createSky } from './sky3d';
 import { disposeToon, toonMaterial, toonRamp } from './toon';
@@ -99,7 +103,7 @@ interface Placed {
 
 const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 1.6);
 /** The home island a new sea starts with reaches about this far; the default camera frames it. */
-const HOME_REACH = 4.1;
+const HOME_REACH = 6;
 // Pulled back so the two-ring island and its third-ring decorations fit with room around them.
 const DEFAULT_CAM = DEFAULT_TARGET.clone().add(new THREE.Vector3(13, 11, 27).sub(DEFAULT_TARGET).multiplyScalar(1.1));
 
@@ -143,6 +147,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const water = createWater();
   scene.add(water.mesh);
   const sandMat = new THREE.MeshToonMaterial({ color: 0xf6dfae, gradientMap: toonRamp() });
+  // Sculpted ground: colours come from the mesh; flat faces for the low-poly look.
+  const groundMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() });
   const sandGeo = new THREE.CylinderGeometry((TILE_D / 2) * 1.28, (TILE_D / 2) * 1.38, 0.5, 6);
   const glowGeo = new THREE.SphereGeometry(1, 14, 10);
   const hitGeo = new THREE.SphereGeometry(0.75, 8, 6);
@@ -306,6 +312,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     const p = placed.get(key);
     if (!p) return;
     scene.remove(p.obj);
+    if (p.obj.userData.ownGeometry) (p.obj as THREE.Mesh).geometry.dispose();
     for (const e of p.extras) {
       scene.remove(e);
       if (e.userData.ownGeometry) (e as THREE.Mesh).geometry.dispose();
@@ -317,6 +324,19 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   }
 
   function putItem(item: WorldItem, gen: number) {
+    if (item.ground) {
+      // Sculpted ground: built here from its shape, no model to load.
+      const mesh = new THREE.Mesh(terrainGeometry(item.ground, { ...GROUND_COLOURS, wash: item.wash }), groundMat);
+      mesh.receiveShadow = true;
+      mesh.castShadow = true;
+      mesh.userData.ownGeometry = true;
+      mesh.userData.key = item.key;
+      if (item.tag) mesh.userData.tag = item.tag;
+      scene.add(mesh);
+      placed.set(item.key, { item, obj: mesh, extras: [], baseY: 0 });
+      if (item.tag) tagObj.set(item.tag, mesh);
+      return;
+    }
     template(item.model).then((t) => {
       if (disposed || gen !== generation || !t) return;
       if (placed.has(item.key) || !items.some((i) => i.key === item.key)) return;
@@ -592,17 +612,16 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       }
       const gen = generation;
       if (d.add.length) {
-        const loads = d.add.map((i) => template(i.model));
+        const loads = d.add.filter((i) => !i.ground).map((i) => template(i.model));
         for (const i of d.add) putItem(i, gen);
         if (!readySent) Promise.all(loads).then(() => setTimeout(sendReady, 50));
       }
       syncTags();
       shores.length = 0;
-      for (const i of next) if (i.shore) shores.push([i.x, i.z, i.shore]);
+      shores.push(...shoresOf(next));
       water.setShores(shores);
       // How far the home island reaches: the camera frames it when you go home.
-      let reach = 0;
-      for (const i of next) if (i.model === 'kk/hex_grass' && !i.key.startsWith('isle:')) reach = Math.max(reach, Math.hypot(i.x, i.z));
+      const reach = next.find((i) => i.ground?.kind === 'home')?.ground?.radius ?? 0;
       if (islandReach === 0 && reach > 0) {
         islandReach = reach;
         if (reach > HOME_REACH) {
@@ -707,6 +726,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       water.dispose();
       sandGeo.dispose();
       sandMat.dispose();
+      groundMat.dispose();
       glowGeo.dispose();
       hitGeo.dispose();
       hitMat.dispose();

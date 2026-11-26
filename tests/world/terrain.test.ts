@@ -24,7 +24,7 @@ describe('sculpted islands', () => {
   test('expanding the island makes it bigger all round', () => {
     const small = homeShape(0);
     const big = homeShape(28);
-    expect(big.radius).toBeGreaterThan(small.radius * 1.4);
+    expect(big.radius).toBeGreaterThan(small.radius * 1.3);
     for (const [x, z] of outline(small, 16)) expect(heightAt(big, x, z)).toBeGreaterThan(0.1);
   });
   test('each destination island has its own build', () => {

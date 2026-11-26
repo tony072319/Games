@@ -6,7 +6,7 @@ import { MATERIALS, SEA_DEF, type Materials } from './data';
 import { emptyMaterials, type GameState } from './state';
 import { T } from './tuning';
 
-/** How many tiles the island can grow by (the world's LAND_TILES; a test keeps them equal). */
+/** How many steps the island can grow by; each widens the sculpted ground a little. */
 export const LAND_MAX = 28;
 
 /** The next tile's price, or null when the island is full. */
