@@ -5,6 +5,7 @@ import { curioChance, foundCurio, pickCurio } from './curios';
 import { seaView } from './seas';
 import { has } from './talents';
 import { T } from './tuning';
+import { rollStory } from './voyageLog';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
 /** Lighthouse light level that repairs the dock so a boat can be built. */
@@ -79,11 +80,18 @@ export function canSail(s: GameState, d: DestId): boolean {
   return reachable(s, d) && !s.boat.voyage && !s.boat.cargo;
 }
 
-export function startVoyage(s: GameState, d: DestId, nowMs: number): boolean {
+export function startVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number = Math.random): boolean {
   if (!canSail(s, d)) return false;
-  s.boat.voyage = { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + voyageMs(s, d) };
+  s.boat.voyage = planVoyage(s, d, nowMs, rng);
   s.boat.lastDest = d;
   return true;
+}
+
+/** A trip leaving now: its story is rolled as it sails (luck can bring it home early). */
+function planVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number): NonNullable<GameState['boat']['voyage']> {
+  const story = rollStory(d, rng);
+  const ms = voyageMs(s, d) * (story.bonus === 'early' ? 1 - T.STORY_EARLY : 1);
+  return { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + ms, story };
 }
 
 /** If the boat is due back, put its haul on the dock. Returns the new cargo, if any. */
@@ -95,15 +103,18 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
   const discovery = !at.discovered.includes(v.dest);
   const haul = voyageHaul(at, v.dest);
   if (discovery) for (const [m, n] of Object.entries(DISCOVERY_FIND[v.dest] ?? {})) haul[m as keyof Materials] += n ?? 0;
+  if (v.story?.bonus === 'haul') for (const m of MATERIALS) haul[m] *= 1 + T.STORY_HAUL;
+  if (v.story?.bonus === 'find') haul.glow += T.STORY_FIND_GLOW;
   // Whatever the island's buildings made comes home too.
   const fromIsland = takeIslandStore(at, v.dest);
   for (const m of MATERIALS) haul[m] += fromIsland[m];
   s.boat.voyage = null;
-  s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland };
+  s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland, story: v.story };
   if (rng() < curioChance(at, 'boat')) {
     const c = pickCurio(at, 'boat', rng, v.dest);
     if (c) s.boat.cargo.curio = c;
   }
+  s.boat.cargo.rare = !!s.boat.cargo.curio || discovery || !!v.story?.bonus;
   return s.boat.cargo;
 }
 
@@ -143,6 +154,6 @@ export function autoSail(s: GameState, nowMs: number, rng: () => number = Math.r
     // Sail again from the sea it was at; reachability is judged there.
     const at = seaView(s, v.sea) ?? s;
     if (!canSail(at, v.dest)) break;
-    s.boat.voyage = { sea: v.sea, dest: v.dest, departAt: back, returnAt: back + voyageMs(at, v.dest) };
+    s.boat.voyage = { ...planVoyage(at, v.dest, back, rng), sea: v.sea };
   }
 }

@@ -2,6 +2,7 @@ import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type B
 import { T } from './tuning';
 import { readDecor } from './decor';
 import { readLand } from './land';
+import { readStory } from './voyageLog';
 import { BUILDINGS } from './islands';
 import { CURIO_BY_ID } from './curios';
 import { TALENT_BY_ID, type TalentId } from './talents';
@@ -137,7 +138,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     else dropped = true;
     const v = b.voyage;
     if (isObj(v) && DEST_IDS.includes(v.dest as DestId) && Number.isFinite(v.departAt) && Number.isFinite(v.returnAt)) {
-      state.boat.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number };
+      state.boat.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number, story: readStory(v.story) };
     } else if (v !== null && v !== undefined) dropped = true;
     const c = b.cargo;
     if (isObj(c) && DEST_IDS.includes(c.dest as DestId) && isObj(c.haul)) {
@@ -146,7 +147,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
       const fromIsland = {} as Materials;
       const fi = isObj(c.fromIsland) ? c.fromIsland : {};
       for (const m of MATERIALS) fromIsland[m] = isAmount(fi[m]) ? (fi[m] as number) : 0;
-      state.boat.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland };
+      state.boat.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland, story: readStory(c.story), rare: c.rare === true };
     } else if (c !== null && c !== undefined) dropped = true;
   } else if ('boat' in data) dropped = true;
 

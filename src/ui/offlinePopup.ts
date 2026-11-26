@@ -1,3 +1,4 @@
+import { storyText } from './story';
 import { T } from '../core/tuning';
 import type { ArrivalLine } from '../core/arrival';
 import { MATERIALS, type DestId, type Materials, type UpgradeId } from '../core/data';
@@ -52,6 +53,11 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
     if (l.kind === 'island') p.textContent = t(lang, 'arrival.island');
     if (l.kind === 'tip') p.textContent = t(lang, 'arrival.tip', { name: t(lang, `upg.${l.upgrade}.name`) });
     li.append(p);
+    if (l.kind === 'boat' && l.story) {
+      const log = el('p', 'arrival-story');
+      log.textContent = storyText(lang, l.dest!, l.story, act.destName(l.dest!));
+      li.append(log);
+    }
     if (l.mats) li.append(haul(l.mats, lang));
     if (l.kind === 'tip') {
       const see = el('button', 'btn-ghost');

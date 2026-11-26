@@ -27,6 +27,7 @@ import { canBuy } from '../core/economy';
 import { formatEta } from '../i18n';
 import { SEA_IDS, type SeaId } from '../core/data';
 import { destDesc, destName } from './names';
+import { storyText } from './story';
 import { createDebug } from './debug';
 import { dismiss, el, openMenu } from './dom';
 import { createHud, type Hud } from './hud';
@@ -402,6 +403,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     refresh();
     save();
+    // The voyage log: what happened at sea (and any luck).
+    const log = storyText(lang, cargo.dest, cargo.story, destName(lang, cargo.sea, cargo.dest));
+    if (log) setTimeout(() => toast(log, cargo.rare ? 'rare' : undefined), cargo.discovery || cargo.curio ? 2400 : 300);
+    if (cargo.rare) sparkle(boatBtn);
     if (cargo.discovery) setTimeout(() => showDiscovery(cargo.sea, cargo.dest), 900);
     else if (cargo.curio) setTimeout(() => onCurio(cargo.curio!), 900);
   }
@@ -491,12 +496,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
   }
 
-  function toast(text: string) {
+  /** A short message; 'rare' ones (a lucky voyage) stay a little longer and glow. */
+  function toast(text: string, kind?: 'rare') {
     game.querySelectorAll('.toast').forEach((old) => old.remove());
-    const n = el('div', 'toast');
+    const n = el('div', kind ? `toast ${kind}` : 'toast');
     n.textContent = text;
     game.append(n);
-    setTimeout(() => n.remove(), 2200);
+    setTimeout(() => n.remove(), kind ? 4200 : 2200);
   }
 
   function onBuy(id: UpgradeId) {
@@ -1057,7 +1063,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         nextSkyAt = now + 1000;
       }
       const v = state.boat.voyage;
-      const boat = v && v.sea === state.sea ? { ...boatPosition(state, now), model: boatModel(state.levels.speed, state.levels.cargo) } : null;
+      // A lucky trip shows on the way home: lantern lit, gulls along.
+      const rare = !!v?.story?.bonus && now > (v.departAt + v.returnAt) / 2;
+      const boat = v && v.sea === state.sea ? { ...boatPosition(state, now), model: boatModel(state.levels.speed, state.levels.cargo), rare } : null;
       const flotsam = field.items.map((i) => ({ id: i.id, ...flotsamPosition(i, now), curio: !!i.curio, material: i.material }));
       world.update(worldLayout(state, now), { boat, flotsam });
       const has = [...world.has].join(' ');

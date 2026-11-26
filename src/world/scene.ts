@@ -36,7 +36,8 @@ export interface FlotsamView {
   material: MaterialId;
 }
 export interface WorldExtra {
-  boat: (ReturnType<typeof boatPosition> & { model: ModelId }) | null;
+  /** The boat at sea; `rare` when it is bringing something special home. */
+  boat: (ReturnType<typeof boatPosition> & { model: ModelId; rare?: boolean }) | null;
   flotsam: FlotsamView[];
 }
 export interface ScreenPoint {
@@ -373,7 +374,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   }
 
   // ---------- moving things: the boat at sea, drifting finds ----------
-  let voyageBoat: { model: ModelId; obj: THREE.Object3D } | null = null;
+  let voyageBoat: { model: ModelId; obj: THREE.Object3D; escort?: THREE.Group } | null = null;
   const drift = new Map<number, THREE.Object3D>();
   function syncExtra() {
     const b = extra.boat;
@@ -393,6 +394,36 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     if (voyageBoat && b) {
       voyageBoat.obj.position.set(b.x, -0.22, b.z);
       voyageBoat.obj.rotation.y = b.rotY;
+      // Coming home lucky: a warm lantern on the boat and two gulls flying along.
+      if (b.rare && !voyageBoat.escort) {
+        const g = new THREE.Group();
+        const lamp = new THREE.PointLight(0xffc56b, 6, 6, 1.6);
+        lamp.position.set(0, 1.1, 0.4);
+        g.add(lamp);
+        const holder = voyageBoat;
+        template('lh/seagull').then((t) => {
+          if (!t || holder.escort !== g) return;
+          for (let i = 0; i < 2; i++) {
+            const gull = instance(t, { model: 'lh/seagull' });
+            gull.userData.orbit = i * Math.PI;
+            g.add(gull);
+          }
+        });
+        voyageBoat.obj.add(g);
+        voyageBoat.escort = g;
+      } else if (!b.rare && voyageBoat.escort) {
+        voyageBoat.obj.remove(voyageBoat.escort);
+        voyageBoat.escort = undefined;
+      }
+      if (voyageBoat.escort) {
+        const tt = performance.now() / 1000;
+        for (const c of voyageBoat.escort.children)
+          if (c.userData.orbit !== undefined) {
+            const a = tt * 1.4 + c.userData.orbit;
+            c.position.set(Math.cos(a) * 1.3, 2 + Math.sin(tt * 3 + c.userData.orbit) * 0.15, Math.sin(a) * 1.3);
+            c.rotation.y = -a;
+          }
+      }
     }
     const alive = new Set(extra.flotsam.map((f) => f.id));
     for (const [id, o] of drift)

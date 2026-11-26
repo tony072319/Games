@@ -160,6 +160,19 @@ describe('a real island', () => {
   });
 });
 
+describe('a lucky boat', () => {
+  test('a boat home with something special shows a lantern', () => {
+    const plain = game((g) => ((g.levels.light = 3), (g.boat.built = true)));
+    expect(worldLayout(plain, NOW).find((i) => i.tag === 'boat')?.glow).toBeUndefined();
+    const rare = game((g) => {
+      g.levels.light = 3;
+      g.boat.built = true;
+      g.boat.cargo = { sea: 'dusk', dest: 'wreck', haul: { wood: 1, plastic: 0, rope: 0, metal: 0, glow: 0 }, discovery: false, fromIsland: { wood: 0, plastic: 0, rope: 0, metal: 0, glow: 0 }, rare: true };
+    });
+    expect(worldLayout(rare, NOW).find((i) => i.tag === 'boat')?.glow).toBe('lantern');
+  });
+});
+
 describe('flotsam drift', () => {
   const item = { id: 1, material: 'wood' as const, spawnedAt: NOW, lane: 0 };
   test('crosses the sea from left to right over its life', () => {

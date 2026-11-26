@@ -28,6 +28,11 @@ export const T = {
   /** Polishing the lamp: glow it costs, how long it lasts, and how many more finds drift by. */
   /** From this lighthouse level on, each level is mended in this many parts (same total price). */
   LIGHT_PARTS: 10,
+  /** Voyage log: chance a trip has some luck, and what the luck is worth. */
+  STORY_LUCK: 0.3,
+  STORY_HAUL: 0.25,
+  STORY_EARLY: 0.15,
+  STORY_FIND_GLOW: 1,
   /** Island decorations: price of the first one, and how much dearer each next one is. */
   DECOR_BASE: 304,
   DECOR_GROWTH: 1.3,

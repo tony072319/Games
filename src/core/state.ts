@@ -7,6 +7,8 @@ export interface Voyage {
   dest: DestId;
   departAt: number;
   returnAt: number;
+  /** What the log will say about this trip (rolled when it sails). */
+  story?: import('./voyageLog').Story;
 }
 
 /** What the boat brought back, waiting on the dock to be unloaded. */
@@ -20,6 +22,9 @@ export interface Cargo {
   fromIsland: Materials;
   /** A curio the boat found, if any. */
   curio?: string;
+  story?: import('./voyageLog').Story;
+  /** Something special came home: a curio, a first find or a lucky trip. */
+  rare?: boolean;
 }
 
 /** Everything that belongs to one sea. The sea you're at lives in the top-level fields; the others are kept here. */

@@ -524,3 +524,6 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .credits-list span { color: var(--c-ink-dim); font-size: var(--fs-caption); }
 
 .item-icon { display: inline-block; object-fit: contain; user-select: none; pointer-events: none; }
+
+.arrival-story { margin: var(--sp-1) 0 0; color: var(--c-ink-dim); font-size: var(--fs-caption); font-style: italic; }
+.toast.rare { box-shadow: var(--glow-gold); color: var(--c-gold); }

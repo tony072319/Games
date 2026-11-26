@@ -169,7 +169,9 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   if (s.boat.built && !awayHere) {
     const b = boatPosition(s, nowMs);
     const model = boatModel(s.levels.speed, s.levels.cargo);
-    items.push({ key: `boat:${model}`, model, x: b.x, y: -0.22, z: b.z, rotY: b.rotY, tag: 'boat', bob: true, shore: 0.9 });
+    // Something special aboard: a lantern lit on the boat.
+    const glow = s.boat.cargo?.rare ? ('lantern' as const) : undefined;
+    items.push({ key: `boat:${model}:${glow ?? ''}`, model, x: b.x, y: -0.22, z: b.z, rotY: b.rotY, tag: 'boat', bob: true, shore: 0.9, glow });
     if (s.boat.cargo)
       for (let i = 0; i < 3; i++)
         items.push({ key: `boat:cargo:${i}`, model: 'kk/crate_A_small', x: b.x + (i - 1) * 0.35, y: 0.15 + (i === 1 ? 0.3 : 0), z: b.z, rotY: i, size: 0.3, bob: true });
