@@ -62,7 +62,8 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
     c.wood = g(30, 1.8);
     c.plastic = g(10, 1.8);
   } else if (id === 'light') {
-    const k = T.LIGHT_COST_MULT;
+    // The first two steps (to the dock) are cheaper, so a new player gets the boat in the first session.
+    const k = T.LIGHT_COST_MULT * (L <= 2 ? T.EARLY_LIGHT_MULT : 1);
     c.wood = g(200 * k, T.LIGHT_GROWTH);
     c.plastic = g(80 * k, T.LIGHT_GROWTH);
     if (L >= 2) c.rope = g(40 * k, T.LIGHT_GROWTH);

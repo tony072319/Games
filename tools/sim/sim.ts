@@ -33,6 +33,8 @@ export interface Profile {
 
 export const IDEAL: Profile = { name: 'ideal', checks: Array.from({ length: 144 }, (_, i) => i * 10), visit: 2, tapsPerCheck: 3 };
 export const NORMAL: Profile = { name: 'normal', checks: [8 * 60, 13 * 60, 21 * 60], visit: 3, tapsPerCheck: 5 };
+/** A new player's first session: plays for fifteen minutes straight from 8:00 (every minute, tapping eight finds), then like NORMAL. */
+export const FIRST: Profile = { name: 'first', checks: [...Array.from({ length: 15 }, (_, i) => 8 * 60 + i), 13 * 60, 21 * 60], visit: 1, tapsPerCheck: 8 };
 export const KEEN: Profile = { name: 'keen', checks: Array.from({ length: 16 }, (_, i) => (8 + i) * 60), visit: 3, tapsPerCheck: 10 };
 
 export type Source = 'net' | 'boat' | 'islands' | 'taps';
@@ -64,6 +66,8 @@ export interface SimReport {
   finished: boolean;
   /** Any material ever went negative or non-finite. */
   broken: boolean;
+  /** Minutes from the first visit to the first voyage. */
+  firstVoyageMin?: number;
 }
 
 export function mulberry(seed: number): () => number {
@@ -171,6 +175,7 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
   let src: Record<Source, number> = { net: 0, boat: 0, islands: 0, taps: 0 };
   let maxNet = 1;
   let broken = false;
+  let firstVoyageMin: number | undefined;
   const times: number[] = [];
   for (let d = 0; d < maxDays; d++) for (const c of profile.checks) times.push(t0 + d * DAY + c * MIN);
 
@@ -245,6 +250,7 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
       for (let n = freeBoat(s); n !== null; n = freeBoat(s)) {
         const dest = chooseDest(s, untilNext);
         if (!dest || !startVoyage(s, dest, at, Math.random, n)) break;
+        if (firstVoyageMin === undefined) firstVoyageMin = (at - times[0]) / MIN;
       }
       if (MATERIALS.some((k) => !Number.isFinite(s.materials[k]) || s.materials[k] < -1e-6)) broken = true;
     }
@@ -253,5 +259,5 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
   const finished = seas.length >= seasWanted;
   const tree = TALENTS.reduce((a, x) => a + x.cost, 0);
   const spent = s.talents.reduce((a, id) => a + (TALENTS.find((x) => x.id === id)?.cost ?? 0), 0);
-  return { profile: profile.name, seas, talentFill: spent / tree, finished, broken };
+  return { profile: profile.name, seas, talentFill: spent / tree, finished, broken, firstVoyageMin };
 }

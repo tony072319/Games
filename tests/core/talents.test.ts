@@ -56,6 +56,7 @@ describe('effects', () => {
   test('net, chest, production, voyage, haul, islands, tap', () => {
     const s = withStars(100);
     s.reached.push('fog', 'aurora');
+    s.discovered.push('firefly'); // not a new game: no trial trip
     const net = netRate(s);
     learn(s, 'net1');
     expect(netRate(s)).toBeCloseTo(net * 1.15);

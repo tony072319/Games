@@ -39,6 +39,10 @@ export const T = {
   BOAT2_COST_MULT: 1,
   /** With two boats each carries this share of a full load (the point is staggered returns, not double). */
   TWO_BOATS_HAUL: 0.52,
+  /** First session: a cheaper way to the dock and the boat, and a short first trip. */
+  EARLY_LIGHT_MULT: 0.4,
+  BOAT_COST_MULT: 0.45,
+  TRIAL_MINUTES: 3,
   STORY_LUCK: 0.3,
   STORY_HAUL: 0.25,
   STORY_EARLY: 0.15,

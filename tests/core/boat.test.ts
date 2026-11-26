@@ -1,7 +1,7 @@
 import { T } from '../../src/core/tuning';
 import { describe, expect, test } from 'vitest';
 import {
-  BOAT_COST,
+  boatCost,
   buildBoat,
   canBuildBoat,
   reachable,
@@ -24,6 +24,8 @@ function rich(light = 3): GameState {
   const s = newGame(0, 'zh');
   s.levels.light = light;
   for (const m of ['wood', 'plastic', 'rope', 'metal'] as const) s.materials[m] = 10_000;
+  // Not a new game (so no short trial trip): an island already found far away.
+  s.discovered.push('oldlight');
   return s;
 }
 
@@ -37,9 +39,9 @@ describe('building the boat', () => {
     const s = rich();
     expect(buildBoat(s)).toBe(true);
     expect(s.boat.built).toBe(true);
-    expect(s.materials.wood).toBe(10_000 - BOAT_COST.wood);
+    expect(s.materials.wood).toBe(10_000 - boatCost().wood);
     expect(buildBoat(s)).toBe(false);
-    expect(s.materials.wood).toBe(10_000 - BOAT_COST.wood);
+    expect(s.materials.wood).toBe(10_000 - boatCost().wood);
   });
 });
 

@@ -45,7 +45,12 @@ describe('buying', () => {
 
 describe('lighthouse light and boat upgrades', () => {
   test('light costs, with glow from level 7', () => {
-    expect(upgradeCost('light', 1)).toEqual({ wood: Math.ceil(200 * T.LIGHT_COST_MULT), plastic: Math.ceil(80 * T.LIGHT_COST_MULT), rope: 0, metal: 0, glow: 0 });
+    // The way to the dock is cheaper (EARLY_LIGHT_MULT).
+    const first = upgradeCost('light', 1);
+    expect(first.wood).toBeCloseTo(200 * T.LIGHT_COST_MULT * T.EARLY_LIGHT_MULT, -0.5);
+    expect(first.plastic).toBeCloseTo(80 * T.LIGHT_COST_MULT * T.EARLY_LIGHT_MULT, -0.5);
+    expect(first.rope + first.metal + first.glow).toBe(0);
+    expect(upgradeCost('light', 3).wood).toBeCloseTo(200 * T.LIGHT_COST_MULT * T.LIGHT_GROWTH ** 2, -0.5);
     expect(upgradeCost('light', 7).glow).toBe(5);
     expect(upgradeCost('light', 6).glow).toBe(0);
   });

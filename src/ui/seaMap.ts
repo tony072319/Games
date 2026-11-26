@@ -1,6 +1,6 @@
 import { T } from '../core/tuning';
 import { FRIEND_MAX, canDeliver, commissionFor, friendOf } from '../core/commission';
-import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere, BOAT2_COST, canBuildBoat2, freeBoat } from '../core/boat';
+import { boatCost, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere, BOAT2_COST, canBuildBoat2, freeBoat } from '../core/boat';
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, type DestId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
@@ -263,7 +263,7 @@ ${path}
       return;
     }
     // Rebuild the build-boat card only when it would look different, so its button stays tappable.
-    const key = `${s.levels.light}:${MATERIALS.map((m) => (s.materials[m] >= BOAT_COST[m] ? 1 : 0)).join('')}`;
+    const key = `${s.levels.light}:${MATERIALS.map((m) => (s.materials[m] >= boatCost()[m] ? 1 : 0)).join('')}`;
     if (key === bottomKey) return;
     bottomKey = key;
     bottom.replaceChildren();
@@ -274,12 +274,12 @@ ${path}
         thumb: boatSvg(false, 1),
         title: t(lang, 'map.build'),
         desc: t(lang, 'map.buildDesc'),
-        cost: BOAT_COST,
+        cost: boatCost(),
         have: s.materials,
         buyLabel: t(lang, 'ui.buy'),
         canBuy: canBuildBoat(s),
-        state: affordState(s, BOAT_COST),
-        eta: etaText(s, BOAT_COST, lang),
+        state: affordState(s, boatCost()),
+        eta: etaText(s, boatCost(), lang),
         onBuy: act.build,
         open: true,
         alwaysOpen: true,

@@ -13,6 +13,13 @@ import { emptyMaterials, type Cargo, type GameState } from './state';
 export const DOCK_LIGHT = 3;
 export const BOAT_COST: Materials = { wood: 500, plastic: 0, rope: 150, metal: 60, glow: 0 };
 
+/** What the first boat costs now (BOAT_COST × the tuning's multiplier, rounded up). */
+export function boatCost(): Materials {
+  const c = { ...BOAT_COST };
+  for (const m of MATERIALS) c[m] = Math.ceil(c[m] * T.BOAT_COST_MULT);
+  return c;
+}
+
 export interface Destination {
   minutes: number;
   /** Lighthouse light needed before the boat can find its way there. */
@@ -35,12 +42,12 @@ const DISCOVERY_FIND: Partial<Record<DestId, Partial<Materials>>> = {
 };
 
 export function canBuildBoat(s: GameState): boolean {
-  return !s.boat.built && s.levels.light >= DOCK_LIGHT && MATERIALS.every((m) => s.materials[m] >= BOAT_COST[m]);
+  return !s.boat.built && s.levels.light >= DOCK_LIGHT && MATERIALS.every((m) => s.materials[m] >= boatCost()[m]);
 }
 
 export function buildBoat(s: GameState): boolean {
   if (!canBuildBoat(s)) return false;
-  for (const m of MATERIALS) s.materials[m] -= BOAT_COST[m];
+  for (const m of MATERIALS) s.materials[m] -= boatCost()[m];
   s.boat.built = true;
   return true;
 }
@@ -81,7 +88,14 @@ export function freeBoat(s: GameState): BoatNo | null {
   return null;
 }
 
+/** A game's very first voyage: nothing found anywhere yet, in the first sea. */
+export function isTrial(s: GameState): boolean {
+  return s.sea === 'dusk' && s.discovered.length === 0 && Object.values(s.seas).every((st) => !st?.discovered.length);
+}
+
 export function voyageMs(s: GameState, d: DestId): number {
+  // The first trip is a short trial, so a new player sees the boat come home in the first session.
+  if (isTrial(s)) return T.TRIAL_MINUTES * 60_000;
   return (
     DESTS[d].minutes *
     60_000 *

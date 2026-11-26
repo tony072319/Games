@@ -12,6 +12,7 @@ const maxed = () => {
   Object.assign(s.levels, { light: 10, net: 20, speed: 10, cargo: 10 });
   s.boat.built = true;
   s.buildings.boatshed = 5;
+  s.discovered.push('firefly'); // not a new game: no trial trip
   return s;
 };
 
