@@ -95,3 +95,10 @@ describe('the town keeps clear of the lighthouse grounds', () => {
     }
   });
 });
+
+describe('town windows', () => {
+  test('glow without adding lights, so the town growing never changes the light count', () => {
+    const s = grown((g) => ((g.levels.light = 10), (g.levels.net = 50), (g.land = LAND_MAX)));
+    for (const i of worldLayout(s, NOW).filter((x) => x.key.startsWith('town:'))) expect(i.glow).not.toBe('window');
+  });
+});

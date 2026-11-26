@@ -96,3 +96,16 @@ describe('near dawn', () => {
     expect(guideShip(s, f, f.ships[0].id, later, quiet)).not.toBeNull();
   });
 });
+
+describe('a damaged guided count', () => {
+  test('is reported as repaired and starts at 0', () => {
+    const map = new Map<string, string>();
+    const kv: KV = { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => void map.set(k, v) };
+    saveGame(kv, newGame(0, 'zh'));
+    const data = JSON.parse(map.get(SAVE_KEY)!);
+    data.stats.guided = -3;
+    const r = loadGame({ getItem: () => JSON.stringify(data), setItem() {} }, 0, 'zh');
+    expect(r.state.stats.guided).toBe(0);
+    expect(r.status).toBe('repaired');
+  });
+});

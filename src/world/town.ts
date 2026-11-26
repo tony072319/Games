@@ -14,8 +14,8 @@ export interface TownSlot {
   /** Facing (radians). */
   rotY: number;
   models: Record<SeaId, ModelId>;
-  /** Lit windows at night: 'window' (with a light) or 'pane' (glow only, cheap). */
-  glow?: 'window' | 'pane';
+  /** Lit windows at night (glow only). */
+  glow?: 'pane';
   harbour: boolean;
 }
 
@@ -49,7 +49,8 @@ function slot(frac: number, a: number, i: number, harbour: boolean): TownSlot {
   // Face the street (terrace) or the sea (harbour).
   const out = harbour || frac > TOWN_RING;
   const rotY = Math.atan2(Math.cos(a), Math.sin(a)) + (out ? Math.PI : 0);
-  return { at: (land) => ringPoint(homeShape(land), frac, a), rotY, models, harbour, glow: i % 4 === 0 ? 'window' : 'pane' };
+  // Panes only: a lit window would add a light, and every new light makes the GPU rebuild its shaders.
+  return { at: (land) => ringPoint(homeShape(land), frac, a), rotY, models, harbour, glow: 'pane' };
 }
 
 /** Every place in the town, in the order they are built. */

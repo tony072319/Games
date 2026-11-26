@@ -42,9 +42,10 @@ describe('the voyage log', () => {
   });
   test('a lucky trip: home early', () => {
     const s = sailor();
+    const full = voyageMs(s, 'oldlight');
     startVoyage(s, 'oldlight', 0, seq(0.0, 0.5));
     expect(s.boat.voyage!.story!.bonus).toBe('early');
-    expect(s.boat.voyage!.returnAt).toBeCloseTo(voyageMs(s, 'oldlight') * (1 - T.STORY_EARLY), -2);
+    expect(s.boat.voyage!.returnAt).toBeCloseTo(full * (1 - T.STORY_EARLY), -2);
   });
   test('most trips are quiet', () => {
     const s = sailor();

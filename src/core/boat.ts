@@ -90,6 +90,8 @@ export function freeBoat(s: GameState): BoatNo | null {
 
 /** A game's very first voyage: nothing found anywhere yet, in the first sea. */
 export function isTrial(s: GameState): boolean {
+  // Not once the first trip is out or its cargo waits on the dock (the island is only recorded on unloading).
+  if (s.boat.voyage || s.boat.cargo) return false;
   return s.sea === 'dusk' && s.discovered.length === 0 && Object.values(s.seas).every((st) => !st?.discovered.length);
 }
 

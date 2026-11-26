@@ -235,6 +235,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   else dropped = true;
   // Ships guided came later: missing means none yet.
   if (typeof stats.guided === 'number' && Number.isInteger(stats.guided) && stats.guided >= 0) state.stats.guided = stats.guided;
+  else if ('guided' in stats) dropped = true;
   // First-time steps came later: a save that has already played skips them.
   if (typeof stats.tutorial === 'number' && Number.isInteger(stats.tutorial) && stats.tutorial >= 0) state.stats.tutorial = Math.min(3, stats.tutorial);
   else if ('tutorial' in stats) dropped = true;

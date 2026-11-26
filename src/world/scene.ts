@@ -110,7 +110,7 @@ interface Placed {
 }
 
 const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 1.6);
-/** The home island a new sea starts with reaches about this far; the default camera frames it. */
+/** The reference island size the default camera frames; bigger islands pull the home view back (homeScale). */
 const HOME_REACH = 6;
 // Pulled back so the two-ring island and its third-ring decorations fit with room around them.
 const DEFAULT_CAM = DEFAULT_TARGET.clone().add(new THREE.Vector3(13, 11, 27).sub(DEFAULT_TARGET).multiplyScalar(1.1));
@@ -409,6 +409,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   scene.add(beam);
   let beamAim: { x: number; z: number; until: number } | null = null;
   let beamAngle = 0;
+  let beamTower: THREE.Object3D | null = null;
+  let beamHeight = 0;
   /** The scene clock last seen by updateBeam (it pauses with the tab and slows in calm mode). */
   let sceneTime = 0;
   function updateBeam(t: number, night: number) {
@@ -416,8 +418,13 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     const tower = tagObj.get('light');
     beam.visible = !!tower && night > 0.3 && !calm;
     if (!beam.visible || !tower) return;
-    const box = new THREE.Box3().setFromObject(tower);
-    beam.position.set(0, box.max.y - Math.min(1.2, (box.max.y - box.min.y) * 0.15), 0);
+    // The lamp's height, measured once per lighthouse model (it changes with the light level).
+    if (beamTower !== tower) {
+      beamTower = tower;
+      const box = new THREE.Box3().setFromObject(tower);
+      beamHeight = box.max.y - Math.min(1.2, (box.max.y - box.min.y) * 0.15);
+    }
+    beam.position.set(0, beamHeight, 0);
     let want = t * 0.35;
     if (beamAim && t < beamAim.until) want = Math.atan2(-beamAim.z, beamAim.x);
     else beamAim = null;
