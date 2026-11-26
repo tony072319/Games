@@ -428,5 +428,7 @@
   "ask.deliver": "Bring it",
   "ask.done": "The people here are old friends now and load a little more onto your boat.",
   "ask.friend": "Friendship {n}/{max}",
-  "ask.thanks": "The people of {name} are delighted (friendship {n}/{max}) and gave you a little glow."
+  "ask.thanks": "The people of {name} are delighted (friendship {n}/{max}) and gave you a little glow.",
+  "story.ice": "The boat spent the whole trip breaking ice around {name} and opened a channel. Nothing came home this time; next time it can land.",
+  "map.fogged": "The fog is too thick for the boat to find the way. Mend the lighthouse to level {n} to see through."
 }

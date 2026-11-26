@@ -149,7 +149,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
       const fromIsland = {} as Materials;
       const fi = isObj(c.fromIsland) ? c.fromIsland : {};
       for (const m of MATERIALS) fromIsland[m] = isAmount(fi[m]) ? (fi[m] as number) : 0;
-      state.boat.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland, story: readStory(c.story), rare: c.rare === true };
+      state.boat.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland, story: readStory(c.story), rare: c.rare === true, ...(c.iceBreak === true ? { iceBreak: true } : {}) };
     } else if (c !== null && c !== undefined) dropped = true;
   } else if ('boat' in data) dropped = true;
 

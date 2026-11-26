@@ -25,6 +25,8 @@ export interface Cargo {
   story?: import('./voyageLog').Story;
   /** Something special came home: a curio, a first find or a lucky trip. */
   rare?: boolean;
+  /** An aurora island's first trip: the ice was broken, nothing came home. */
+  iceBreak?: boolean;
 }
 
 /** Everything that belongs to one sea. The sea you're at lives in the top-level fields; the others are kept here. */

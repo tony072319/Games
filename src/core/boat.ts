@@ -45,8 +45,13 @@ export function buildBoat(s: GameState): boolean {
   return true;
 }
 
+/** Light the boat needs to find an island here: in the fog, one level more than elsewhere. */
+export function needLightHere(s: GameState, d: DestId): number {
+  return DESTS[d].needLight + (s.sea === 'fog' ? T.FOG_EXTRA_LIGHT : 0);
+}
+
 export function reachable(s: GameState, d: DestId): boolean {
-  return s.boat.built && s.levels.light >= DESTS[d].needLight;
+  return s.boat.built && s.levels.light >= needLightHere(s, d);
 }
 
 export function voyageMs(s: GameState, d: DestId): number {
@@ -104,13 +109,16 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
   const discovery = !at.discovered.includes(v.dest);
   const haul = voyageHaul(at, v.dest);
   if (discovery) for (const [m, n] of Object.entries(DISCOVERY_FIND[v.dest] ?? {})) haul[m as keyof Materials] += n ?? 0;
+  // Under the aurora the islands are iced in: the first trip only breaks the ice.
+  const iceBreak = v.sea === 'aurora' && discovery;
+  if (iceBreak) for (const m of MATERIALS) haul[m] = 0;
   if (v.story?.bonus === 'haul') for (const m of MATERIALS) haul[m] *= 1 + T.STORY_HAUL;
   if (v.story?.bonus === 'find') haul.glow += T.STORY_FIND_GLOW;
   // Whatever the island's buildings made comes home too.
   const fromIsland = takeIslandStore(at, v.dest);
   for (const m of MATERIALS) haul[m] += fromIsland[m];
   s.boat.voyage = null;
-  s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland, story: v.story };
+  s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland, story: v.story, ...(iceBreak ? { iceBreak } : {}) };
   if (rng() < curioChance(at, 'boat')) {
     const c = pickCurio(at, 'boat', rng, v.dest);
     if (c) s.boat.cargo.curio = c;

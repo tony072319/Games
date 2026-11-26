@@ -33,6 +33,8 @@ export const T = {
   ASK_SECONDS: 3600,
   FRIEND_GLOW: 1,
   FRIEND_HAUL: 0.05,
+  /** Fog sea: extra lighthouse levels the boat needs to find an island. */
+  FOG_EXTRA_LIGHT: 1,
   STORY_LUCK: 0.3,
   STORY_HAUL: 0.25,
   STORY_EARLY: 0.15,

@@ -203,6 +203,9 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
       ground(items, `isle:${d}:dark`, shape, [SILHOUETTE, 0.85], `island:${d}`);
       const main = ISLAND_DECOR[d][0];
       place(items, `isle:${d}:dark`, [{ ...main, dx: 0, dz: 0, tint: SILHOUETTE }], ix, iz, main.dy ?? 0);
+      // Under the aurora an island nobody has reached yet is iced in.
+      if (s.sea === 'aurora')
+        place(items, `isle:${d}:ice`, [0, 1, 2, 3, 4].map((k) => ({ part: `ice${k}`, model: 'winter/ice_crystal', dx: Math.cos(k * 1.26) * shape.radius * 1.05, dz: Math.sin(k * 1.26) * shape.radius * 1.05, rotY: k })), ix, iz, 0);
       continue;
     }
     ground(items, `isle:${d}`, shape, GROUND[s.sea]);

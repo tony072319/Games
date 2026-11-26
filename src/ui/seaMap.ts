@@ -1,5 +1,5 @@
 import { FRIEND_MAX, canDeliver, commissionFor, friendOf } from '../core/commission';
-import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs } from '../core/boat';
+import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere } from '../core/boat';
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, type DestId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
@@ -161,6 +161,12 @@ ${path}
     p.textContent = lit ? (found ? destDesc(lang, s.sea, d) : t(lang, 'map.unknownDesc')) : t(lang, 'map.dark');
     info.append(h, p);
     if (found) info.append(askRow(s, d));
+    if (lit && s.boat.built && !reachable(s, d)) {
+      // The fog sea: the island shows, but the boat needs more light to find the way.
+      const fog = el('p', 'status');
+      fog.textContent = t(lang, 'map.fogged', { n: needLightHere(s, d) });
+      info.append(fog);
+    }
     if (!reachable(s, d)) return;
     const row = el('div', 'sail-row');
     if (found) {
