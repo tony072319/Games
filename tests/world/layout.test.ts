@@ -186,3 +186,21 @@ describe('flotsam drift', () => {
     expect(Number.isFinite(far.x + far.z + near.x + near.z)).toBe(true);
   });
 });
+
+describe('friends live there', () => {
+  test('friendship lights an island up, step by step', () => {
+    const at = (f: number) =>
+      worldLayout(
+        game((g) => {
+          g.levels.light = 10;
+          g.discovered.push('wreck');
+          g.friend.wreck = f;
+        }),
+        NOW,
+      ).filter((i) => i.key.startsWith('friend:wreck:'));
+    expect(at(0)).toHaveLength(0);
+    expect(at(1).length).toBeGreaterThan(0);
+    expect(at(3).length).toBeGreaterThan(at(1).length);
+    expect(at(1).some((i) => i.glow)).toBe(true);
+  });
+});

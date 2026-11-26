@@ -21,3 +21,12 @@ describe('voyage log text', () => {
     expect(storyText('zh', 'wreck', undefined, '沉船湾')).toBe('');
   });
 });
+
+describe('islanders text', () => {
+  test('every island asks in both languages', () => {
+    for (const k of [...DEST_IDS.map((d) => `ask.${d}`), 'ask.deliver', 'ask.done', 'ask.friend', 'ask.thanks']) {
+      expect((zh as Record<string, string>)[k], `zh ${k}`).toBeTruthy();
+      expect((en as Record<string, string>)[k], `en ${k}`).toBeTruthy();
+    }
+  });
+});

@@ -527,3 +527,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 
 .arrival-story { margin: var(--sp-1) 0 0; color: var(--c-ink-dim); font-size: var(--fs-caption); font-style: italic; }
 .toast.rare { box-shadow: var(--glow-gold); color: var(--c-gold); }
+
+.ask-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--c-surface-1); }
+.ask-row .hearts { color: var(--c-gold); letter-spacing: 1px; }
+.ask-row .ask-text { flex: 1 1 12em; color: var(--c-ink-dim); font-size: var(--fs-body); }

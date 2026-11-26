@@ -6,6 +6,7 @@ import { seaView } from './seas';
 import { has } from './talents';
 import { T } from './tuning';
 import { rollStory } from './voyageLog';
+import { friendHaul } from './commission';
 import { emptyMaterials, type Cargo, type GameState } from './state';
 
 /** Lighthouse light level that repairs the dock so a boat can be built. */
@@ -69,7 +70,7 @@ export function voyageHaul(s: GameState, d: DestId): Materials {
   const dest = DESTS[d];
   // In the fog the boat only finds what the lighthouse lights: full haul at light 10.
   const fog = s.sea === 'fog' ? s.levels.light / 10 : 1;
-  const total = netRate(s) * dest.minutes * 60 * T.BOAT_BASE * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1) * fog;
+  const total = netRate(s) * dest.minutes * 60 * T.BOAT_BASE * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1) * fog * friendHaul(s, d);
   const h = emptyMaterials();
   for (const m of MATERIALS) h[m] = total * (dest.mix[m] ?? 0);
   if (d === 'firefly') h.glow = 2 + s.levels.cargo;

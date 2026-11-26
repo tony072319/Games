@@ -29,6 +29,10 @@ export const T = {
   /** From this lighthouse level on, each level is mended in this many parts (same total price). */
   LIGHT_PARTS: 10,
   /** Voyage log: chance a trip has some luck, and what the luck is worth. */
+  /** Islanders' requests: seconds of the net's catch asked for, the glow thank-you, the haul bonus per friendship. */
+  ASK_SECONDS: 3600,
+  FRIEND_GLOW: 1,
+  FRIEND_HAUL: 0.05,
   STORY_LUCK: 0.3,
   STORY_HAUL: 0.25,
   STORY_EARLY: 0.15,

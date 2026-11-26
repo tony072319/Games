@@ -207,6 +207,14 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     }
     ground(items, `isle:${d}`, shape, GROUND[s.sea]);
     place(items, `isle:${d}`, ISLAND_DECOR[d], ix, iz, 0, `island:${d}`);
+    // Friends live here: a lantern by the shore, then a flag, then strung lights.
+    const f = s.friend[d] ?? 0;
+    const friendParts: Part[] = [
+      { part: 'lamp', model: 'harbor/dock_post_lantern', dx: shape.radius * 0.55, dz: shape.radius * 0.45, glow: 'lantern' },
+      { part: 'flag', model: 'kk/flag_yellow', dx: -shape.radius * 0.5, dz: -shape.radius * 0.35 },
+      { part: 'lights', model: 'tiki/string_lights', dx: shape.radius * 0.1, dz: shape.radius * 0.6, glow: 'lantern' },
+    ];
+    if (f > 0) place(items, `friend:${d}:${f}`, friendParts.slice(0, f), ix, iz, 0);
     // Buildings round the island's middle.
     const spots: [number, number][] = [
       [0.9, 0.7],

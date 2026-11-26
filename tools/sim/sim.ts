@@ -16,6 +16,7 @@ import { incomePerSecond } from '../../src/core/advice';
 import { tapValue } from './taps';
 import { DECOR_IDS, canDecorate, decorCost, decorate } from '../../src/core/decor';
 import { canExpand, expand, landCost } from '../../src/core/land';
+import { canDeliver, deliver } from '../../src/core/commission';
 import { SKY_CYCLE_MS } from '../../src/core/daycycle';
 
 const DAY = 24 * 3600 * 1000;
@@ -102,6 +103,12 @@ function shop(s: GameState): number {
     const ok = ups.filter((u) => canBuy(s, u));
     ok.sort((a, b) => total(priceOf(s, a)) - total(priceOf(s, b)));
     if (ok[0] && buyUpgrade(s, ok[0])) {
+      bought++;
+      continue;
+    }
+    // Islanders' requests (friends load more onto the boat).
+    const ask = s.discovered.find((d) => canDeliver(s, d));
+    if (ask && deliver(s, ask)) {
       bought++;
       continue;
     }

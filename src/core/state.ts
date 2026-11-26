@@ -35,6 +35,7 @@ export interface SeaState {
   lightParts: number;
   decor: Partial<Record<import('./decor').DecorId, number>>;
   land: number;
+  friend: Partial<Record<import('./data').DestId, number>>;
   chest: Materials;
   discovered: DestId[];
   buildings: Partial<Record<BuildingId, number>>;
@@ -84,6 +85,8 @@ export interface GameState {
   decor: Partial<Record<import('./decor').DecorId, number>>;
   /** Tiles the island has grown by in this sea. */
   land: number;
+  /** Friendship with each island's people in this sea (0..3). */
+  friend: Partial<Record<import('./data').DestId, number>>;
 }
 
 export function emptyMaterials(): Materials {
@@ -116,5 +119,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     lightParts: 0,
     decor: {},
     land: 0,
+    friend: {},
   };
 }

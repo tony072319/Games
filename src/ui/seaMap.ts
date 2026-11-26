@@ -1,3 +1,4 @@
+import { FRIEND_MAX, canDeliver, commissionFor, friendOf } from '../core/commission';
 import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs } from '../core/boat';
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, type DestId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
@@ -32,6 +33,8 @@ export interface SeaMapActions {
   sail(d: DestId): void;
   land(d: DestId): void;
   build(): void;
+  /** Bring an island its people's request. */
+  deliver(d: DestId): void;
   buy(id: UpgradeId): void;
   close(): void;
 }
@@ -157,6 +160,7 @@ ${path}
     const p = el('p');
     p.textContent = lit ? (found ? destDesc(lang, s.sea, d) : t(lang, 'map.unknownDesc')) : t(lang, 'map.dark');
     info.append(h, p);
+    if (found) info.append(askRow(s, d));
     if (!reachable(s, d)) return;
     const row = el('div', 'sail-row');
     if (found) {
@@ -186,6 +190,28 @@ ${path}
     go.addEventListener('click', () => act.sail(d));
     row.append(go);
     info.append(row);
+  }
+
+  /** The island's people: friendship hearts, and what they ask for with a button to bring it. */
+  function askRow(s: GameState, d: DestId): HTMLElement {
+    const row = el('div', 'ask-row');
+    const hearts = el('span', 'hearts');
+    const f = friendOf(s, d);
+    hearts.textContent = '♥'.repeat(f) + '♡'.repeat(FRIEND_MAX - f);
+    hearts.title = t(lang, 'ask.friend', { n: f, max: FRIEND_MAX });
+    const c = commissionFor(s, d);
+    const text = el('span', 'ask-text');
+    text.textContent = c ? t(lang, `ask.${d}`, { n: formatNumber(c.amount, lang), mat: t(lang, `mat.${c.material}`) }) : t(lang, 'ask.done');
+    row.append(hearts, text);
+    if (c) {
+      const give = el('button', 'buy deliver');
+      give.type = 'button';
+      give.textContent = t(lang, 'ask.deliver');
+      give.disabled = !canDeliver(s, d);
+      give.addEventListener('click', () => act.deliver(d));
+      row.append(give);
+    }
+    return row;
   }
 
   let bottomKey = '';
@@ -223,7 +249,7 @@ ${path}
   function render(s: GameState) {
     // Rebuild only when something visible changed (the boat's position updates every few seconds).
     const v = s.boat.voyage;
-    const key = [s.levels.light, s.boat.built, s.boat.cargo?.dest, v?.dest, v ? Math.floor(act.now() / 3000) : 0, s.discovered.join(), selected, s.levels.speed, s.levels.cargo, canBuildBoat(s)].join('|');
+    const key = [s.levels.light, s.boat.built, s.boat.cargo?.dest, v?.dest, v ? Math.floor(act.now() / 3000) : 0, s.discovered.join(), selected, s.levels.speed, s.levels.cargo, canBuildBoat(s), JSON.stringify(s.friend), selected ? canDeliver(s, selected) : ''].join('|');
     if (key !== lastKey) {
       lastKey = key;
       chart.innerHTML = chartSvg(s);

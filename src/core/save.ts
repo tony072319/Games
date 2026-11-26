@@ -2,6 +2,7 @@ import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type B
 import { T } from './tuning';
 import { readDecor } from './decor';
 import { readLand } from './land';
+import { readFriend } from './commission';
 import { readStory } from './voyageLog';
 import { BUILDINGS } from './islands';
 import { CURIO_BY_ID } from './curios';
@@ -72,6 +73,7 @@ function readSea(v: unknown, nowMs: number, of: number): SeaState | null {
     lightParts: readParts(v.lightParts, of),
     decor: readDecor(v.decor),
     land: readLand(v.land),
+    friend: readFriend(v.friend),
     chest: readMaterials(v.chest),
     discovered: Array.isArray(v.discovered) ? (v.discovered.filter((d) => DEST_IDS.includes(d as DestId)) as DestId[]) : [],
     buildings,
@@ -189,6 +191,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   state.lightParts = readParts(data.lightParts, partsOf(data));
   state.decor = readDecor(data.decor);
   state.land = readLand(data.land);
+  state.friend = readFriend(data.friend);
   if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
   else if ('starlight' in data) dropped = true;
   if (isObj(data.seas)) {

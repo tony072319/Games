@@ -420,5 +420,13 @@
   "story.firefly.5": "林子深处有一棵空心老树，树洞里亮着一点不灭的光。",
   "story.bonus.haul": "运气不错，多带回了一些。",
   "story.bonus.early": "一路顺风，提前回来了。",
-  "story.bonus.find": "还捡到了一颗萤光！"
+  "story.bonus.find": "还捡到了一颗萤光！",
+  "ask.wreck": "拾荒的老水手想要 {n} {mat}，用来补他的小船。",
+  "ask.gullrock": "看鸟的小孩想要 {n} {mat}，给海鸥搭个避风的窝。",
+  "ask.oldlight": "老守塔人想要 {n} {mat}，把楼梯的扶手重新绑一遍。",
+  "ask.firefly": "林子里的采果人想要 {n} {mat}，修一修果园的水车。",
+  "ask.deliver": "送去",
+  "ask.done": "这里的人已经是你的老朋友了，会多帮你装一些货。",
+  "ask.friend": "友好度 {n}/{max}",
+  "ask.thanks": "{name}的人很开心（友好度 {n}/{max}），回赠了一点萤光。"
 }

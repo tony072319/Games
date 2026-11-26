@@ -16,6 +16,7 @@ import { createBook, type Book } from './book';
 import { createDecorSheet, type DecorSheet } from './decor';
 import { decorate, type DecorId } from '../core/decor';
 import { LAND_MAX, expand } from '../core/land';
+import { FRIEND_MAX, deliver, friendOf } from '../core/commission';
 import { createTalentTree } from './talentTree';
 import { CURIOS, chestFind, foundCurio } from '../core/curios';
 import { BUILDINGS, construct } from '../core/islands';
@@ -337,6 +338,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     seaMap = createSeaMap(lang, state, {
       now: opts.now,
+      deliver: (d: DestId) => {
+        if (!deliver(state, d)) return;
+        sound.play('upgrade');
+        toast(t(lang, 'ask.thanks', { name: destName(lang, state.sea, d), n: friendOf(state, d), max: FRIEND_MAX }), 'rare');
+        save();
+        refresh();
+      },
       sail: (d: DestId) => {
         if (!startVoyage(state, d, opts.now())) return;
         sound.play('upgrade');

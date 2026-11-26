@@ -420,5 +420,13 @@
   "story.firefly.5": "Deep in the woods, a hollow old tree with a small light that never goes out.",
   "story.bonus.haul": " A lucky trip: a bigger haul.",
   "story.bonus.early": " A fair wind brought it home early.",
-  "story.bonus.find": " And a glowshard, too!"
+  "story.bonus.find": " And a glowshard, too!",
+  "ask.wreck": "The old beachcomber needs {n} {mat} to patch his little boat.",
+  "ask.gullrock": "The bird-watching kid needs {n} {mat} for a sheltered gull nest.",
+  "ask.oldlight": "The old keeper needs {n} {mat} to rebind the stair rail.",
+  "ask.firefly": "The fruit picker in the woods needs {n} {mat} to fix the orchard waterwheel.",
+  "ask.deliver": "Bring it",
+  "ask.done": "The people here are old friends now and load a little more onto your boat.",
+  "ask.friend": "Friendship {n}/{max}",
+  "ask.thanks": "The people of {name} are delighted (friendship {n}/{max}) and gave you a little glow."
 }
