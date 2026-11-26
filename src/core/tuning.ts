@@ -35,6 +35,10 @@ export const T = {
   FRIEND_HAUL: 0.05,
   /** Fog sea: extra lighthouse levels the boat needs to find an island. */
   FOG_EXTRA_LIGHT: 1,
+  /** Price of the second boat, times BOAT2_COST. */
+  BOAT2_COST_MULT: 1,
+  /** With two boats each carries this share of a full load (the point is staggered returns, not double). */
+  TWO_BOATS_HAUL: 0.52,
   STORY_LUCK: 0.3,
   STORY_HAUL: 0.25,
   STORY_EARLY: 0.15,

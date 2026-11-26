@@ -37,6 +37,26 @@ describe('the island grows', () => {
   });
 });
 
+describe('the second boat', () => {
+  test('ties up by the pier next to the first, on the water, and sails around the island too', () => {
+    for (const land of [0, LAND_MAX]) {
+      const s = full(land);
+      s.boat2.built = true;
+      const items = worldLayout(s, NOW);
+      const docked = items.filter((i) => i.key.startsWith('boat2:'));
+      expect(docked.length).toBeGreaterThan(0);
+      const one = boatPosition(s, NOW, 0);
+      const two = boatPosition(s, NOW, 1);
+      expect(Math.hypot(one.x - two.x, one.z - two.z)).toBeGreaterThan(1.2);
+      expect(groundAt(items, two.x, two.z)).toBeLessThan(-0.2);
+      for (const d of Object.keys(DESTS) as DestId[]) {
+        s.boat2.voyage = { sea: 'dusk', dest: d, departAt: NOW, returnAt: NOW + 100_000 };
+        for (let t = 0; t <= 1; t += 0.01) expect(groundAt(items, boatPosition(s, NOW + t * 100_000, 1).x, boatPosition(s, NOW + t * 100_000, 1).z), `${land} ${d} ${t}`).toBeLessThan(-0.2);
+      }
+    }
+  });
+});
+
 describe('the boat sails around the island, not over it', () => {
   test('every trip stays on the water at every island size', () => {
     for (const land of [0, LAND_MAX]) {

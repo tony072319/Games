@@ -3,7 +3,7 @@ import { DECOR_IDS } from '../core/decor';
  * What the world should contain for a game state: a flat list of placed models.
  * Pure, so it can be tested; the renderer diffs it by `key`.
  */
-import { DESTS } from '../core/boat';
+import { DESTS, boatOf } from '../core/boat';
 import { FLOAT_LIFETIME_MS, type BuildingId, type DestId } from '../core/data';
 import type { FloatingItem } from '../core/flotsam';
 import { ISLAND_BUILDINGS, buildingLevel } from '../core/islands';
@@ -67,9 +67,11 @@ function pierEnd(land: number): [number, number] {
 }
 
 /** Where the boat ties up: beside the end of the pier. */
-function mooring(land: number): [number, number] {
+function mooring(land: number, n: 0 | 1 = 0): [number, number] {
   const [x, z] = pierEnd(land);
-  return [x + PDZ * 1.4 - PDX * 0.8, z - PDX * 1.4 - PDZ * 0.8];
+  // The second boat ties up on the same side, a boat length nearer the shore.
+  const back = n === 1 ? 2 : 0;
+  return [x + PDZ * 1.4 - PDX * (0.8 + back), z - PDX * 1.4 - PDZ * (0.8 + back)];
 }
 
 function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az: number, ay: number, tag?: Tag) {
@@ -165,16 +167,20 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     items.push({ key: 'dock:lantern', model: 'harbor/dock_post_lantern', x: ex - PDZ * 0.6, y: -0.1, z: ez + PDX * 0.6, rotY: 0, glow: 'lantern' });
     items.push({ key: 'dock:bollard', model: 'harbor/mooring_bollard', x: ex + PDZ * 0.5, y: -0.05, z: ez - PDX * 0.5, rotY: 0 });
   }
-  const awayHere = s.boat.voyage !== null;
-  if (s.boat.built && !awayHere) {
-    const b = boatPosition(s, nowMs);
+  // Boats in port. The 'boat' tag (tap to unload) goes to one with cargo, else the first in port.
+  const inPort = ([0, 1] as const).filter((n) => boatOf(s, n).built && !boatOf(s, n).voyage);
+  const tagged = inPort.find((n) => boatOf(s, n).cargo) ?? inPort[0];
+  for (const n of inPort) {
+    const boat = boatOf(s, n);
+    const b = boatPosition(s, nowMs, n);
     const model = boatModel(s.levels.speed, s.levels.cargo);
+    const pre = n === 0 ? 'boat' : 'boat2';
     // Something special aboard: a lantern lit on the boat.
-    const glow = s.boat.cargo?.rare ? ('lantern' as const) : undefined;
-    items.push({ key: `boat:${model}:${glow ?? ''}`, model, x: b.x, y: -0.22, z: b.z, rotY: b.rotY, tag: 'boat', bob: true, shore: 0.9, glow });
-    if (s.boat.cargo)
+    const glow = boat.cargo?.rare ? ('lantern' as const) : undefined;
+    items.push({ key: `${pre}:${model}:${glow ?? ''}`, model, x: b.x, y: -0.22, z: b.z, rotY: b.rotY, tag: n === tagged ? 'boat' : undefined, bob: true, shore: 0.9, glow });
+    if (boat.cargo)
       for (let i = 0; i < 3; i++)
-        items.push({ key: `boat:cargo:${i}`, model: 'kk/crate_A_small', x: b.x + (i - 1) * 0.35, y: 0.15 + (i === 1 ? 0.3 : 0), z: b.z, rotY: i, size: 0.3, bob: true });
+        items.push({ key: `${pre}:cargo:${i}`, model: 'kk/crate_A_small', x: b.x + (i - 1) * 0.35, y: 0.15 + (i === 1 ? 0.3 : 0), z: b.z, rotY: i, size: 0.3, bob: true });
   }
 
   // Life: a few who live here, more as the light grows.
@@ -264,11 +270,11 @@ function offset([x, z]: [number, number]): { dx: number; dz: number } {
 }
 
 /** Where the boat is: tied up at the pier, or on its way to an island and back. */
-export function boatPosition(s: GameState, nowMs: number): { x: number; z: number; rotY: number; atDock: boolean } {
-  const [mx, mz] = mooring(s.land);
-  const v = s.boat.voyage;
+export function boatPosition(s: GameState, nowMs: number, n: 0 | 1 = 0): { x: number; z: number; rotY: number; atDock: boolean } {
+  const [mx, mz] = mooring(s.land, n);
+  const v = boatOf(s, n).voyage;
   if (!v) return { x: mx, z: mz, rotY: Math.atan2(PDX, PDZ), atDock: true };
-  const route = boatRoute(v.dest, s.land);
+  const route = boatRoute(v.dest, s.land, n);
   const span = Math.max(1, v.returnAt - v.departAt);
   const p = Math.min(1, Math.max(0, (nowMs - v.departAt) / span));
   const out = p < 0.5;
@@ -281,8 +287,8 @@ export function boatPosition(s: GameState, nowMs: number): { x: number; z: numbe
 const SEA_RING = 11;
 
 /** From the mooring out to open water, around the island at SEA_RING, then in to stop short of the island. */
-function boatRoute(dest: DestId, land: number): [number, number][] {
-  const [mx, mz] = mooring(land);
+function boatRoute(dest: DestId, land: number, n: 0 | 1 = 0): [number, number][] {
+  const [mx, mz] = mooring(land, n);
   const [ix, iz] = hexToWorld(...DEST_HEX[dest]);
   const a0 = Math.atan2(mz, mx);
   const a1 = Math.atan2(iz, ix);

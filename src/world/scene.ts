@@ -36,8 +36,8 @@ export interface FlotsamView {
   material: MaterialId;
 }
 export interface WorldExtra {
-  /** The boat at sea; `rare` when it is bringing something special home. */
-  boat: (ReturnType<typeof boatPosition> & { model: ModelId; rare?: boolean }) | null;
+  /** Boats at sea (n: which boat); `rare` when one is bringing something special home. */
+  boats: (ReturnType<typeof boatPosition> & { model: ModelId; rare?: boolean; n: 0 | 1 })[];
   flotsam: FlotsamView[];
 }
 export interface ScreenPoint {
@@ -247,7 +247,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   // ---------- state ----------
   const placed = new Map<string, Placed>();
   let items: WorldItem[] = [];
-  let extra: WorldExtra = { boat: null, flotsam: [] };
+  let extra: WorldExtra = { boats: [], flotsam: [] };
   let pal: Palette = paletteFor({ skyTop: '', skyMid: '', skyLow: '', horizon: '', seaTint: '', seaTintOpacity: 0, sun: 1, moon: 0, stars: 0, cloudWarm: 1 }, 'dusk');
   let light = 1;
   let calm = opts.calm;
@@ -374,56 +374,64 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   }
 
   // ---------- moving things: the boat at sea, drifting finds ----------
-  let voyageBoat: { model: ModelId; obj: THREE.Object3D; escort?: THREE.Group } | null = null;
+  type SeaBoat = { model: ModelId; obj: THREE.Object3D; escort?: THREE.Group };
+  /** Boats at sea, by which boat they are. */
+  const voyageBoats = new Map<0 | 1, SeaBoat>();
   const drift = new Map<number, THREE.Object3D>();
-  function syncExtra() {
-    const b = extra.boat;
-    if (!b || b.atDock) {
-      if (voyageBoat) scene.remove(voyageBoat.obj);
-      voyageBoat = null;
-    } else if (!voyageBoat || voyageBoat.model !== b.model) {
-      if (voyageBoat) scene.remove(voyageBoat.obj);
-      const model = b.model;
-      voyageBoat = { model, obj: new THREE.Group() };
-      const holder = voyageBoat;
-      scene.add(holder.obj);
-      template(model).then((t) => {
-        if (t && voyageBoat === holder) holder.obj.add(instance(t, { model }));
+
+  /** Coming home lucky: a warm lantern on the boat and two gulls flying along. */
+  function escort(vb: SeaBoat, on: boolean) {
+    if (on && !vb.escort) {
+      const g = new THREE.Group();
+      const lamp = new THREE.PointLight(0xffc56b, 6, 6, 1.6);
+      lamp.position.set(0, 1.1, 0.4);
+      g.add(lamp);
+      template('lh/seagull').then((t) => {
+        if (!t || vb.escort !== g) return;
+        for (let i = 0; i < 2; i++) {
+          const gull = instance(t, { model: 'lh/seagull' });
+          gull.userData.orbit = i * Math.PI;
+          g.add(gull);
+        }
       });
+      vb.obj.add(g);
+      vb.escort = g;
+    } else if (!on && vb.escort) {
+      vb.obj.remove(vb.escort);
+      vb.escort = undefined;
     }
-    if (voyageBoat && b) {
-      voyageBoat.obj.position.set(b.x, -0.22, b.z);
-      voyageBoat.obj.rotation.y = b.rotY;
-      // Coming home lucky: a warm lantern on the boat and two gulls flying along.
-      if (b.rare && !voyageBoat.escort) {
-        const g = new THREE.Group();
-        const lamp = new THREE.PointLight(0xffc56b, 6, 6, 1.6);
-        lamp.position.set(0, 1.1, 0.4);
-        g.add(lamp);
-        const holder = voyageBoat;
-        template('lh/seagull').then((t) => {
-          if (!t || holder.escort !== g) return;
-          for (let i = 0; i < 2; i++) {
-            const gull = instance(t, { model: 'lh/seagull' });
-            gull.userData.orbit = i * Math.PI;
-            g.add(gull);
-          }
+    if (vb.escort) {
+      const tt = performance.now() / 1000;
+      for (const c of vb.escort.children)
+        if (c.userData.orbit !== undefined) {
+          const a = tt * 1.4 + c.userData.orbit;
+          c.position.set(Math.cos(a) * 1.3, 2 + Math.sin(tt * 3 + c.userData.orbit) * 0.15, Math.sin(a) * 1.3);
+          c.rotation.y = -a;
+        }
+    }
+  }
+
+  function syncExtra() {
+    const want = new Map(extra.boats.filter((b) => !b.atDock).map((b) => [b.n, b] as const));
+    for (const [n, vb] of voyageBoats)
+      if (!want.has(n) || want.get(n)!.model !== vb.model) {
+        scene.remove(vb.obj);
+        voyageBoats.delete(n);
+      }
+    for (const [n, b] of want) {
+      let vb = voyageBoats.get(n);
+      if (!vb) {
+        const holder: SeaBoat = { model: b.model, obj: new THREE.Group() };
+        scene.add(holder.obj);
+        template(b.model).then((t) => {
+          if (t && voyageBoats.get(n) === holder) holder.obj.add(instance(t, { model: b.model }));
         });
-        voyageBoat.obj.add(g);
-        voyageBoat.escort = g;
-      } else if (!b.rare && voyageBoat.escort) {
-        voyageBoat.obj.remove(voyageBoat.escort);
-        voyageBoat.escort = undefined;
+        voyageBoats.set(n, holder);
+        vb = holder;
       }
-      if (voyageBoat.escort) {
-        const tt = performance.now() / 1000;
-        for (const c of voyageBoat.escort.children)
-          if (c.userData.orbit !== undefined) {
-            const a = tt * 1.4 + c.userData.orbit;
-            c.position.set(Math.cos(a) * 1.3, 2 + Math.sin(tt * 3 + c.userData.orbit) * 0.15, Math.sin(a) * 1.3);
-            c.rotation.y = -a;
-          }
-      }
+      vb.obj.position.set(b.x, -0.22, b.z);
+      vb.obj.rotation.y = b.rotY;
+      escort(vb, !!b.rare);
     }
     const alive = new Set(extra.flotsam.map((f) => f.id));
     for (const [id, o] of drift)
@@ -535,7 +543,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       o.position.y = -0.2 + Math.sin(t * 2 + o.position.x) * 0.06;
       o.rotation.y += dt * 0.4;
     }
-    if (voyageBoat) voyageBoat.obj.position.y = -0.22 + Math.sin(t * 1.3) * 0.05;
+    for (const vb of voyageBoats.values()) vb.obj.position.y = -0.22 + Math.sin(t * 1.3) * 0.05;
     for (const l of lights) {
       const base = l.userData.base as number;
       l.intensity = l.userData.flicker ? base * (0.8 + Math.random() * 0.4) : base * (1 + pal.night * 0.25);

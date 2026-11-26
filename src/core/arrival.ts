@@ -26,7 +26,7 @@ export function arrivalLines(s: GameState, r: OfflineReport): ArrivalLine[] {
   if (r.seconds > r.creditedSeconds + 1 && r.creditedSeconds >= 0 && some(s.chest)) {
     lines.push({ kind: 'cap', hours: offlineCapSeconds(s.levels.storage) / 3600 });
   }
-  if (s.boat.cargo) lines.push({ kind: 'boat', dest: s.boat.cargo.dest, mats: { ...s.boat.cargo.haul }, story: s.boat.cargo.story });
+  for (const b of [s.boat, s.boat2]) if (b.cargo) lines.push({ kind: 'boat', dest: b.cargo.dest, mats: { ...b.cargo.haul }, story: b.cargo.story });
   const isl = emptyMaterials();
   for (const st of Object.values(s.islandStore)) if (st) for (const m of MATERIALS) isl[m] += st[m];
   if (some(isl)) lines.push({ kind: 'island', mats: isl });

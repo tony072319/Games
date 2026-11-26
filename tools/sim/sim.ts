@@ -3,7 +3,7 @@
  * profile says, does what a sensible player would (collect, unload, buy, sail, pass the light), and
  * reports pacing and where income came from. Used to tune src/core numbers against the design targets.
  */
-import { DESTS, buildBoat, canBuildBoat, reachable, startVoyage, unloadBoat, voyageMs } from '../../src/core/boat';
+import { DESTS, buildBoat, buildBoat2, canBuildBoat, canBuildBoat2, freeBoat, reachable, startVoyage, unloadBoat, voyageMs } from '../../src/core/boat';
 import { BOAT_UPGRADES, MATERIALS, PANEL_UPGRADES, type DestId, type Materials, type SeaId, type UpgradeId } from '../../src/core/data';
 import { buyUpgrade, canBuy, priceOf, upgradeCost } from '../../src/core/economy';
 import { pickMaterial } from '../../src/core/flotsam';
@@ -87,7 +87,7 @@ function shop(s: GameState): number {
       bought++;
       continue;
     }
-    if (canBuildBoat(s) && buildBoat(s)) {
+    if ((canBuildBoat(s) && buildBoat(s)) || (canBuildBoat2(s) && buildBoat2(s))) {
       bought++;
       continue;
     }
@@ -206,11 +206,13 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
       const at = now + m * MIN;
       if (m > 0) tick(s, at);
       src.net += total(collectChest(s));
-      const cargo = unloadBoat(s);
-      if (cargo) {
-        const isl = total(cargo.fromIsland);
-        src.islands += isl;
-        src.boat += total(cargo.haul) - isl;
+      for (const n of [0, 1] as const) {
+        const cargo = unloadBoat(s, n);
+        if (cargo) {
+          const isl = total(cargo.fromIsland);
+          src.islands += isl;
+          src.boat += total(cargo.haul) - isl;
+        }
       }
       if (m === 0)
         for (let k = 0; k < profile.tapsPerCheck; k++) {
@@ -240,9 +242,9 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
       bought += shop(s);
       for (let L = lightBefore + 1; L <= s.levels.light; L++) lightAt[L] = (at - seaStart) / DAY;
       maxNet = Math.max(maxNet, s.levels.net);
-      if (!s.boat.voyage && !s.boat.cargo && s.boat.built) {
+      for (let n = freeBoat(s); n !== null; n = freeBoat(s)) {
         const dest = chooseDest(s, untilNext);
-        if (dest) startVoyage(s, dest, at);
+        if (!dest || !startVoyage(s, dest, at, Math.random, n)) break;
       }
       if (MATERIALS.some((k) => !Number.isFinite(s.materials[k]) || s.materials[k] < -1e-6)) broken = true;
     }

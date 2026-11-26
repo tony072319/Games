@@ -430,5 +430,10 @@
   "ask.friend": "Friendship {n}/{max}",
   "ask.thanks": "The people of {name} are delighted (friendship {n}/{max}) and gave you a little glow.",
   "story.ice": "The boat spent the whole trip breaking ice around {name} and opened a channel. Nothing came home this time; next time it can land.",
-  "map.fogged": "The fog is too thick for the boat to find the way. Mend the lighthouse to level {n} to see through."
+  "map.fogged": "The fog is too thick for the boat to find the way. Mend the lighthouse to level {n} to see through.",
+  "map.boat1": "Boat 1: ",
+  "map.boat2": "Boat 2: ",
+  "map.build2": "Build a second boat",
+  "map.build2Desc": "The fog sea dock has room for another boat. Send one near and one far, so they come home at different times.",
+  "map.built2": "The second boat is in the water! Both can sail at once."
 }

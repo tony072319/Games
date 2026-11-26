@@ -1,5 +1,6 @@
+import { T } from '../core/tuning';
 import { FRIEND_MAX, canDeliver, commissionFor, friendOf } from '../core/commission';
-import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere } from '../core/boat';
+import { BOAT_COST, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere, BOAT2_COST, canBuildBoat2, freeBoat } from '../core/boat';
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, type DestId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
@@ -33,6 +34,8 @@ export interface SeaMapActions {
   sail(d: DestId): void;
   land(d: DestId): void;
   build(): void;
+  /** Build the second boat (from the fog sea on). */
+  build2(): void;
   /** Bring an island its people's request. */
   deliver(d: DestId): void;
   buy(id: UpgradeId): void;
@@ -69,16 +72,17 @@ export function createSeaMap(lang: Lang, state: GameState, act: SeaMapActions): 
 
   function chartSvg(s: GameState): string {
     const r = reach(s.levels.light);
-    const v = s.boat.voyage;
     let path = '';
-    if (v && v.sea === s.sea) {
+    for (const b of [s.boat, s.boat2]) {
+      const v = b.voyage;
+      if (!v || v.sea !== s.sea) continue;
       const p = pos(v.dest);
       const f = Math.max(0, Math.min(1, (act.now() - v.departAt) / (v.returnAt - v.departAt)));
       // Out and back: the boat reaches the island halfway through the trip.
       const k = f < 0.5 ? f * 2 : 2 - f * 2;
       const bx = C + (p.x - C) * k;
       const by = C + (p.y - C) * k;
-      path = `<line x1="${C}" y1="${C}" x2="${p.x}" y2="${p.y}" stroke="#ffd98a" stroke-opacity="0.5" stroke-width="1.5" stroke-dasharray="4 5"/>
+      path += `<line x1="${C}" y1="${C}" x2="${p.x}" y2="${p.y}" stroke="#ffd98a" stroke-opacity="0.5" stroke-width="1.5" stroke-dasharray="4 5"/>
 <g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)})"><circle r="10" fill="url(#mglow)"/><path d="M-6 2 L6 2 L4 5 L-4 5 Z" fill="#8a5a3a"/><line x1="0" y1="2" x2="0" y2="-7" stroke="#5a3a26" stroke-width="1.2"/><path d="M0 -7 L6 0 L0 0 Z" fill="#efe6d6"/></g>`;
     }
     return `<svg viewBox="0 0 360 360" aria-hidden="true">
@@ -128,24 +132,30 @@ ${path}
 
   function renderInfo(s: GameState) {
     info.replaceChildren();
-    const v = s.boat.voyage;
     if (!s.boat.built) {
       const p = el('p');
       p.textContent = t(lang, s.levels.light >= 3 ? 'map.buildDesc' : 'map.locked');
       info.append(p);
       return;
     }
-    if (v) {
-      const p = el('p', 'status');
-      p.textContent = t(lang, 'map.away', { name: v.sea !== s.sea || s.discovered.includes(v.dest) ? destName(lang, v.sea, v.dest) : t(lang, 'map.unknown'), time: formatDuration(Math.max(60, (v.returnAt - act.now()) / 1000), lang) });
-      info.append(p);
-    } else if (s.boat.cargo) {
-      const p = el('p', 'status');
-      p.textContent = t(lang, 'map.waiting');
-      info.append(p);
+    // Each boat's whereabouts (named when there are two).
+    const two = s.boat2.built;
+    for (const [n, b] of [s.boat, s.boat2].entries()) {
+      if (!b.built) continue;
+      const who = two ? t(lang, n === 0 ? 'map.boat1' : 'map.boat2') : '';
+      const v = b.voyage;
+      if (v) {
+        const p = el('p', 'status');
+        p.textContent = who + t(lang, 'map.away', { name: v.sea !== s.sea || s.discovered.includes(v.dest) ? destName(lang, v.sea, v.dest) : t(lang, 'map.unknown'), time: formatDuration(Math.max(60, (v.returnAt - act.now()) / 1000), lang) });
+        info.append(p);
+      } else if (b.cargo) {
+        const p = el('p', 'status');
+        p.textContent = who + t(lang, 'map.waiting');
+        info.append(p);
+      }
     }
     if (!selected) {
-      if (!v && !s.boat.cargo) {
+      if (freeBoat(s) !== null) {
         const p = el('p');
         p.textContent = t(lang, 'map.pick');
         info.append(p);
@@ -192,7 +202,7 @@ ${path}
     }
     const go = el('button', 'buy sail');
     go.textContent = t(lang, 'map.sail');
-    go.disabled = !canSail(s, d);
+    go.disabled = !(canSail(s, d, 0) || canSail(s, d, 1));
     go.addEventListener('click', () => act.sail(d));
     row.append(go);
     info.append(row);
@@ -223,7 +233,32 @@ ${path}
   let bottomKey = '';
   function renderBottom(s: GameState) {
     if (s.boat.built) {
-      if (bottom.firstChild !== boatPanel.el) bottom.replaceChildren(boatPanel.el);
+      // From the fog sea on, a second boat can be built (its card sits above the boat upgrades).
+      const want2 = !s.boat2.built && s.reached.includes('fog');
+      const key2 = want2 ? `2:${canBuildBoat2(s)}:${MATERIALS.map((m) => (s.materials[m] >= T.BOAT2_COST_MULT * BOAT2_COST[m] ? 1 : 0)).join('')}` : 'none';
+      if (key2 !== bottomKey || bottom.lastChild !== boatPanel.el) {
+        bottomKey = key2;
+        const cost = { ...BOAT2_COST };
+        for (const m of MATERIALS) cost[m] *= T.BOAT2_COST_MULT;
+        const card2 = want2
+          ? upgradeCard(lang, {
+              data: ['card', 'build-boat2'],
+              thumb: boatSvg(true, 3),
+              title: t(lang, 'map.build2'),
+              desc: t(lang, 'map.build2Desc'),
+              cost,
+              have: s.materials,
+              buyLabel: t(lang, 'ui.buy'),
+              canBuy: canBuildBoat2(s),
+              state: affordState(s, cost),
+              eta: etaText(s, cost, lang),
+              onBuy: act.build2,
+              open: true,
+              alwaysOpen: true,
+            })
+          : null;
+        bottom.replaceChildren(...(card2 ? [card2] : []), boatPanel.el);
+      }
       boatPanel.update(s);
       return;
     }
@@ -255,7 +290,8 @@ ${path}
   function render(s: GameState) {
     // Rebuild only when something visible changed (the boat's position updates every few seconds).
     const v = s.boat.voyage;
-    const key = [s.levels.light, s.boat.built, s.boat.cargo?.dest, v?.dest, v ? Math.floor(act.now() / 3000) : 0, s.discovered.join(), selected, s.levels.speed, s.levels.cargo, canBuildBoat(s), JSON.stringify(s.friend), selected ? canDeliver(s, selected) : ''].join('|');
+    const v2 = s.boat2.voyage;
+    const key = [s.levels.light, s.boat.built, s.boat.cargo?.dest, v?.dest, v || v2 ? Math.floor(act.now() / 3000) : 0, s.boat2.built, s.boat2.cargo?.dest, v2?.dest, s.discovered.join(), selected, s.levels.speed, s.levels.cargo, canBuildBoat(s), JSON.stringify(s.friend), selected ? canDeliver(s, selected) : ''].join('|');
     if (key !== lastKey) {
       lastKey = key;
       chart.innerHTML = chartSvg(s);

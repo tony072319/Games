@@ -6,7 +6,7 @@ import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } fro
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { islandIcon, itemIcon } from './art';
-import { DOCK_LIGHT, buildBoat, startVoyage, unloadBoat } from '../core/boat';
+import { DOCK_LIGHT, boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo } from '../core/boat';
 import { createWorld, type AnchorTag, type World } from '../world/scene';
 import { boatPosition, flotsamPosition, worldLayout, type Tag } from '../world/layout';
 import { boatModel } from '../world/looks';
@@ -128,15 +128,15 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     popupEl?.remove();
     const lang = state.settings.lang;
     popupEl = showArrival(game, lang, lines, {
-      destName: (d) => destName(lang, state.boat.cargo?.sea ?? state.sea, d),
+      destName: (d) => destName(lang, (state.boat.cargo ?? state.boat2.cargo)?.sea ?? state.sea, d),
       showUpgrade: (id) => panel.show(id),
       collect: (double) => {
         const moved = takeChest();
         if (double) claimDouble(state, moved);
-        const cargo = state.boat.cargo;
-        if (cargo) {
+        const cargos = [state.boat.cargo, state.boat2.cargo].filter((c) => c !== null);
+        if (cargos.length) {
           unload();
-          if (double) claimDouble(state, cargo.haul);
+          if (double) for (const c of cargos) claimDouble(state, c.haul);
         }
         pending = null;
         popupEl = null;
@@ -346,7 +346,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         refresh();
       },
       sail: (d: DestId) => {
-        if (!startVoyage(state, d, opts.now())) return;
+        // Whichever boat is in port and empty takes the trip.
+        const n = freeBoat(state);
+        if (n === null || !startVoyage(state, d, opts.now(), Math.random, n)) return;
         sound.play('upgrade');
         save();
         refresh();
@@ -357,6 +359,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         save();
         refresh();
         sparkle(boatBtn);
+      },
+      build2: () => {
+        if (!buildBoat2(state)) return;
+        sound.play('upgrade');
+        toast(t(state.settings.lang, 'map.built2'), 'rare');
+        save();
+        refresh();
       },
       buy: (id) => {
         if (!buyUpgrade(state, id)) return;
@@ -395,8 +404,14 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     game.append(islandView.el);
   }
 
+  /** Unload every boat in port with cargo (the second a moment after the first). */
   function unload() {
-    const cargo = unloadBoat(state);
+    unloadOne(0);
+    if (state.boat2.cargo) setTimeout(() => unloadOne(1), state.boat.cargo === null ? 700 : 0);
+  }
+
+  function unloadOne(n: BoatNo) {
+    const cargo = unloadBoat(state, n);
     if (!cargo) return;
     sound.play('chest');
     const lang = state.settings.lang;
@@ -752,10 +767,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
           skip: (h) => {
             state.lastActiveAt -= h * 3600 * 1000;
             state.islandAt -= h * 3600 * 1000;
-            const v = state.boat.voyage;
-            if (v) {
-              v.departAt -= h * 3600 * 1000;
-              v.returnAt -= h * 3600 * 1000;
+            for (const b of [state.boat, state.boat2]) {
+              const v = b.voyage;
+              if (v) {
+                v.departAt -= h * 3600 * 1000;
+                v.returnAt -= h * 3600 * 1000;
+              }
             }
           },
           speed: () => {
@@ -783,7 +800,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
             refresh();
           },
           boatNow: () => {
-            if (state.boat.voyage) state.boat.voyage.returnAt = opts.now();
+            for (const b of [state.boat, state.boat2]) if (b.voyage) b.voyage.returnAt = opts.now();
           },
           addAll: (n) => MATERIALS.forEach((m) => (state.materials[m] += n)),
           setInfinite: (on) => (infinite = on),
@@ -863,7 +880,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       refresh();
       save();
     } else if (tag === 'boat') {
-      if (state.boat.cargo) unload();
+      if (state.boat.cargo || state.boat2.cargo) unload();
       else openMap();
     } else if (tag === 'light' || tag === 'net') panel.show(tag);
     else if (tag === 'dock') openMap();
@@ -992,7 +1009,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const fill = Math.min(1, total / chestCapacity(state));
     // While learning to collect, show the bubble as soon as there is anything in the chest.
     const showChest = total >= 1 && (fill >= 0.02 || state.stats.tutorial === 1);
-    const showBoat = !!state.boat.cargo && !state.boat.voyage;
+    const showBoat = [state.boat, state.boat2].some((b) => !!b.cargo && !b.voyage);
     const label = showChest ? t(lang, 'bubble.collect', { n: formatNumber(total, lang) }) : '';
     const key = `${label}:${fill >= 0.999}:${showBoat}`;
     if (key === bubbleKey) return;
@@ -1004,8 +1021,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   function renderBoat() {
-    const shown = state.boat.built && !state.boat.voyage;
-    const laden = !!state.boat.cargo;
+    const shown = [state.boat, state.boat2].some((b) => b.built && !b.voyage);
+    const laden = !!(state.boat.cargo || state.boat2.cargo);
     const key = `${shown}:${laden}:${state.levels.cargo}`;
     if (key === boatKey) return;
     boatKey = key;
@@ -1057,7 +1074,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const fast = !!opts.clock && opts.clock.speed() > 1;
     if (report && !fast && !wasFast) showReport(report);
     wasFast = fast;
-    const hasCargo = state.boat.cargo !== null;
+    const hasCargo = state.boat.cargo !== null || state.boat2.cargo !== null;
     if (hasCargo && !hadCargo && !report) {
       toast(t(state.settings.lang, 'toast.boatBack'));
       sound.play('chest');
@@ -1070,12 +1087,15 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         world.setSky(currentSky(), state.sea);
         nextSkyAt = now + 1000;
       }
-      const v = state.boat.voyage;
-      // A lucky trip shows on the way home: lantern lit, gulls along.
-      const rare = !!v?.story?.bonus && now > (v.departAt + v.returnAt) / 2;
-      const boat = v && v.sea === state.sea ? { ...boatPosition(state, now), model: boatModel(state.levels.speed, state.levels.cargo), rare } : null;
+      // Boats at sea; a lucky trip shows on the way home: lantern lit, gulls along.
+      const boats = ([0, 1] as const).flatMap((n) => {
+        const v = boatOf(state, n).voyage;
+        if (!v || v.sea !== state.sea) return [];
+        const rare = !!v.story?.bonus && now > (v.departAt + v.returnAt) / 2;
+        return [{ ...boatPosition(state, now, n), model: boatModel(state.levels.speed, state.levels.cargo), rare, n }];
+      });
       const flotsam = field.items.map((i) => ({ id: i.id, ...flotsamPosition(i, now, state.land), curio: !!i.curio, material: i.material }));
-      world.update(worldLayout(state, now), { boat, flotsam });
+      world.update(worldLayout(state, now), { boats, flotsam });
       const has = [...world.has].join(' ');
       if (stage.dataset.worldHas !== has) stage.dataset.worldHas = has;
     }

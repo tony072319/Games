@@ -54,6 +54,33 @@ export function reachable(s: GameState, d: DestId): boolean {
   return s.boat.built && s.levels.light >= needLightHere(s, d);
 }
 
+/** Which boat: 0 is the first, 1 the second (from the fog sea on). */
+export type BoatNo = 0 | 1;
+export const boatOf = (s: GameState, n: BoatNo = 0): GameState['boat'] => (n === 1 ? s.boat2 : s.boat);
+
+/** A second boat, once the first is built and you have reached the fog sea. */
+export const BOAT2_COST: Materials = { wood: 20000, plastic: 0, rope: 6000, metal: 2400, glow: 0 };
+
+export function canBuildBoat2(s: GameState): boolean {
+  return s.boat.built && !s.boat2.built && s.reached.includes('fog') && MATERIALS.every((m) => s.materials[m] >= T.BOAT2_COST_MULT * BOAT2_COST[m]);
+}
+
+export function buildBoat2(s: GameState): boolean {
+  if (!canBuildBoat2(s)) return false;
+  for (const m of MATERIALS) s.materials[m] -= T.BOAT2_COST_MULT * BOAT2_COST[m];
+  s.boat2.built = true;
+  return true;
+}
+
+/** A boat that is built, in port and empty, or null. */
+export function freeBoat(s: GameState): BoatNo | null {
+  for (const n of [0, 1] as const) {
+    const b = boatOf(s, n);
+    if (b.built && !b.voyage && !b.cargo) return n;
+  }
+  return null;
+}
+
 export function voyageMs(s: GameState, d: DestId): number {
   return (
     DESTS[d].minutes *
@@ -75,21 +102,23 @@ export function voyageHaul(s: GameState, d: DestId): Materials {
   const dest = DESTS[d];
   // In the fog the boat only finds what the lighthouse lights: full haul at light 10.
   const fog = s.sea === 'fog' ? s.levels.light / 10 : 1;
-  const total = netRate(s) * dest.minutes * 60 * T.BOAT_BASE * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1) * fog * friendHaul(s, d);
+  const total = netRate(s) * dest.minutes * 60 * T.BOAT_BASE * cargoMultiplier(s) * (has(s, 'haul2') ? 1.3 : 1) * fog * friendHaul(s, d) * (s.boat2.built ? T.TWO_BOATS_HAUL : 1);
   const h = emptyMaterials();
   for (const m of MATERIALS) h[m] = total * (dest.mix[m] ?? 0);
   if (d === 'firefly') h.glow = 2 + s.levels.cargo;
   return h;
 }
 
-export function canSail(s: GameState, d: DestId): boolean {
-  return reachable(s, d) && !s.boat.voyage && !s.boat.cargo;
+export function canSail(s: GameState, d: DestId, n: BoatNo = 0): boolean {
+  const b = boatOf(s, n);
+  return b.built && s.levels.light >= needLightHere(s, d) && !b.voyage && !b.cargo;
 }
 
-export function startVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number = Math.random): boolean {
-  if (!canSail(s, d)) return false;
-  s.boat.voyage = planVoyage(s, d, nowMs, rng);
-  s.boat.lastDest = d;
+export function startVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number = Math.random, n: BoatNo = 0): boolean {
+  if (!canSail(s, d, n)) return false;
+  const b = boatOf(s, n);
+  b.voyage = planVoyage(s, d, nowMs, rng);
+  b.lastDest = d;
   return true;
 }
 
@@ -101,8 +130,9 @@ function planVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number): 
 }
 
 /** If the boat is due back, put its haul on the dock. Returns the new cargo, if any. */
-export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Math.random): Cargo | null {
-  const v = s.boat.voyage;
+export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Math.random, n: BoatNo = 0): Cargo | null {
+  const boat = boatOf(s, n);
+  const v = boat.voyage;
   if (!v || nowMs < v.returnAt) return null;
   // The boat may have sailed at a sea you've since left.
   const at = seaView(s, v.sea) ?? s;
@@ -117,26 +147,27 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
   // Whatever the island's buildings made comes home too.
   const fromIsland = takeIslandStore(at, v.dest);
   for (const m of MATERIALS) haul[m] += fromIsland[m];
-  s.boat.voyage = null;
-  s.boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland, story: v.story, ...(iceBreak ? { iceBreak } : {}) };
+  boat.voyage = null;
+  boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland, story: v.story, ...(iceBreak ? { iceBreak } : {}) };
   if (rng() < curioChance(at, 'boat')) {
     const c = pickCurio(at, 'boat', rng, v.dest);
-    if (c) s.boat.cargo.curio = c;
+    if (c) boat.cargo.curio = c;
   }
-  s.boat.cargo.rare = !!s.boat.cargo.curio || discovery || !!v.story?.bonus;
-  return s.boat.cargo;
+  boat.cargo.rare = !!boat.cargo.curio || discovery || !!v.story?.bonus;
+  return boat.cargo;
 }
 
 /** Take the boat's cargo into the inventory (and record the island as found). */
-export function unloadBoat(s: GameState): Cargo | null {
-  const c = s.boat.cargo;
+export function unloadBoat(s: GameState, n: BoatNo = 0): Cargo | null {
+  const boat = boatOf(s, n);
+  const c = boat.cargo;
   if (!c) return null;
   // Each sea keeps its own materials: a haul from an old sea goes to that sea.
   const at = seaView(s, c.sea) ?? s;
   addMaterials(at, c.haul);
   if (!at.discovered.includes(c.dest)) at.discovered.push(c.dest);
   if (c.curio) foundCurio(s, c.curio);
-  s.boat.cargo = null;
+  boat.cargo = null;
   return c;
 }
 
@@ -149,20 +180,24 @@ export const AUTO_TRIPS_MAX = 200;
  */
 export function autoSail(s: GameState, nowMs: number, rng: () => number = Math.random): void {
   if (!has(s, 'autoBoat')) return;
-  if (s.boat.cargo && !s.boat.voyage) {
-    const dest = s.boat.cargo.dest;
-    unloadBoat(s);
-    if (s.boat.lastDest ?? dest) startVoyage(s, s.boat.lastDest ?? dest, nowMs);
-  }
-  for (let i = 0; i < AUTO_TRIPS_MAX; i++) {
-    const v = s.boat.voyage;
-    if (!v || nowMs < v.returnAt) break;
-    const back = v.returnAt;
-    settleVoyage(s, back, rng);
-    unloadBoat(s);
-    // Sail again from the sea it was at; reachability is judged there.
-    const at = seaView(s, v.sea) ?? s;
-    if (!canSail(at, v.dest)) break;
-    s.boat.voyage = { ...planVoyage(at, v.dest, back, rng), sea: v.sea };
+  for (const n of [0, 1] as const) {
+    const boat = boatOf(s, n);
+    if (!boat.built) continue;
+    if (boat.cargo && !boat.voyage) {
+      const dest = boat.cargo.dest;
+      unloadBoat(s, n);
+      startVoyage(s, boat.lastDest ?? dest, nowMs, rng, n);
+    }
+    for (let i = 0; i < AUTO_TRIPS_MAX; i++) {
+      const v = boat.voyage;
+      if (!v || nowMs < v.returnAt) break;
+      const back = v.returnAt;
+      settleVoyage(s, back, rng, n);
+      unloadBoat(s, n);
+      // Sail again from the sea it was at; reachability is judged there.
+      const at = seaView(s, v.sea) ?? s;
+      if (!canSail(at, v.dest, n)) break;
+      boat.voyage = { ...planVoyage(at, v.dest, back, rng), sea: v.sea };
+    }
   }
 }

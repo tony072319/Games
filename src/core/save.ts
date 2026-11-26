@@ -134,24 +134,27 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
     }
   } else if ('discovered' in data) dropped = true;
 
-  if (isObj(data.boat)) {
-    const b = data.boat;
-    if (typeof b.built === 'boolean') state.boat.built = b.built;
-    else dropped = true;
-    const v = b.voyage;
-    if (isObj(v) && DEST_IDS.includes(v.dest as DestId) && Number.isFinite(v.departAt) && Number.isFinite(v.returnAt)) {
-      state.boat.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number, story: readStory(v.story) };
-    } else if (v !== null && v !== undefined) dropped = true;
-    const c = b.cargo;
-    if (isObj(c) && DEST_IDS.includes(c.dest as DestId) && isObj(c.haul)) {
-      const haul = {} as Materials;
-      for (const m of MATERIALS) haul[m] = isAmount(c.haul[m]) ? (c.haul[m] as number) : 0;
-      const fromIsland = {} as Materials;
-      const fi = isObj(c.fromIsland) ? c.fromIsland : {};
-      for (const m of MATERIALS) fromIsland[m] = isAmount(fi[m]) ? (fi[m] as number) : 0;
-      state.boat.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland, story: readStory(c.story), rare: c.rare === true, ...(c.iceBreak === true ? { iceBreak: true } : {}) };
-    } else if (c !== null && c !== undefined) dropped = true;
-  } else if ('boat' in data) dropped = true;
+  for (const [key, target] of [['boat', state.boat], ['boat2', state.boat2]] as const) {
+    const b = data[key];
+    if (isObj(b)) {
+      if (typeof b.built === 'boolean') target.built = b.built;
+      else dropped = true;
+      const v = b.voyage;
+      if (isObj(v) && DEST_IDS.includes(v.dest as DestId) && Number.isFinite(v.departAt) && Number.isFinite(v.returnAt)) {
+        target.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number, story: readStory(v.story) };
+      } else if (v !== null && v !== undefined) dropped = true;
+      const c = b.cargo;
+      if (isObj(c) && DEST_IDS.includes(c.dest as DestId) && isObj(c.haul)) {
+        const haul = {} as Materials;
+        for (const m of MATERIALS) haul[m] = isAmount(c.haul[m]) ? (c.haul[m] as number) : 0;
+        const fromIsland = {} as Materials;
+        const fi = isObj(c.fromIsland) ? c.fromIsland : {};
+        for (const m of MATERIALS) fromIsland[m] = isAmount(fi[m]) ? (fi[m] as number) : 0;
+        target.cargo = { sea: isSea(c.sea) ? c.sea : 'dusk', dest: c.dest as DestId, haul, discovery: c.discovery === true, fromIsland, story: readStory(c.story), rare: c.rare === true, ...(c.iceBreak === true ? { iceBreak: true } : {}) };
+      } else if (c !== null && c !== undefined) dropped = true;
+      if (DEST_IDS.includes(b.lastDest as DestId)) target.lastDest = b.lastDest as DestId;
+    } else if (key in data) dropped = true;
+  }
 
   if (isObj(data.buildings)) {
     for (const [b, v] of Object.entries(data.buildings)) {
@@ -215,7 +218,6 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
       else dropped = true;
     }
   } else if ('talents' in data) dropped = true;
-  if (isObj(data.boat) && DEST_IDS.includes(data.boat.lastDest as DestId)) state.boat.lastDest = data.boat.lastDest as DestId;
 
   const settings = isObj(data.settings) ? data.settings : {};
   if (settings.lang === 'zh' || settings.lang === 'en') state.settings.lang = settings.lang;

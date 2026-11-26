@@ -61,6 +61,8 @@ export interface GameState {
   stats: { tapped: number; tutorial: number };
   /** lastDest: where the boat last sailed (auto-sailing goes there again). */
   boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null; lastDest?: DestId };
+  /** The second boat (from the fog sea on); same shape as the first. */
+  boat2: { built: boolean; voyage: Voyage | null; cargo: Cargo | null; lastDest?: DestId };
   discovered: DestId[];
   /** Island building levels (absent = not built). */
   buildings: Partial<Record<BuildingId, number>>;
@@ -107,6 +109,7 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     settings: { lang, sound: true, calm: false, mini: false },
     stats: { tapped: 0, tutorial: 0 },
     boat: { built: false, voyage: null, cargo: null },
+    boat2: { built: false, voyage: null, cargo: null },
     discovered: [],
     buildings: {},
     islandStore: {},

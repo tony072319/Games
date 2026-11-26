@@ -28,8 +28,8 @@ const sky = { ...skyAt(0), sun: q.has('night') ? 0 : 1, moon: q.has('night') ? 1
 w.setSky(sky, s.sea); w.setLight(L);
 const items = worldLayout(s, Date.now());
 if (q.has('bad')) items.push({ key: 'bad', model: 'test/missing', x: 0, y: 0, z: 3, rotY: 0 });
-window.__bump = () => { s.levels.light = Math.min(10, s.levels.light + 1); s.levels.storage = Math.min(11, s.levels.storage + 1); w.update(worldLayout(s, Date.now()), { boat: null, flotsam: [] }); };
-window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => {}, onError: () => {}, onLost }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boat: null, flotsam: [] }); return w2; };
-w.update(items, { boat: null, flotsam: [{ id: 1, x: -3, z: 7, curio: false, material: 'wood' }, { id: 2, x: 3, z: 9, curio: true, material: 'wood' }] });
+window.__bump = () => { s.levels.light = Math.min(10, s.levels.light + 1); s.levels.storage = Math.min(11, s.levels.storage + 1); w.update(worldLayout(s, Date.now()), { boats: [], flotsam: [] }); };
+window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => {}, onError: () => {}, onLost }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boats: [], flotsam: [] }); return w2; };
+w.update(items, { boats: [], flotsam: [{ id: 1, x: -3, z: 7, curio: false, material: 'wood' }, { id: 2, x: 3, z: 9, curio: true, material: 'wood' }] });
 if (q.get('focus')) setTimeout(() => w.focus(q.get('focus')), 100);
 </script></body></html>

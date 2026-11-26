@@ -22,6 +22,7 @@ export function applyOffline(state: GameState, nowMs: number): OfflineReport {
   accrueOtherSeas(state, nowMs);
   autoSail(state, nowMs);
   settleVoyage(state, nowMs);
+  settleVoyage(state, nowMs, Math.random, 1);
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
   const { creditedSeconds, gained } = fillChest(state, seconds);
   recycle(state, seconds);
@@ -51,6 +52,7 @@ export function tick(state: GameState, nowMs: number): OfflineReport | null {
   accrueOtherSeas(state, nowMs);
   autoSail(state, nowMs);
   settleVoyage(state, nowMs);
+  settleVoyage(state, nowMs, Math.random, 1);
   const dt = (nowMs - state.lastActiveAt) / 1000;
   if (dt >= 0 && dt <= LIVE_DT_MAX_SECONDS) {
     fillChest(state, dt);

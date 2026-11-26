@@ -73,11 +73,11 @@ export const TUTORIAL_STEPS = TUTORIAL.length;
 /** The one thing worth doing next. `name`/`time` params are upgrade ids and seconds; the UI turns them into words. */
 export function nextGoal(s: GameState): Goal {
   if (s.stats.tutorial < TUTORIAL_STEPS) return TUTORIAL[s.stats.tutorial];
-  if (s.boat.cargo) return { key: 'goal.unload', target: 'boat' };
+  if (s.boat.cargo || s.boat2.cargo) return { key: 'goal.unload', target: 'boat' };
   if (chestTotal(s.chest) >= chestCapacity(s) * 0.5) return { key: 'goal.collectChest', target: 'chest' };
   if (s.levels.light < DOCK_LIGHT) return { key: 'goal.dock', target: 'light' };
   if (!s.boat.built) return { key: 'goal.buildBoat', target: 'map' };
-  if (DEST_IDS.some((d) => canSail(s, d) && DESTS[d])) return { key: 'goal.sail', target: 'map' };
+  if (DEST_IDS.some((d) => (canSail(s, d, 0) || canSail(s, d, 1)) && DESTS[d])) return { key: 'goal.sail', target: 'map' };
   if (canBuy(s, 'light')) return { key: 'goal.mend', params: { name: 'light' }, target: 'light' };
   // Otherwise: the panel upgrade that will be affordable soonest.
   let best: UpgradeId | null = null;

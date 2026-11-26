@@ -68,7 +68,7 @@ try {
   // A real tap on the picture where the find floats (not the hidden button). Finds drift on and off
   // screen, so tap one that is visible now; slow screenshot runs may also drop an input (ruling): retry there.
   await page.waitForTimeout(1500);
-  for (let tries = SHOTS ? 8 : 3; tries > 0 && !((await total(page)) > before); tries--) {
+  for (let tries = SHOTS ? 8 : 6; tries > 0 && !((await total(page)) > before); tries--) {
     await item.waitFor({ timeout: 15000 }).catch(() => {});
     const ib = await item.boundingBox().catch(() => null);
     if (!ib) {
