@@ -309,8 +309,10 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
 }
 
 /** Drifting finds cross the lit water in front of the island, far lane to near lane. */
-export function flotsamPosition(item: FloatingItem, nowMs: number): { x: number; z: number } {
+export function flotsamPosition(item: FloatingItem, nowMs: number, land = 0): { x: number; z: number } {
   const age = Math.min(1, Math.max(0, (nowMs - item.spawnedAt) / FLOAT_LIFETIME_MS));
   const lane = Math.min(1, Math.max(0, item.lane));
-  return { x: -16 + 32 * age, z: 10 + lane * 3.5 };
+  // Just off the island's front beach: further out as the island grows (the camera pulls back with it).
+  const near = Math.max(8.5, homeShape(land).radius * 1.17 + 2);
+  return { x: -16 + 32 * age, z: near + lane * 3 };
 }

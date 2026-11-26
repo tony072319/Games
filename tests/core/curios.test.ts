@@ -5,6 +5,9 @@ import { newField, updateField, collect } from '../../src/core/flotsam';
 import { netRate } from '../../src/core/economy';
 import { newGame } from '../../src/core/state';
 
+/** Dice for a trip with no luck, so timings are exact. */
+const quiet = () => 0.99;
+
 describe('the book', () => {
   test('12 per sea: 8 common, 3 rare, 1 legend', () => {
     for (const sea of ['dusk', 'fog', 'aurora']) {
@@ -70,7 +73,7 @@ describe('where finds come from', () => {
     for (const m of ['wood', 'plastic', 'rope', 'metal'] as const) s.materials[m] = 1e6;
     s.levels.light = 3;
     buildBoat(s);
-    startVoyage(s, 'wreck', 0);
+    startVoyage(s, 'wreck', 0, quiet);
     const cargo = settleVoyage(s, 60 * 60_000, () => 0);
     expect(cargo?.curio).toMatch(/^dusk:/);
     unloadBoat(s);

@@ -31,7 +31,7 @@ describe('the island grows', () => {
     expect(shoresOf(items).length).toBeLessThanOrEqual(MAX_SHORES);
     for (const lane of [0, 0.5, 1])
       for (let t = 0; t <= 1; t += 0.02) {
-        const p = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
+        const p = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS, LAND_MAX);
         expect(groundAt(items, p.x, p.z), `${lane} ${t}`).toBeLessThan(-0.5);
       }
   });
@@ -65,7 +65,7 @@ describe('the boat sails around the island, not over it', () => {
     }
     for (const lane of [0, 0.5, 1])
       for (let t = 0; t <= 1; t += 0.01) {
-        const f = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
+        const f = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS, LAND_MAX);
         for (const [x, z] of [...planks.map((p) => [p.x, p.z]), [boat.x, boat.z]]) expect(Math.hypot(f.x - x, f.z - z)).toBeGreaterThan(1);
       }
   });

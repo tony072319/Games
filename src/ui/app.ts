@@ -1066,7 +1066,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       // A lucky trip shows on the way home: lantern lit, gulls along.
       const rare = !!v?.story?.bonus && now > (v.departAt + v.returnAt) / 2;
       const boat = v && v.sea === state.sea ? { ...boatPosition(state, now), model: boatModel(state.levels.speed, state.levels.cargo), rare } : null;
-      const flotsam = field.items.map((i) => ({ id: i.id, ...flotsamPosition(i, now), curio: !!i.curio, material: i.material }));
+      const flotsam = field.items.map((i) => ({ id: i.id, ...flotsamPosition(i, now, state.land), curio: !!i.curio, material: i.material }));
       world.update(worldLayout(state, now), { boat, flotsam });
       const has = [...world.has].join(' ');
       if (stage.dataset.worldHas !== has) stage.dataset.worldHas = has;

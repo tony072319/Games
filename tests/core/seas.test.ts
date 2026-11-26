@@ -8,6 +8,9 @@ import { applyOffline, tick } from '../../src/core/sim';
 import { newGame, type GameState } from '../../src/core/state';
 import { loadGame, saveGame, type KV } from '../../src/core/save';
 
+/** Dice for a trip with no luck, so timings are exact. */
+const quiet = () => 0.99;
+
 const H = 3_600_000;
 
 function lit(): GameState {
@@ -116,7 +119,7 @@ describe('sea economy', () => {
     const s = lit();
     buildBoat(s);
     s.levels.light = 10;
-    startVoyage(s, 'wreck', 0);
+    startVoyage(s, 'wreck', 0, quiet);
     passLight(s, 0);
     const cargo = settleVoyage(s, H);
     expect(cargo?.sea).toBe('dusk');
@@ -145,7 +148,7 @@ describe('each sea keeps its own materials', () => {
     buildBoat(s);
     passLight(s, 0);
     switchSea(s, 'dusk', 0);
-    startVoyage(s, 'wreck', 0);
+    startVoyage(s, 'wreck', 0, quiet);
     switchSea(s, 'fog', 1000);
     settleVoyage(s, 10 * H, () => 0.5);
     const got = unloadBoat(s)!;

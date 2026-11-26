@@ -8,6 +8,9 @@ import { passLight } from '../../src/core/seas';
 import { applyOffline, tick } from '../../src/core/sim';
 import { newGame, type GameState } from '../../src/core/state';
 
+/** Dice for a trip with no luck, so timings are exact. */
+const quiet = () => 0.99;
+
 const H = 3_600_000;
 const withStars = (n: number): GameState => {
   const s = newGame(0, 'zh');
@@ -114,7 +117,7 @@ describe('effects', () => {
     for (const m of ['wood', 'plastic', 'rope', 'metal'] as const) s.materials[m] = 1e9;
     s.levels.light = 3;
     buildBoat(s);
-    startVoyage(s, 'wreck', 0);
+    startVoyage(s, 'wreck', 0, quiet);
     const metal = s.materials.metal;
     applyOffline(s, 10 * H);
     // 15 min × 0.85 per trip: many trips home, boat out again.

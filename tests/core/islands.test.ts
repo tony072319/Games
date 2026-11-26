@@ -6,6 +6,9 @@ import { DEST_IDS } from '../../src/core/data';
 import { applyOffline } from '../../src/core/sim';
 import { newGame, type GameState } from '../../src/core/state';
 
+/** Dice for a trip with no luck, so timings are exact. */
+const quiet = () => 0.99;
+
 const H = 3_600_000;
 
 function rich(): GameState {
@@ -68,7 +71,7 @@ describe('island production', () => {
     const s = rich();
     buildBoat(s);
     construct(s, 'dismantler', 0);
-    startVoyage(s, 'wreck', 3 * H);
+    startVoyage(s, 'wreck', 3 * H, quiet);
     accrueIslands(s, 3 * H);
     const cargo = settleVoyage(s, 3 * H + 15 * 60_000)!;
     const perHour = islandRates(s, 'wreck').metal;

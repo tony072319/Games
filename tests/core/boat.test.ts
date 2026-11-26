@@ -14,6 +14,9 @@ import {
 import { applyOffline, tick } from '../../src/core/sim';
 import { newGame, type GameState } from '../../src/core/state';
 
+/** Dice for a trip with no luck, so timings are exact. */
+const quiet = () => 0.99;
+
 const MIN = 60_000;
 const H = 60 * MIN;
 
@@ -61,15 +64,15 @@ describe('voyages', () => {
   test('a full voyage: sail, arrive, unload once, discover', () => {
     const s = rich();
     buildBoat(s);
-    expect(startVoyage(s, 'wreck', 1000)).toBe(true);
-    expect(startVoyage(s, 'wreck', 1000)).toBe(false); // already at sea
+    expect(startVoyage(s, 'wreck', 1000, quiet)).toBe(true);
+    expect(startVoyage(s, 'wreck', 1000, quiet)).toBe(false); // already at sea
     expect(settleVoyage(s, 1000 + 14 * MIN)).toBeNull();
     const cargo = settleVoyage(s, 1000 + 15 * MIN);
     expect(cargo).not.toBeNull();
     expect(cargo!.discovery).toBe(true);
     expect(cargo!.haul.metal).toBeGreaterThan(cargo!.haul.wood);
     expect(s.boat.voyage).toBeNull();
-    expect(startVoyage(s, 'wreck', 2000 + 15 * MIN)).toBe(false); // unload first
+    expect(startVoyage(s, 'wreck', 2000 + 15 * MIN, quiet)).toBe(false); // unload first
     const metalBefore = s.materials.metal;
     const got = unloadBoat(s);
     expect(got).not.toBeNull();
@@ -83,7 +86,7 @@ describe('voyages', () => {
     const s = rich();
     buildBoat(s);
     s.discovered.push('wreck');
-    startVoyage(s, 'wreck', 0);
+    startVoyage(s, 'wreck', 0, quiet);
     expect(settleVoyage(s, 15 * MIN)!.discovery).toBe(false);
   });
 
@@ -93,7 +96,7 @@ describe('voyages', () => {
     s.levels.cargo = 3;
     expect(voyageHaul(s, 'firefly').glow).toBe(5);
     expect(voyageHaul(s, 'wreck').glow).toBe(0);
-    startVoyage(s, 'firefly', 0);
+    startVoyage(s, 'firefly', 0, quiet);
     expect(settleVoyage(s, 8 * H)!.haul.glow).toBe(10); // 2 + cargo, +5 the first time
   });
 
@@ -107,7 +110,7 @@ describe('voyages', () => {
   test('clock set before departure does not finish the voyage', () => {
     const s = rich();
     buildBoat(s);
-    startVoyage(s, 'wreck', 10 * MIN);
+    startVoyage(s, 'wreck', 10 * MIN, quiet);
     expect(settleVoyage(s, 0)).toBeNull();
     expect(s.boat.voyage).not.toBeNull();
   });
@@ -115,7 +118,7 @@ describe('voyages', () => {
   test('a voyage finishes while the game is closed', () => {
     const s = rich(6);
     buildBoat(s);
-    startVoyage(s, 'firefly', 0);
+    startVoyage(s, 'firefly', 0, quiet);
     applyOffline(s, 10 * H);
     expect(s.boat.voyage).toBeNull();
     expect(s.boat.cargo?.dest).toBe('firefly');
@@ -125,7 +128,7 @@ describe('voyages', () => {
     const s = rich();
     buildBoat(s);
     s.lastActiveAt = 15 * MIN - 1000;
-    startVoyage(s, 'wreck', 0);
+    startVoyage(s, 'wreck', 0, quiet);
     tick(s, 15 * MIN);
     expect(s.boat.cargo).not.toBeNull();
   });
