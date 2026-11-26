@@ -1,8 +1,10 @@
+// New-player playtest: plays the real build in a phone-sized browser for MIN minutes (needs `npm run build` first).
+// Run: MIN=16 OUT=/some/dir node tools/playtest-bot.mjs
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-const { chromium } = createRequire('/home/user/Games/package.json')('playwright');
-const MIN = +(process.env.MIN || 12), OUT = '/tmp/claude-0/play';
-const server = spawn('npx', ['vite', 'preview', '--port', '4181', '--strictPort'], { cwd: '/home/user/Games', stdio: 'ignore' });
+const { chromium } = createRequire(import.meta.url)('playwright');
+const MIN = +(process.env.MIN || 12), OUT = process.env.OUT || '.';
+const server = spawn('npx', ['vite', 'preview', '--port', '4181', '--strictPort'], { stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 3000));
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await b.newPage({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
