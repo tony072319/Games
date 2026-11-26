@@ -302,6 +302,13 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       pl.userData.base = 2.5;
       lights.push(pl);
       add(pl);
+    } else if (g === 'beacon') {
+      // A far lighthouse answering: a big soft glow at its top, no real light (they are many and far).
+      const s = new THREE.Mesh(glowGeo, glowMat(0xffe0a0));
+      s.scale.setScalar(Math.max(0.6, size.x * 0.4));
+      s.position.set(c.x, box.max.y - size.y * 0.12, c.z);
+      s.userData.lamp = true;
+      add(s);
     } else if (g === 'lantern') {
       const s = new THREE.Mesh(glowGeo, glowMat(0xffd080));
       s.scale.setScalar(0.1);

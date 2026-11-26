@@ -5,6 +5,7 @@ import { DECOR_IDS } from '../core/decor';
  */
 import { DESTS, boatOf } from '../core/boat';
 import { townShown } from '../core/town';
+import { answeringLights } from '../core/answering';
 import type { Ship } from '../core/ships';
 import { T } from '../core/tuning';
 import { TOWN_HOMES, TOWN_SLOTS, townWalkers } from './town';
@@ -35,7 +36,7 @@ export interface WorldItem {
   /** Blend the colours toward this colour by this much (snow, fog), for when a tint is not enough. */
   wash?: [number, number];
   tag?: Tag;
-  glow?: 'lamp' | 'window' | 'pane' | 'lantern' | 'fire';
+  glow?: 'lamp' | 'window' | 'pane' | 'lantern' | 'fire' | 'beacon';
   anim?: string;
   /** Land: the renderer adds a sandy rim and foam around it (radius in world units). */
   shore?: number;
@@ -173,6 +174,14 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash: townWash, tag: i === 0 ? 'town' : 'ground' });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
+
+  // The last climb: far lighthouses on the horizon answer, one per part mended.
+  const answering = answeringLights(s);
+  for (let i = 0; i < answering; i++) {
+    // Spread round the horizon, leaving the front (where the camera looks from) open.
+    const a = ((150 + (i * 300) / Math.max(1, T.LIGHT_PARTS - 1)) * Math.PI) / 180 + Math.PI / 2;
+    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x: Math.cos(a) * 52, y: -0.2, z: Math.sin(a) * 52, rotY: -a, glow: 'beacon', bob: true });
+  }
 
   // Dock and boat.
   const hasDock = light >= 3 || s.boat.built;

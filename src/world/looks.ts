@@ -15,7 +15,7 @@ export interface Part {
   rotY?: number;
   size?: number;
   tint?: number;
-  glow?: 'lamp' | 'window' | 'pane' | 'lantern' | 'fire';
+  glow?: 'lamp' | 'window' | 'pane' | 'lantern' | 'fire' | 'beacon';
 }
 
 const LH_SMALL = 'lh/lighthouse_small';
