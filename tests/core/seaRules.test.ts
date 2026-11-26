@@ -42,3 +42,19 @@ describe('each sea has its own islands', () => {
     expect(c.haul.metal).toBeGreaterThan(200);
   });
 });
+
+describe('an ice-breaking trip brings nothing at all', () => {
+  test('no luck, no curio, no glow, and it takes the full time', () => {
+    for (const r of [0, 0.3, 0.6]) {
+      const s = at('aurora', 6);
+      startVoyage(s, 'firefly', 0, () => r);
+      const v = s.boat.voyage!;
+      expect(v.story?.bonus).toBeUndefined();
+      const c = settleVoyage(s, v.returnAt, () => 0)!;
+      expect(c.iceBreak).toBe(true);
+      for (const m of MATERIALS) expect(c.haul[m]).toBe(0);
+      expect(c.curio).toBeUndefined();
+      expect(c.rare).toBe(false);
+    }
+  });
+});

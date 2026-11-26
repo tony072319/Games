@@ -111,7 +111,11 @@ export function voyageHaul(s: GameState, d: DestId): Materials {
 
 export function canSail(s: GameState, d: DestId, n: BoatNo = 0): boolean {
   const b = boatOf(s, n);
-  return b.built && s.levels.light >= needLightHere(s, d) && !b.voyage && !b.cargo;
+  if (!b.built || s.levels.light < needLightHere(s, d) || b.voyage || b.cargo) return false;
+  // An island nobody has reached yet: only one boat makes that first trip.
+  const other = boatOf(s, n === 0 ? 1 : 0);
+  const otherFirst = [other.voyage, other.cargo].some((x) => x && x.sea === s.sea && x.dest === d);
+  return s.discovered.includes(d) || !otherFirst;
 }
 
 export function startVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number = Math.random, n: BoatNo = 0): boolean {
@@ -124,7 +128,9 @@ export function startVoyage(s: GameState, d: DestId, nowMs: number, rng: () => n
 
 /** A trip leaving now: its story is rolled as it sails (luck can bring it home early). */
 function planVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number): NonNullable<GameState['boat']['voyage']> {
-  const story = rollStory(d, rng);
+  const rolled = rollStory(d, rng);
+  // Breaking the ice (an aurora island's first trip) has no luck: full time, nothing aboard.
+  const story = s.sea === 'aurora' && !s.discovered.includes(d) ? { n: rolled.n } : rolled;
   const ms = voyageMs(s, d) * (story.bonus === 'early' ? 1 - T.STORY_EARLY : 1);
   return { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + ms, story };
 }
@@ -142,18 +148,19 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
   // Under the aurora the islands are iced in: the first trip only breaks the ice.
   const iceBreak = v.sea === 'aurora' && discovery;
   if (iceBreak) for (const m of MATERIALS) haul[m] = 0;
-  if (v.story?.bonus === 'haul') for (const m of MATERIALS) haul[m] *= 1 + T.STORY_HAUL;
-  if (v.story?.bonus === 'find') haul.glow += T.STORY_FIND_GLOW;
+  const luck = iceBreak ? undefined : v.story?.bonus;
+  if (luck === 'haul') for (const m of MATERIALS) haul[m] *= 1 + T.STORY_HAUL;
+  if (luck === 'find') haul.glow += T.STORY_FIND_GLOW;
   // Whatever the island's buildings made comes home too.
   const fromIsland = takeIslandStore(at, v.dest);
   for (const m of MATERIALS) haul[m] += fromIsland[m];
   boat.voyage = null;
   boat.cargo = { sea: v.sea, dest: v.dest, haul, discovery, fromIsland, story: v.story, ...(iceBreak ? { iceBreak } : {}) };
-  if (rng() < curioChance(at, 'boat')) {
+  if (!iceBreak && rng() < curioChance(at, 'boat')) {
     const c = pickCurio(at, 'boat', rng, v.dest);
     if (c) boat.cargo.curio = c;
   }
-  boat.cargo.rare = !!boat.cargo.curio || discovery || !!v.story?.bonus;
+  boat.cargo.rare = !iceBreak && (!!boat.cargo.curio || discovery || !!luck);
   return boat.cargo;
 }
 

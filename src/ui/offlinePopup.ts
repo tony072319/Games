@@ -1,7 +1,7 @@
 import { storyText } from './story';
 import { T } from '../core/tuning';
 import type { ArrivalLine } from '../core/arrival';
-import { MATERIALS, type DestId, type Materials, type UpgradeId } from '../core/data';
+import { MATERIALS, type DestId, type Materials, type SeaId, type UpgradeId } from '../core/data';
 import type { Lang } from '../core/state';
 import { formatDuration, formatNumber, t } from '../i18n';
 import { itemIcon } from './art';
@@ -25,7 +25,8 @@ export interface ArrivalActions {
   collect(double: boolean): void;
   /** Close and show an upgrade card. */
   showUpgrade(id: UpgradeId): void;
-  destName(d: DestId): string;
+  /** An island's name at a sea (the boat may have sailed at another). */
+  destName(d: DestId, sea?: SeaId): string;
 }
 
 /**
@@ -49,13 +50,13 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
     if (l.kind === 'away') p.textContent = t(lang, 'arrival.away', { time: formatDuration(l.seconds ?? 0, lang) });
     if (l.kind === 'chest') p.textContent = t(lang, 'arrival.chest');
     if (l.kind === 'cap') p.textContent = t(lang, 'arrival.cap', { h: formatNumber(l.hours ?? 0, lang) });
-    if (l.kind === 'boat') p.textContent = t(lang, 'arrival.boat', { name: act.destName(l.dest!) });
+    if (l.kind === 'boat') p.textContent = t(lang, 'arrival.boat', { name: act.destName(l.dest!, l.sea) });
     if (l.kind === 'island') p.textContent = t(lang, 'arrival.island');
     if (l.kind === 'tip') p.textContent = t(lang, 'arrival.tip', { name: t(lang, `upg.${l.upgrade}.name`) });
     li.append(p);
-    if (l.kind === 'boat' && l.story) {
+    if (l.kind === 'boat' && (l.story || l.iceBreak)) {
       const log = el('p', 'arrival-story');
-      log.textContent = storyText(lang, l.dest!, l.story, act.destName(l.dest!));
+      log.textContent = l.iceBreak ? t(lang, 'story.ice', { name: act.destName(l.dest!, l.sea) }) : storyText(lang, l.dest!, l.story, act.destName(l.dest!, l.sea));
       li.append(log);
     }
     if (l.mats) li.append(haul(l.mats, lang));

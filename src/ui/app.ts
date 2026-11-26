@@ -101,7 +101,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   /** Something new went into the book since it was last opened. */
   let newFind = false;
   /** Whether cargo was waiting last frame, to notice the boat coming home. */
-  let hadCargo = state.boat.cargo !== null;
+  let hadCargo = state.boat.cargo !== null || state.boat2.cargo !== null;
   /** Debug only: shifts the sky clock forward. */
   let skyOffset = 0;
   let nextSkyAt = 0;
@@ -128,7 +128,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     popupEl?.remove();
     const lang = state.settings.lang;
     popupEl = showArrival(game, lang, lines, {
-      destName: (d) => destName(lang, (state.boat.cargo ?? state.boat2.cargo)?.sea ?? state.sea, d),
+      destName: (d, sea) => destName(lang, sea ?? state.sea, d),
       showUpgrade: (id) => panel.show(id),
       collect: (double) => {
         const moved = takeChest();
@@ -406,8 +406,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   /** Unload every boat in port with cargo (the second a moment after the first). */
   function unload() {
+    // With both boats laden, the second unloads after the first's log line has been read.
+    const wait = state.boat.cargo ? (state.boat.cargo.rare ? 4600 : 2600) : 0;
     unloadOne(0);
-    if (state.boat2.cargo) setTimeout(() => unloadOne(1), state.boat.cargo === null ? 700 : 0);
+    if (state.boat2.cargo) {
+      if (wait) setTimeout(() => unloadOne(1), wait);
+      else unloadOne(1);
+    }
   }
 
   function unloadOne(n: BoatNo) {

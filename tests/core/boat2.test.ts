@@ -83,3 +83,14 @@ describe('a second boat', () => {
     expect(old.status).toBe('loaded');
   });
 });
+
+describe('two boats and a new island', () => {
+  test('only one boat goes to an island nobody has reached yet', () => {
+    const s = fleet();
+    buildBoat2(s);
+    expect(startVoyage(s, 'oldlight', 0, quiet, 0)).toBe(true);
+    expect(canSail(s, 'oldlight', 1)).toBe(false);
+    expect(startVoyage(s, 'oldlight', 0, quiet, 1)).toBe(false);
+    expect(canSail(s, 'wreck', 1)).toBe(true); // already found: both may go
+  });
+});
