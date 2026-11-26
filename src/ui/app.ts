@@ -24,7 +24,7 @@ import { BUILDINGS, construct } from '../core/islands';
 import { SoundEngine } from './audio';
 import { SKY_CYCLE_MS, skyAt, tintSky } from './sky';
 import { canPassLight, materialStars, nextSea, passLight, starlightFor, switchSea, starPercent } from '../core/seas';
-import { nextGoal, type Goal, TUTORIAL_STEPS } from '../core/advice';
+import { guideHint, nextGoal, type Goal } from '../core/advice';
 import { canBuy } from '../core/economy';
 import { formatEta } from '../i18n';
 import { type SeaId } from '../core/data';
@@ -55,6 +55,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   const field: FlotsamField = newField(opts.now());
   /** Ships passing at night (on screen only, like drifting finds). */
   const shipField: ShipField = newShipField(opts.now());
+  /** The ship the "guide it" hint went to this session (only the first one gets it). */
+  let hintShip: number | undefined;
   const save = () => {
     saveGame(opts.kv, state);
     opts.clock?.save();
@@ -966,7 +968,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     // The first night a ship passes (after the first-time steps): show how to guide it.
     // (Only with the 3D picture: without it there is no ship to tap.)
-    const shipOut = !!world && state.stats.tutorial >= TUTORIAL_STEPS && state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
+    const hinted = world ? guideHint(state, shipField.ships, hintShip) : undefined;
+    if (hinted !== undefined) hintShip = hinted;
+    const shipOut = hinted !== undefined;
     // With the lighthouse mended, the next step is to pass the light on (tap the lighthouse).
     const passNow = canPassLight(state);
     const g: Goal = passNow ? { key: 'goal.pass', target: 'light' } : shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);

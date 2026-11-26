@@ -1,6 +1,7 @@
 import { DESTS, DOCK_LIGHT, canSail } from './boat';
 import { DEST_IDS, MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, PANEL_UPGRADES, type Materials, type UpgradeId } from './data';
 import { autoRate, canBuy, chestCapacity, chestTotal, isMaxLevel, netRate, priceOf, upgradeLocked } from './economy';
+import type { Ship } from './ships';
 import { emptyMaterials, type GameState } from './state';
 
 /** What the net brings in per second, by material (island production not counted). */
@@ -69,6 +70,18 @@ const TUTORIAL: Goal[] = [
   { key: 'goal.mendNet', target: 'net' },
 ];
 export const TUTORIAL_STEPS = TUTORIAL.length;
+
+/**
+ * Which passing ship the "guide it" hint points at, if any. Only once the first boat is built (the
+ * first voyage comes first), only until a ship has been guided, and only for the first ship seen
+ * (`shown`, kept by the caller for the session): later ships do not keep taking the goal bar.
+ */
+export function guideHint(s: GameState, ships: readonly Ship[], shown: number | undefined): number | undefined {
+  if (s.stats.tutorial < TUTORIAL_STEPS || !s.boat.built || s.stats.guided > 0) return undefined;
+  const open = ships.filter((sh) => sh.guidedAt === undefined);
+  if (shown !== undefined) return open.some((sh) => sh.id === shown) ? shown : undefined;
+  return open[0]?.id;
+}
 
 /** The one thing worth doing next. `name`/`time` params are upgrade ids and seconds; the UI turns them into words. */
 export function nextGoal(s: GameState): Goal {
