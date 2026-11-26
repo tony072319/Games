@@ -92,3 +92,33 @@
 - Polytropic Town 的许可、两款中文圆体字体的简体覆盖和许可，需要在用之前再读一遍原文。
 - Steam 同类游戏只看了商店页面，没有销量或留存数据。
 - 下载的包放在会话临时目录，会话结束会被清掉；真要用时从上面的链接重新下载。
+
+## 七、GitHub 公共仓库补充搜索（2026-11-27 白天）
+
+用 GitHub 搜索按星数排序查了：放置/增量游戏、three.js 小岛、卡通水面、CC0 素材清单、远征类放置游戏。
+
+**素材清单（找素材时的入口，都是 CC0）**
+
+| 仓库 | 星数 | 用途 |
+|---|---|---|
+| [madjin/awesome-cc0](https://github.com/madjin/awesome-cc0) | 564 | 全网 CC0 素材站点清单：3D、贴图、音效、音乐 |
+| [devanshutak25/3d-resources](https://github.com/devanshutak25/3d-resources) | 1037 | 3D/游戏开发资源索引（4800+ 条），按类别分 |
+| [iwenzhou/kenney](https://github.com/iwenzhou/kenney) | 7 | Kenney 全套素材包的镜像（CC0），以后可以从这里批量取 |
+
+**开源放置游戏（看玩法和结构，不拿代码）**
+
+| 仓库 | 许可 | 值得看的地方 |
+|---|---|---|
+| [IvarK/AntimatterDimensionsSourceCode](https://github.com/IvarK/AntimatterDimensionsSourceCode) | MIT | 最成功的网页放置游戏之一：多层转生、每层换规则、离线进度、新手引导节奏 |
+| [pmotschmann/Evolve](https://github.com/pmotschmann/Evolve) | MPL-2.0 | 文明演化放置：资源种类多但界面分层展示，参考"信息不过载" |
+| [ihtasham42/progress-knight](https://github.com/ihtasham42/progress-knight) | Unlicense | 极简放置：一生结束后带着经验重来，和我们"传光"很像 |
+| [particle-clicker/particle-clicker](https://github.com/particle-clicker/particle-clicker) | MIT | 每次升级附一小段科普文字，类似我们的航海日志 |
+| [Flaque/merchant.js](https://github.com/Flaque/merchant.js) | MIT | 放置游戏的资源/价格小框架；我们已有自己的规则层，不需要 |
+| [Patashu/break_infinity.js](https://github.com/Patashu/break_infinity.js) | MIT | 超大数字库；我们的数字不超过普通范围，暂不需要 |
+
+**three.js 小岛 / 水面（以后改画面时参考）**
+- [nicksonthc/ghibli-threejs](https://github.com/nicksonthc/ghibli-threejs)（MIT）：手绘/吉卜力风格的 three.js 场景做法，包括水面、草、光照。
+- [ywsfAS/IslandAS](https://github.com/ywsfAS/IslandAS)（MIT）：three.js + TypeScript 的风格化小岛，自写 GLSL 着色器。
+- [StarKnightt/tiny-planet](https://github.com/StarKnightt/tiny-planet)（MIT）：小星球上的海、沙滩、起伏的山，地形和海岸线的处理可参考。
+
+**结论**：GitHub 上没有"拿来就能用"的灯塔/小岛放置游戏素材；有用的是 CC0 素材清单（找素材的入口）和几个开源放置游戏（参考转生和新手节奏）。我们的规则层 + 模拟器已经比这些项目的结构更完整，不需要换框架。
