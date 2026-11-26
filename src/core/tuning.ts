@@ -23,6 +23,8 @@ export const T = {
   BUILDING_PCT: 0.0724,
   /** Net upgrade cost grows by this each level (was 1.6; the net now reaches 40+ every sea). */
   NET_COST_GROWTH: 1.37,
+  /** Share of the net's price (from level 2) paid in plastic instead of wood. */
+  NET_PLASTIC: 0.35,
   /** Lighthouse levels 7–10 cost this much more per level past 6. */
   LATE_LIGHT_MULT: 3.31,
   /** Polishing the lamp: glow it costs, how long it lasts, and how many more finds drift by. */

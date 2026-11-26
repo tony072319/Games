@@ -17,7 +17,9 @@ describe('formulas', () => {
   });
   test('upgrade costs', () => {
     expect(upgradeCost('net', 1)).toEqual({ wood: 15, plastic: 0, rope: 0, metal: 0, glow: 0 });
-    expect(upgradeCost('net', 3)).toEqual({ wood: Math.ceil(15 * T.NET_COST_GROWTH ** 2), plastic: 0, rope: 5, metal: 0, glow: 0 });
+    // From level 2 the net takes plastic too (the same total), so plastic does not pile up unused.
+    const w3 = 15 * T.NET_COST_GROWTH ** 2;
+    expect(upgradeCost('net', 3)).toEqual({ wood: Math.ceil(w3 * (1 - T.NET_PLASTIC)), plastic: Math.ceil(w3 * T.NET_PLASTIC), rope: 5, metal: 0, glow: 0 });
     expect(upgradeCost('storage', 1)).toEqual({ wood: 30, plastic: 10, rope: 0, metal: 0, glow: 0 });
   });
 });

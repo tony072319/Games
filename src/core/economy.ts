@@ -55,7 +55,11 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
   const c = emptyMaterials();
   const g = (base: number, r: number, from = 1) => Math.ceil(base * Math.pow(r, L - from));
   if (id === 'net') {
-    c.wood = g(15, T.NET_COST_GROWTH);
+    // From level 2 part of the price is plastic (same total): the net alone would drain wood while plastic piles up.
+    const w = 15 * Math.pow(T.NET_COST_GROWTH, L - 1);
+    const p = L >= 2 ? T.NET_PLASTIC : 0;
+    c.wood = Math.ceil(w * (1 - p));
+    if (p) c.plastic = Math.ceil(w * p);
     if (L >= 3) c.rope = g(5, T.NET_COST_GROWTH, 3);
     if (L >= 6) c.metal = g(2, T.NET_COST_GROWTH, 6);
   } else if (id === 'storage') {
