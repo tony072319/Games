@@ -72,6 +72,16 @@ describe('the lighthouse is mended part by part from level 5', () => {
     switchSea(s, 'fog', 2000);
     expect(s.lightParts).toBe(2);
   });
+  test('a save from when a level had 4 parts keeps the share already paid', () => {
+    const kv = memKV();
+    const s = rich(8);
+    saveGame(kv, s);
+    const data = JSON.parse(kv.getItem(SAVE_KEY)!);
+    delete data.lightPartsOf; // saved before parts were counted in tenths
+    data.lightParts = 3; // 3 of 4 paid
+    const r = loadGame({ getItem: () => JSON.stringify(data), setItem() {} }, 0, 'zh').state;
+    expect(r.lightParts).toBe(Math.floor((3 * T.LIGHT_PARTS) / 4));
+  });
   test('parts survive a save; bad values load as 0 without dropping anything', () => {
     const kv = memKV();
     const s = rich(6);

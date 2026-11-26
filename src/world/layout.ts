@@ -52,7 +52,7 @@ function pierStart(): [number, number] {
   const [x, z] = hexToWorld(...PIER_TILE);
   return [x + PDX * 0.9, z + PDZ * 0.9];
 }
-const PIER_PLANKS = 5;
+const PIER_PLANKS = 3;
 const PLANK = 1.6;
 
 function pierEnd(): [number, number] {
@@ -244,9 +244,10 @@ function boatRoute(dest: DestId): [number, number][] {
   const [ix, iz] = hexToWorld(...DEST_HEX[dest]);
   const a0 = Math.atan2(mz, mx);
   const a1 = Math.atan2(iz, ix);
+  // Always round the island clockwise (decreasing angle): the pier lies just the other way.
   let da = a1 - a0;
-  while (da > Math.PI) da -= 2 * Math.PI;
-  while (da < -Math.PI) da += 2 * Math.PI;
+  while (da >= 0) da -= 2 * Math.PI;
+  while (da < -2 * Math.PI) da += 2 * Math.PI;
   const steps = Math.max(1, Math.ceil(Math.abs(da) / 0.25));
   const pts: [number, number][] = [[mx, mz]];
   for (let i = 0; i <= steps; i++) {
@@ -278,5 +279,5 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
 export function flotsamPosition(item: FloatingItem, nowMs: number): { x: number; z: number } {
   const age = Math.min(1, Math.max(0, (nowMs - item.spawnedAt) / FLOAT_LIFETIME_MS));
   const lane = Math.min(1, Math.max(0, item.lane));
-  return { x: -16 + 32 * age, z: 9 + lane * 4 };
+  return { x: -16 + 32 * age, z: 10 + lane * 3.5 };
 }

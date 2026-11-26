@@ -33,6 +33,32 @@ describe('the boat sails around the island, not over it', () => {
   });
 });
 
+describe('the pier stays clear', () => {
+  const planks = (s: ReturnType<typeof full>) => worldLayout(s, NOW).filter((i) => i.key.startsWith('dock:plank'));
+  test('no trip sails through the pier', () => {
+    const s = full();
+    const ps = planks(s);
+    for (const d of Object.keys(DESTS) as DestId[]) {
+      s.boat.voyage = { sea: 'dusk', dest: d, departAt: NOW, returnAt: NOW + 100_000 };
+      for (let t = 0.03; t < 0.97; t += 0.005) {
+        const b = boatPosition(s, NOW + t * 100_000);
+        for (const p of ps) expect(Math.hypot(b.x - p.x, b.z - p.z), `${d} ${t.toFixed(3)}`).toBeGreaterThan(0.9);
+      }
+    }
+  });
+  test('drifting finds pass clear of the pier and the moored boat', () => {
+    const s = full();
+    const ps = planks(s);
+    const boat = boatPosition(s, NOW);
+    const things = [...ps.map((p) => [p.x, p.z]), [boat.x, boat.z]];
+    for (const lane of [0, 0.5, 1])
+      for (let t = 0; t <= 1; t += 0.01) {
+        const f = flotsamPosition({ id: 1, material: 'wood', spawnedAt: NOW, lane }, NOW + t * FLOAT_LIFETIME_MS);
+        for (const [x, z] of things) expect(Math.hypot(f.x - x, f.z - z)).toBeGreaterThan(1);
+      }
+  });
+});
+
 describe('the island grows', () => {
   test('as many tiles as the rules allow, all different, none on home, decorations or near an island', () => {
     expect(LAND_TILES).toHaveLength(LAND_MAX);

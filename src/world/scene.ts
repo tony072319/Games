@@ -629,8 +629,10 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       renderer.toneMappingExposure = pal.exposure;
       const fog = scene.fog as THREE.Fog;
       // The fog sea lives up to its name; the others keep a soft, far haze.
-      fog.near = sea === 'fog' ? 10 : 70;
-      fog.far = sea === 'fog' ? 55 : 220;
+      // Fog distances follow the home view, so a grown island is not lost in the fog sea's fog.
+      const k = homeScale();
+      fog.near = (sea === 'fog' ? 10 : 70) * k;
+      fog.far = (sea === 'fog' ? 55 : 220) * k;
       sky.setAurora(sea === 'aurora' ? 1 : 0);
     },
     setLight(level) {

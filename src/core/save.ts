@@ -19,7 +19,8 @@ export type LoadStatus = 'new' | 'loaded' | 'repaired' | 'corrupt';
 
 /** Writes the save. Returns false (never throws) if storage refuses, e.g. quota full. */
 export function saveGame(kv: KV, state: GameState): boolean {
-  return safeSet(kv, SAVE_KEY, JSON.stringify(state));
+  // lightPartsOf: how many parts a level had when saved, so a change to LIGHT_PARTS keeps paid progress.
+  return safeSet(kv, SAVE_KEY, JSON.stringify({ ...state, lightPartsOf: T.LIGHT_PARTS }));
 }
 
 function safeSet(kv: KV, key: string, value: string): boolean {
@@ -44,11 +45,18 @@ function readMaterials(v: unknown): Materials {
 
 /** A sea you're not at. Returns null if it can't be read. */
 /** Lighthouse parts in progress: anything not a whole 0..LIGHT_PARTS-1 starts the level over. */
-function readParts(v: unknown): number {
-  return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < T.LIGHT_PARTS ? v : 0;
+function readParts(v: unknown, of: number): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v >= of) return 0;
+  return of === T.LIGHT_PARTS ? v : Math.floor((v * T.LIGHT_PARTS) / of);
 }
 
-function readSea(v: unknown, nowMs: number): SeaState | null {
+/** Parts per level in the save; saves from before this was stored had 4. */
+function partsOf(data: Record<string, unknown>): number {
+  const of = data.lightPartsOf;
+  return typeof of === 'number' && Number.isInteger(of) && of > 0 ? of : 4;
+}
+
+function readSea(v: unknown, nowMs: number, of: number): SeaState | null {
   if (!isObj(v) || !isObj(v.levels)) return null;
   const L = v.levels;
   if (!isLevel(L.net, MAX_LEVEL.net) || !isLevel(L.storage, MAX_LEVEL.storage) || !isLevel(L.light, MAX_LEVEL.light)) return null;
@@ -60,7 +68,7 @@ function readSea(v: unknown, nowMs: number): SeaState | null {
     levels: { net: L.net as number, storage: L.storage as number, light: L.light as number },
     // Saves from before per-sea materials have none stored: the old sea starts with nothing.
     materials: readMaterials(v.materials),
-    lightParts: readParts(v.lightParts),
+    lightParts: readParts(v.lightParts, of),
     decor: readDecor(v.decor),
     land: readLand(v.land),
     chest: readMaterials(v.chest),
@@ -177,14 +185,14 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   } else state.reached = Array.from(new Set<SeaId>(['dusk', state.sea]));
   if (typeof data.polishUntil === 'number' && Number.isFinite(data.polishUntil) && data.polishUntil >= 0) state.polishUntil = data.polishUntil;
   else if ('polishUntil' in data) dropped = true;
-  state.lightParts = readParts(data.lightParts);
+  state.lightParts = readParts(data.lightParts, partsOf(data));
   state.decor = readDecor(data.decor);
   state.land = readLand(data.land);
   if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
   else if ('starlight' in data) dropped = true;
   if (isObj(data.seas)) {
     for (const [id, v] of Object.entries(data.seas)) {
-      const sea = isSea(id) && id !== state.sea ? readSea(v, nowMs) : null;
+      const sea = isSea(id) && id !== state.sea ? readSea(v, nowMs, partsOf(data)) : null;
       if (sea) state.seas[id as SeaId] = sea;
       else dropped = true;
     }

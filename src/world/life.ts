@@ -169,8 +169,9 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
       {
         const on = ctx.light >= 2 && !ctx.calm;
         const ph = (t * 0.35) % 3;
-        const x = -3.5;
-        const z = 5.6;
+        // Out in open water, beyond the fully grown island.
+        const x = -6.5;
+        const z = 11.5;
         if (on && ph < 1) {
           fish.visible = true;
           fish.position.set(x + ph * 1.6, -0.25 + Math.sin(ph * Math.PI) * 1.1, z);
