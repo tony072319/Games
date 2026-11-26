@@ -58,7 +58,8 @@ export interface GameState {
   /** calm: fewer animations. mini: corner mode. */
   settings: { lang: Lang; sound: boolean; calm: boolean; mini: boolean };
   /** tutorial: first-time steps done (0..3). */
-  stats: { tapped: number; tutorial: number };
+  /** guided: ships guided past the rocks at night. */
+  stats: { tapped: number; tutorial: number; guided: number };
   /** lastDest: where the boat last sailed (auto-sailing goes there again). */
   boat: { built: boolean; voyage: Voyage | null; cargo: Cargo | null; lastDest?: DestId };
   /** The second boat (from the fog sea on); same shape as the first. */
@@ -107,7 +108,7 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     levels: { net: 1, storage: 1, light: 1, recycle: 0, speed: 1, cargo: 1 },
     lastActiveAt: nowMs,
     settings: { lang, sound: true, calm: false, mini: false },
-    stats: { tapped: 0, tutorial: 0 },
+    stats: { tapped: 0, tutorial: 0, guided: 0 },
     boat: { built: false, voyage: null, cargo: null },
     boat2: { built: false, voyage: null, cargo: null },
     discovered: [],

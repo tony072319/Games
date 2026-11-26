@@ -43,6 +43,11 @@ export const T = {
   EARLY_LIGHT_MULT: 0.4,
   BOAT_COST_MULT: 0.45,
   TRIAL_MINUTES: 3,
+  /** Night ships: how often one passes, how long it takes to cross, what guiding one is worth. */
+  SHIP_EVERY_MS: 75_000,
+  SHIP_LIFE_MS: 60_000,
+  GUIDE_SECONDS: 30,
+  GUIDE_GLOW_CHANCE: 0.25,
   STORY_LUCK: 0.3,
   STORY_HAUL: 0.25,
   STORY_EARLY: 0.15,
