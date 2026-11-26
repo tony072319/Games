@@ -55,7 +55,7 @@ export function nextEffect(s: GameState, id: UpgradeId): Effect | null {
   return { kind: 'percent', value: Math.round(25 / (1 + 0.25 * (L - 1))) };
 }
 
-export type GoalTarget = 'flotsam' | 'chest' | 'boat' | 'net' | 'storage' | 'light' | 'recycle' | 'map';
+export type GoalTarget = 'flotsam' | 'chest' | 'boat' | 'net' | 'storage' | 'light' | 'recycle' | 'map' | 'ship';
 
 export interface Goal {
   key: string;

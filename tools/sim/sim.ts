@@ -17,7 +17,9 @@ import { tapValue } from './taps';
 import { DECOR_IDS, canDecorate, decorCost, decorate } from '../../src/core/decor';
 import { canExpand, expand, landCost } from '../../src/core/land';
 import { canDeliver, deliver } from '../../src/core/commission';
-import { SKY_CYCLE_MS } from '../../src/core/daycycle';
+import { SKY_CYCLE_MS, nightness } from '../../src/core/daycycle';
+import { guideShip, newShipField, updateShips } from '../../src/core/ships';
+import { T } from '../../src/core/tuning';
 
 const DAY = 24 * 3600 * 1000;
 const MIN = 60 * 1000;
@@ -218,6 +220,13 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
           src.islands += isl;
           src.boat += total(cargo.haul) - isl;
         }
+      }
+      // At night the player guides one passing ship with the light.
+      if (m === 0 && nightness(at) > 0.5) {
+        const f = newShipField(at - T.SHIP_EVERY_MS);
+        updateShips(f, at, rng);
+        const gift = f.ships[0] ? guideShip(s, f, f.ships[0].id, at, rng) : null;
+        if (gift) src.taps += total(gift);
       }
       if (m === 0)
         for (let k = 0; k < profile.tapsPerCheck; k++) {

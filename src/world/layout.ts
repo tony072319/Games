@@ -5,6 +5,8 @@ import { DECOR_IDS } from '../core/decor';
  */
 import { DESTS, boatOf } from '../core/boat';
 import { townShown } from '../core/town';
+import type { Ship } from '../core/ships';
+import { T } from '../core/tuning';
 import { TOWN_HOMES, TOWN_SLOTS, townWalkers } from './town';
 import { FLOAT_LIFETIME_MS, type BuildingId, type DestId } from '../core/data';
 import type { FloatingItem } from '../core/flotsam';
@@ -334,6 +336,17 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
     left -= lens[i];
   }
   return { x: pts[0][0], z: pts[0][1], dx: 0, dz: 1 };
+}
+
+/**
+ * A ship passing at night: right to left far out behind the island, beyond the islands the boat
+ * sails to, where the camera sees it against the horizon.
+ */
+export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; z: number; rotY: number } {
+  void land;
+  const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / T.SHIP_LIFE_MS));
+  const lane = Math.min(1, Math.max(0, ship.lane));
+  return { x: 42 - 84 * age, z: -(37 + lane * 5), rotY: -Math.PI / 2 };
 }
 
 /** Drifting finds cross the lit water in front of the island, far lane to near lane. */

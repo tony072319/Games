@@ -19,6 +19,9 @@ import { TILE_D, litRadiusWorld } from './hex';
 import { shoresOf, type Tag, type WorldItem, type boatPosition } from './layout';
 import { terrainGeometry, type Shape } from './terrain';
 
+/** A ship passing at night. */
+const SHIP_MODEL: ModelId = 'kp/ship-medium';
+
 /** Ground colours for sculpted islands (the sea's wash is applied on top). */
 const GROUND_COLOURS = { sand: 0xf2dca0, grass: 0x8cc25a, rock: 0xa39a8c, path: 0xcdb48a };
 import { paletteFor, type Palette } from './palette';
@@ -27,7 +30,7 @@ import { disposeToon, toonMaterial, toonRamp } from './toon';
 import { createWater } from './water';
 import { createLife, type Life } from './life';
 
-export type AnchorTag = Tag | `flotsam:${number}`;
+export type AnchorTag = Tag | `flotsam:${number}` | `ship:${number}`;
 export interface FlotsamView {
   id: number;
   x: number;
@@ -39,6 +42,8 @@ export interface WorldExtra {
   /** Boats at sea (n: which boat); `rare` when one is bringing something special home. */
   boats: (ReturnType<typeof boatPosition> & { model: ModelId; rare?: boolean; n: 0 | 1 })[];
   flotsam: FlotsamView[];
+  /** Ships passing at night (guided: flashing its thanks). */
+  ships?: { id: number; x: number; z: number; rotY: number; guided: boolean }[];
 }
 export interface ScreenPoint {
   x: number;
@@ -53,6 +58,8 @@ export interface World {
   anchor(tag: AnchorTag): ScreenPoint | null;
   /** The tag under a point in the canvas (CSS px from its top-left), if any. */
   pick(x: number, y: number): AnchorTag | null;
+  /** Turn the lighthouse beam to a point on the sea for a moment (guiding a ship). */
+  aimBeam(x: number, z: number): void;
   pulse(tag: Tag): void;
   /** Test build: show a passing whale now. */
   summon(): void;
@@ -384,6 +391,33 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   /** Boats at sea, by which boat they are. */
   const voyageBoats = new Map<0 | 1, SeaBoat>();
   const drift = new Map<number, THREE.Object3D>();
+  const seaShips = new Map<number, THREE.Object3D>();
+
+  // The lighthouse beam: at night it sweeps the sea; guiding a ship, it swings onto it for a moment.
+  const beamGeo = new THREE.ConeGeometry(2.6, 30, 24, 1, true).translate(0, -15, 0).rotateZ(Math.PI / 2);
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffe3a0, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  beam.visible = false;
+  scene.add(beam);
+  let beamAim: { x: number; z: number; until: number } | null = null;
+  let beamAngle = 0;
+  function updateBeam(t: number, night: number) {
+    const tower = tagObj.get('light');
+    beam.visible = !!tower && night > 0.3 && !calm;
+    if (!beam.visible || !tower) return;
+    const box = new THREE.Box3().setFromObject(tower);
+    beam.position.set(0, box.max.y - Math.min(1.2, (box.max.y - box.min.y) * 0.15), 0);
+    let want = t * 0.35;
+    if (beamAim && t < beamAim.until) want = Math.atan2(-beamAim.z, beamAim.x);
+    else beamAim = null;
+    // Turn smoothly toward where it should point.
+    let d = (want - beamAngle) % (2 * Math.PI);
+    if (d > Math.PI) d -= 2 * Math.PI;
+    if (d < -Math.PI) d += 2 * Math.PI;
+    beamAngle += beamAim ? d * 0.15 : d;
+    beam.rotation.set(0, beamAngle, -0.06);
+    beamMat.opacity = 0.16 * Math.min(1, (night - 0.3) * 3);
+  }
 
   /** Coming home lucky: a warm lantern on the boat and two gulls flying along. */
   function escort(vb: SeaBoat, on: boolean) {
@@ -438,6 +472,39 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       vb.obj.position.set(b.x, -0.22, b.z);
       vb.obj.rotation.y = b.rotY;
       escort(vb, !!b.rare);
+    }
+    // Ships passing at night: tappable, flashing when guided.
+    const shipIds = new Set((extra.ships ?? []).map((sh) => sh.id));
+    for (const [id, o] of seaShips)
+      if (!shipIds.has(id)) {
+        scene.remove(o);
+        seaShips.delete(id);
+      }
+    for (const sh of extra.ships ?? []) {
+      let o = seaShips.get(sh.id);
+      if (!o) {
+        const g = new THREE.Group();
+        g.userData.tag = `ship:${sh.id}`;
+        const hitBall = new THREE.Mesh(hitGeo, hitMat);
+        // Far away: a generous target.
+        hitBall.scale.setScalar(8);
+        hitBall.position.y = 2.5;
+        g.add(hitBall);
+        const lamp = new THREE.Mesh(glowGeo, glowMat(0xfff0c0));
+        lamp.scale.setScalar(0.5);
+        lamp.position.y = 6.5;
+        lamp.userData.shipLamp = true;
+        g.add(lamp);
+        seaShips.set(sh.id, g);
+        scene.add(g);
+        o = g;
+        template(SHIP_MODEL).then((t) => {
+          if (t && seaShips.get(sh.id) === g) g.add(instance(t, { model: SHIP_MODEL, size: 7 }));
+        });
+      }
+      o.position.set(sh.x, -0.2, sh.z);
+      o.rotation.y = sh.rotY;
+      o.userData.guided = sh.guided;
     }
     const alive = new Set(extra.flotsam.map((f) => f.id));
     for (const [id, o] of drift)
@@ -547,6 +614,12 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         p.obj.rotation.z = Math.sin(t * 0.9 + p.item.z) * 0.035;
       }
     }
+    for (const o of seaShips.values()) {
+      o.position.y = -0.25 + Math.sin(t * 1.1 + o.position.x) * 0.06;
+      // A guided ship flashes its lamp in thanks.
+      for (const c of o.children) if (c.userData.shipLamp) c.scale.setScalar(o.userData.guided ? (Math.sin(t * 14) > 0 ? 1.1 : 0.4) : 0.5);
+    }
+    updateBeam(t, pal.night);
     for (const o of drift.values()) {
       o.position.y = -0.2 + Math.sin(t * 2 + o.position.x) * 0.06;
       o.rotation.y += dt * 0.4;
@@ -713,6 +786,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     anchor(tag) {
       let obj: THREE.Object3D | undefined;
       if (tag.startsWith('flotsam:')) obj = drift.get(Number(tag.slice(8)));
+      else if (tag.startsWith('ship:')) obj = seaShips.get(Number(tag.slice(5)));
       else obj = tagObj.get(tag as Tag);
       if (!obj) return null;
       const box = new THREE.Box3().setFromObject(obj);
@@ -729,12 +803,15 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       const h = host.clientHeight;
       raycaster.setFromCamera(new THREE.Vector2((x / w) * 2 - 1, -(y / h) * 2 + 1), cam);
       // Drifting finds first: they are small and sit in front of everything.
-      const objs = [...drift.values(), ...tagObj.values()];
+      const objs = [...drift.values(), ...seaShips.values(), ...tagObj.values()];
       const hit = raycaster.intersectObjects(objs, true)[0];
       if (!hit) return null;
       let o: THREE.Object3D | null = hit.object;
       while (o && !o.userData.tag) o = o.parent;
       return (o?.userData.tag as AnchorTag) ?? null;
+    },
+    aimBeam(x, z) {
+      beamAim = { x, z, until: performance.now() / 1000 + 2.5 };
     },
     summon() {
       life?.summon();
@@ -777,6 +854,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       groundMat.dispose();
       glowGeo.dispose();
       hitGeo.dispose();
+      beamGeo.dispose();
+      beamMat.dispose();
       hitMat.dispose();
       glowMats.forEach((m) => m.dispose());
       disposeToon();

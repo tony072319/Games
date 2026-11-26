@@ -1,3 +1,4 @@
+import { guideShip, newShipField, updateShips, type ShipField } from '../core/ships';
 import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
 import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
 import { collect, newField, updateField, type FlotsamField } from '../core/flotsam';
@@ -8,7 +9,7 @@ import { detectLang, formatNumber, t } from '../i18n';
 import { islandIcon, itemIcon } from './art';
 import { DOCK_LIGHT, boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo } from '../core/boat';
 import { createWorld, type AnchorTag, type World } from '../world/scene';
-import { boatPosition, flotsamPosition, worldLayout, type Tag } from '../world/layout';
+import { boatPosition, flotsamPosition, shipPosition, worldLayout, type Tag } from '../world/layout';
 import { boatModel } from '../world/looks';
 import { createSeaMap, type SeaMap } from './seaMap';
 import { createIslandView, type IslandView } from './islandView';
@@ -52,6 +53,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   const loaded = loadGame(opts.kv, opts.now(), detectLang(opts.navLangs));
   const state: GameState = loaded.state;
   const field: FlotsamField = newField(opts.now());
+  /** Ships passing at night (on screen only, like drifting finds). */
+  const shipField: ShipField = newShipField(opts.now());
   const save = () => {
     saveGame(opts.kv, state);
     opts.clock?.save();
@@ -879,6 +882,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   /** What tapping each thing does, from the picture or from its button. */
   function tapThing(tag: AnchorTag, x?: number, y?: number) {
     if (tag.startsWith('flotsam:')) return grabFlotsam(Number(tag.slice(8)), x, y);
+    if (tag.startsWith('ship:')) return guide(Number(tag.slice(5)), x, y);
     if (tag === 'chest') {
       if (chestTotal(state.chest) < 1) return panel.show('storage');
       takeChest();
@@ -894,6 +898,28 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       if (state.discovered.includes(d)) openIsland(d);
       else openMap();
     } else if (tag.startsWith('bld:')) openIsland(BUILDINGS[tag.slice(4) as keyof typeof BUILDINGS].island);
+  }
+
+  /** Guide a passing ship with the light: the beam swings onto it, it flashes its thanks and leaves a gift. */
+  function guide(id: number, x?: number, y?: number) {
+    const now = opts.now();
+    const ship = shipField.ships.find((sh) => sh.id === id);
+    const gift = ship ? guideShip(state, shipField, id, now) : null;
+    if (!ship || !gift) return;
+    const p = shipPosition(ship, now, state.land);
+    world?.aimBeam(p.x, p.z);
+    sound.play('upgrade');
+    const lang = state.settings.lang;
+    toast(t(lang, 'guide.thanks'), gift.glow >= 1 ? 'rare' : undefined);
+    const srect = stage.getBoundingClientRect();
+    let i = 0;
+    for (const m of MATERIALS) {
+      if (gift[m] < 1) continue;
+      floatText(`+${formatNumber(gift[m], lang)}`, (x ?? srect.left + srect.width / 2) - srect.left, (y ?? srect.top + srect.height / 2) - srect.top - 20 - i * 18, itemIcon(m));
+      i++;
+    }
+    save();
+    refresh();
   }
 
   function grabFlotsam(id: number, x?: number, y?: number) {
@@ -966,7 +992,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
 
   function renderGoal() {
     const lang = state.settings.lang;
-    const g = nextGoal(state);
+    // The first night a ship passes: show how to guide it.
+    const shipOut = state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
+    const g: Goal = shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);
     const p = { ...(g.params ?? {}) };
     if (typeof p.name === 'string') p.name = t(lang, `upg.${p.name}.name`);
     if (typeof p.time === 'number') p.time = formatEta(p.time, lang);
@@ -990,6 +1018,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (!goal) return;
     const g = goal.target;
     if (g === 'map') return openMap();
+    if (g === 'ship') return world?.focus('sea');
     if (g === 'net' || g === 'storage' || g === 'light' || g === 'recycle') panel.show(g);
     const spotOn: Element | null =
       g === 'chest' ? chestBtn : g === 'boat' ? boatBtn : g === 'flotsam' ? flotsamLayer : g === 'storage' ? chestBtn : stage.querySelector(`.hit[data-hit="${g}"]`);
@@ -1086,6 +1115,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     hadCargo = hasCargo;
     updateField(field, now, Math.random, state);
+    updateShips(shipField, now, Math.random);
     syncFlotsam();
     if (world) {
       if (now >= nextSkyAt) {
@@ -1100,7 +1130,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         return [{ ...boatPosition(state, now, n), model: boatModel(state.levels.speed, state.levels.cargo), rare, n }];
       });
       const flotsam = field.items.map((i) => ({ id: i.id, ...flotsamPosition(i, now, state.land), curio: !!i.curio, material: i.material }));
-      world.update(worldLayout(state, now), { boats, flotsam });
+      const ships = shipField.ships.map((sh) => ({ id: sh.id, ...shipPosition(sh, now, state.land), guided: sh.guidedAt !== undefined }));
+      world.update(worldLayout(state, now), { boats, flotsam, ships });
       const has = [...world.has].join(' ');
       if (stage.dataset.worldHas !== has) stage.dataset.worldHas = has;
     }
