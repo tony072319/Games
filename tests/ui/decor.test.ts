@@ -36,7 +36,7 @@ describe('decorations sheet', () => {
     expect(lantern.canBuy).toBe(false);
   });
   test('every decoration name and the part names exist in both languages', () => {
-    const keys = ['land.title', 'land.desc', 'land.count', 'land.full', 'land.toast', 'decor.open', 'decor.title', 'decor.desc', 'decor.done', 'card.parts', ...DECOR_IDS.flatMap((id) => [1, 2, 3].map((n) => `decor.${id}.${n}`)), ...Array.from({ length: T.LIGHT_PARTS }, (_, i) => `part.${i + 1}`)];
+    const keys = ['land.title', 'land.desc', 'land.count', 'land.full', 'land.toast', 'decor.title', 'decor.desc', 'decor.done', 'card.parts', ...DECOR_IDS.flatMap((id) => [1, 2, 3].map((n) => `decor.${id}.${n}`)), ...Array.from({ length: T.LIGHT_PARTS }, (_, i) => `part.${i + 1}`)];
     for (const k of keys) {
       expect((zh as Record<string, string>)[k], `zh ${k}`).toBeTruthy();
       expect((en as Record<string, string>)[k], `en ${k}`).toBeTruthy();

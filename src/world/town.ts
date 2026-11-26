@@ -83,7 +83,7 @@ export const TOWN_SLOTS: TownSlot[] = (() => {
     if (terrace[i]) out.push(slot(terrace[i][0], terrace[i][1], i, false));
   }
   // Last of all, two buildings up on the peak beside the lighthouse.
-  out.push(slot(0.17, 0.45, 7, false), slot(0.17, -2.95, 2, false));
+  out.push(slot(0.17, 2.05, 7, false), slot(0.17, -2.95, 2, false));
   return out;
 })();
 

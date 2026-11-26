@@ -123,8 +123,8 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   const on = (frac: number, a: number): [number, number] => ringPoint(home, frac, a);
 
   place(items, `light:${light}`, LIGHT_LOOKS[light] ?? LIGHT_LOOKS[10], 0, 0, 0, 'light');
-  // The keeper's house beside the lighthouse on the peak; chest and net down at the harbour by the pier.
-  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.14, -2.0), 0, 'house');
+  // The keeper's house on the peak, in front of the lighthouse (easy to tap); chest and net down at the harbour by the pier.
+  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.17, 0.7), 0, 'house');
   place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...on(0.84, 0.72), 0, 'chest');
   const [nx, nz] = on(0.85, 1.0);
   place(items, `net:${Math.min(50, s.levels.net)}`, netParts(s.levels.net), nx, nz, 0, 'net');
@@ -135,7 +135,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     ['tree2', 'nature/pine_tree', 0.21, -0.9],
   ];
   if (light >= 2) deco.push(['fire', 'viking/firepit', 0.6, 1.25, { glow: 'fire' }]);
-  if (light >= 3) deco.push(['flowers', 'nature/flower_yellow', 0.18, 1.5]);
+  if (light >= 3) deco.push(['flowers', 'nature/flower_yellow', 0.18, -2.0]);
   if (light >= 4) deco.push(['bush', 'nature/bush_berries', 0.4, -0.5]);
   if (light >= 6) deco.push(['mill', 'kk/building_windmill_blue', 0.55, -2.75, { tint: 0xfff0e0 }]);
   if (light >= 8) deco.push(['hammock', 'huts/hammock', 0.62, 2.2, { rotY: 0.9 }]);
@@ -203,7 +203,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   }
 
   // Life: a few who live here, more as the light grows.
-  const [hx, hz] = on(0.12, -1.45);
+  const [hx, hz] = on(0.1, 1.35);
   if (light >= 2) items.push({ key: 'life:keeper', model: 'kc/character-male-a', x: hx, y: 0, z: hz, rotY: 0.3, anim: 'idle' });
   const [cx, cz] = on(0.83, 0.6);
   items.push({ key: 'life:cat', model: 'kpet/animal-cat', x: cx, y: 0, z: cz, rotY: 1.2 });

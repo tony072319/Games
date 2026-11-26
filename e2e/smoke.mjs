@@ -34,7 +34,26 @@ const dbg = async (label) => {
 };
 
 // Things on the island are tapped in the 3D picture; their hidden buttons are the keyboard way in.
-const tapHit = (name) => page.locator(`.hit[data-hit="${name}"]`).dispatchEvent('click');
+const tapHit = async (name) => {
+  const b = page.locator(`.hit[data-hit="${name}"]`);
+  if (await b.evaluate((e) => e.classList.contains('offscreen'))) fail(`the ${name} button should be placed over its thing on the island`);
+  await b.focus();
+  await page.keyboard.press('Enter');
+};
+/** A real tap in the 3D picture where an island thing's button sits (retried once in slow screenshot runs). */
+const tapIsland = async (name, opened) => {
+  for (let tries = SHOTS ? 3 : 2; tries > 0; tries--) {
+    const pos = await page.locator(`.hit[data-hit="${name}"]`).evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await page.mouse.click(pos.x, pos.y);
+    if (await page.locator(opened).waitFor({ timeout: 2000 }).then(() => true).catch(() => false)) return;
+  }
+  const what = await page.evaluate(() => [...document.querySelectorAll('.seamap, .book, .popup, .toast, .menu')].map((e) => e.className + ':' + (e.textContent || '').slice(0, 30)).join(' | '));
+  const pos = await page.locator(`.hit[data-hit="${name}"]`).evaluate((e) => e.getBoundingClientRect().toJSON());
+  fail(`tapping the ${name} in the picture should open it; open now: ${what}; button at ${JSON.stringify(pos)}`);
+};
 
 const total = (page) =>
   page.$$eval('.hud .mat span', (els) => els.reduce((a, e) => a + Number(e.textContent || 0), 0));
@@ -261,7 +280,7 @@ try {
 
   // The book: 12 cells per sea; a find shows up as found.
   await dbg('+1 珍品');
-  await tapHit('book'); // the keeper's house keeps the book
+  await tapIsland('book', '.book'); // tapping the keeper's house in the picture opens the book
   await page.locator('.book').waitFor();
   if ((await page.locator('.book-cell').count()) !== 12) fail('a book page should have 12 cells');
   if ((await page.locator('.book-cell.found').count()) < 1) fail('the find should be in the book');

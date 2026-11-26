@@ -807,8 +807,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       const w = host.clientWidth;
       const h = host.clientHeight;
       raycaster.setFromCamera(new THREE.Vector2((x / w) * 2 - 1, -(y / h) * 2 + 1), cam);
-      // Drifting finds first: they are small and sit in front of everything.
-      const objs = [...drift.values(), ...seaShips.values(), ...tagObj.values()];
+      // Everything that can be tapped (many things share a tag, e.g. the town's houses and the
+      // ground); the nearest hit wins, so things standing on the ground come before the ground.
+      const objs = [...drift.values(), ...seaShips.values(), ...[...placed.values()].filter((p) => p.item.tag).map((p) => p.obj)];
       const hit = raycaster.intersectObjects(objs, true)[0];
       if (!hit) return null;
       let o: THREE.Object3D | null = hit.object;

@@ -81,3 +81,17 @@ describe('where the town stands', () => {
     }
   });
 });
+
+describe('the town keeps clear of the lighthouse grounds', () => {
+  test("no place stands on the keeper's house, the chest, the net, the keeper or the greenery", () => {
+    for (const land of [0, LAND_MAX]) {
+      const s = grown((g) => ((g.levels.light = 10), (g.levels.net = 50), (g.land = land)));
+      const items = worldLayout(s, NOW);
+      const own = items.filter((i) => /^(house|chest:|net:|deco|life:keeper|life:cat|life:chick)/.test(i.key) && i.model !== 'ground');
+      for (const [k, sl] of TOWN_SLOTS.entries()) {
+        const [x, z] = sl.at(land);
+        for (const o of own) expect(Math.hypot(o.x - x, o.z - z), `${land} town ${k} vs ${o.key}`).toBeGreaterThan(1.2);
+      }
+    }
+  });
+});

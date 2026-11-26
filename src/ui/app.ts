@@ -181,6 +181,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (id === state.sea || !switchSea(state, id, opts.now())) return;
     save();
     build();
+    // The sea map opens again; keep the keyboard on the sea just chosen.
+    game.querySelector<HTMLElement>('.sea-chips .chip.on')?.focus();
   }
 
   function confirmPass() {
@@ -251,7 +253,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       game.append(dot);
       setTimeout(() => dot.remove(), 600);
     }
-    sparkle(hitByName('book'));
+    const bookHit = hitByName('book');
+    if (bookHit && !bookHit.classList.contains('offscreen')) sparkle(bookHit);
     save();
     refresh();
   }
@@ -575,6 +578,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       const note = el('div', 'note');
       note.textContent = t(lang, 'world.noWebgl');
       stage.append(note);
+      // No picture to touch: the island's buttons show as a plain list instead.
+      stage.classList.add('no-world');
     }
     // Buttons sit invisibly over the 3D things (for keyboards and screen readers);
     // taps on the picture itself are picked in the world.
@@ -607,6 +612,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       b.type = 'button';
       b.dataset.hit = name;
       b.setAttribute('aria-label', label);
+      // Shown only without the 3D picture (see .no-world).
+      b.textContent = label;
       onAct(b, () => tapThing(tag));
       stage.insertBefore(b, flotsamLayer);
       hits.push({ el: b, tag });
@@ -981,6 +988,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (!goal) return;
     const g = goal.target;
     if (g === 'map') return openMap();
+    if (g === 'light' && canPassLight(state)) return confirmPass();
     if (g === 'ship') return world?.focus('sea');
     if (g === 'net' || g === 'storage' || g === 'light' || g === 'recycle') panel.show(g);
     const spotOn: Element | null =

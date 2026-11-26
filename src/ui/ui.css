@@ -156,31 +156,6 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .menu button:hover, .menu button.on { background: var(--c-surface-2); }
 .menu button .val { color: var(--c-gold); font-size: var(--fs-body); font-weight: var(--fw-regular); }
 
-/* ---------- action bar ---------- */
-.toolbar { z-index: 2; display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) 0; }
-.btn-bar {
-  position: relative;
-  flex: 1 0 auto; /* share the row; wrap to a second row rather than run off screen */
-  min-height: var(--tap);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  padding: 0 var(--sp-3);
-  border: 1px solid var(--c-line);
-  border-radius: var(--r-md);
-  background: var(--c-surface-1);
-  color: var(--c-ink);
-  font-size: var(--fs-label);
-  font-weight: var(--fw-bold);
-  line-height: var(--lh-tight);
-  white-space: nowrap;
-}
-.btn-bar svg { width: var(--icon-md); height: var(--icon-md); color: var(--c-gold); }
-.toolbar .map-btn.locked { color: var(--c-ink-faint); }
-.toolbar .map-btn.locked svg { color: var(--c-ink-faint); }
-.map-btn.badge::after, .book-btn.badge::after { content: ''; position: absolute; top: calc(var(--sp-1) * -1); right: calc(var(--sp-1) * -1); width: var(--sp-3); height: var(--sp-3); border-radius: var(--r-pill); background: var(--c-accent); box-shadow: var(--glow-gold); animation: breathe var(--t-breathe) var(--ease-inout) infinite; }
-.toolbar .pass-btn { border: 0; color: var(--c-on-accent); font-weight: var(--fw-bold); background: linear-gradient(90deg, var(--c-gold), var(--c-gold-soft), var(--c-gold)); background-size: 200% 100%; box-shadow: var(--glow-gold); animation: shimmer var(--t-breathe) linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
 /* ---------- panel and cards ---------- */
@@ -409,7 +384,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 }
 
 /* Calm: the decorative loops stop; what carries information stays. */
-.game.calm .buy.can, .game.calm .book-btn.badge::after, .game.calm .bubble.full, .game.calm .pass-btn, .game.calm .map-btn.badge::after, .game.calm .node.unknown, .game.calm .glint, .game.calm .card.flash { animation: none; }
+.game.calm .buy.can, .game.calm .bubble.full, .game.calm .node.unknown, .game.calm .glint, .game.calm .card.flash { animation: none; }
 
 /* ---------- tapping the scene ---------- */
 .hit { position: absolute; z-index: 4; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-md); background: none; transform: translate(-50%, -50%); pointer-events: none; }
@@ -535,3 +510,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .sea-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); width: 100%; order: 3; }
 .sea-chips .chip { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-sm); border: 1px solid var(--c-surface-2); background: none; color: var(--c-ink-dim); font-size: var(--fs-body); cursor: pointer; }
 .sea-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
+.sea-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
+
+/* Island buttons: invisible over the 3D picture; without it, a plain tappable list. */
+.hit { font-size: 0; color: transparent; }
+.stage.no-world { display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--sp-2); padding: var(--sp-3); }
+.stage.no-world .hit { position: static; transform: none; pointer-events: auto; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--c-surface-1); color: var(--c-ink); font-size: var(--fs-body); }
