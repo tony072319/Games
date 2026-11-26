@@ -36,3 +36,42 @@ describe('far lighthouses answer the last climb', () => {
     expect(worldLayout(at(10), NOW).filter((i) => i.key.startsWith('answer:'))).toHaveLength(T.LIGHT_PARTS);
   });
 });
+
+import * as THREE from 'three';
+import { shipPosition } from '../../src/world/layout';
+import { DEFAULT_CAM, DEFAULT_TARGET, seaView } from '../../src/world/view';
+
+describe('the answering lighthouses can be seen', () => {
+  const towers = () => worldLayout(at(10), NOW).filter((i) => i.key.startsWith('answer:'));
+  const onScreen = (pos: THREE.Vector3, target: THREE.Vector3, aspect: number) => {
+    const cam = new THREE.PerspectiveCamera(36, aspect, 0.1, 600);
+    cam.position.copy(pos);
+    cam.lookAt(target);
+    cam.updateMatrixWorld();
+    return towers().filter((f) => {
+      const p = new THREE.Vector3(f.x, 3, f.z).project(cam);
+      return Math.abs(p.x) <= 0.95 && Math.abs(p.y) <= 0.95 && p.z < 1;
+    }).length;
+  };
+  test('the lit-sea view at the last level shows every one, on a phone and on a wide screen', () => {
+    const v = seaView(10);
+    const pos = v.target.clone().add(v.dir.clone().multiplyScalar(v.dist));
+    expect(onScreen(pos, v.target, 0.5)).toBe(T.LIGHT_PARTS);
+    expect(onScreen(pos, v.target, 16 / 9)).toBe(T.LIGHT_PARTS);
+  });
+  test('the everyday view shows most of them', () => {
+    expect(onScreen(DEFAULT_CAM, DEFAULT_TARGET, 0.5)).toBeGreaterThanOrEqual(T.LIGHT_PARTS / 2);
+    expect(onScreen(DEFAULT_CAM, DEFAULT_TARGET, 16 / 9)).toBe(T.LIGHT_PARTS);
+  });
+  test('no night ship sails through one', () => {
+    for (const f of towers())
+      for (let lane = 0; lane <= 1; lane += 0.1)
+        for (let t = 0; t <= 1; t += 0.02) {
+          const p = shipPosition({ id: 1, lane, spawnedAt: 0 } as never, t * T.SHIP_LIFE_MS);
+          expect(Math.hypot(p.x - f.x, p.z - f.z)).toBeGreaterThan(6);
+        }
+  });
+  test('they stand still (stone, not floats)', () => {
+    for (const f of towers()) expect(f.bob).toBeFalsy();
+  });
+});

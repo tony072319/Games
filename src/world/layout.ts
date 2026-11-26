@@ -1,3 +1,4 @@
+import { FAR_SIDE } from './view';
 import { DECOR_IDS } from '../core/decor';
 /**
  * What the world should contain for a game state: a flat list of placed models.
@@ -178,9 +179,8 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   // The last climb: far lighthouses on the horizon answer, one per part mended.
   const answering = answeringLights(s);
   for (let i = 0; i < answering; i++) {
-    // Spread round the horizon, leaving the front (where the camera looks from) open.
-    const a = ((150 + (i * 300) / Math.max(1, T.LIGHT_PARTS - 1)) * Math.PI) / 180 + Math.PI / 2;
-    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x: Math.cos(a) * 52, y: -0.2, z: Math.sin(a) * 52, rotY: -a, glow: 'beacon', bob: true });
+    const [x, z] = answerSpot(i);
+    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), glow: 'beacon' });
   }
 
   // Dock and boat.
@@ -354,6 +354,18 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
  * A ship passing at night: right to left far out behind the island, beyond the islands the boat
  * sails to, where the camera sees it against the horizon.
  */
+/**
+ * Where far lighthouse i stands: on the horizon the everyday camera looks at (across the island),
+ * in two staggered rows so they fit a phone's narrow view, and beyond the night ships' lane.
+ */
+export function answerSpot(i: number): [number, number] {
+  const n = T.LIGHT_PARTS;
+  const a = FAR_SIDE + ((i - (n - 1) / 2) / (n - 1)) * ANSWER_SPREAD;
+  const r = i % 2 === 0 ? 70 : 82;
+  return [Math.cos(a) * r, Math.sin(a) * r];
+}
+const ANSWER_SPREAD = (28 * Math.PI) / 180;
+
 export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; z: number; rotY: number } {
   void land;
   const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / T.SHIP_LIFE_MS));

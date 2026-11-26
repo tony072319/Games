@@ -542,7 +542,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (id === 'light' && state.levels.light >= MAX_LEVEL.light) {
       setTimeout(() => toast(t(lang, state.sea === 'aurora' ? 'toast.allLit' : 'toast.lit'), 'rare'), 1200);
       // Look out over the lit sea: every far lighthouse is answering now.
-      setTimeout(() => world?.focus('sea'), 600);
+      if (!state.settings.calm) setTimeout(() => world?.focus('sea'), 600);
     }
     const tag: Tag = id === 'net' ? 'net' : id === 'storage' ? 'chest' : id === 'light' ? 'light' : 'boat';
     world?.pulse(tag);

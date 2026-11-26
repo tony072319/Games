@@ -16,6 +16,7 @@ import type { Sky } from '../ui/sky';
 import { MODELS, modelUrl, type ModelId } from './assets';
 import { diffItems } from './diff';
 import { TILE_D, litRadiusWorld } from './hex';
+import { DEFAULT_CAM, DEFAULT_TARGET, seaView } from './view';
 import { shoresOf, type Tag, type WorldItem, type boatPosition } from './layout';
 import { terrainGeometry, type Shape } from './terrain';
 
@@ -109,11 +110,8 @@ interface Placed {
   baseY: number;
 }
 
-const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 1.6);
 /** The reference island size the default camera frames; bigger islands pull the home view back (homeScale). */
 const HOME_REACH = 6;
-// Pulled back so the two-ring island and its third-ring decorations fit with room around them.
-const DEFAULT_CAM = DEFAULT_TARGET.clone().add(new THREE.Vector3(13, 11, 27).sub(DEFAULT_TARGET).multiplyScalar(1.1));
 
 export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -163,6 +161,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const hitGeo = new THREE.SphereGeometry(0.75, 8, 6);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const glowMats = new Map<number, THREE.MeshBasicMaterial>();
+  const beaconMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe0a0).multiplyScalar(3), toneMapped: false, fog: false });
   const glowMat = (c: number) => {
     let m = glowMats.get(c);
     if (!m) {
@@ -304,7 +303,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       add(pl);
     } else if (g === 'beacon') {
       // A far lighthouse answering: a big soft glow at its top, no real light (they are many and far).
-      const s = new THREE.Mesh(glowGeo, glowMat(0xffe0a0));
+      // Not fogged: in the fog sea the tower fades out but its light still reads through the fog.
+      const s = new THREE.Mesh(glowGeo, beaconMat);
       s.scale.setScalar(Math.max(0.6, size.x * 0.4));
       s.position.set(c.x, box.max.y - size.y * 0.12, c.z);
       s.userData.lamp = true;
@@ -844,7 +844,10 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     },
     focus(where) {
       if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * homeScale(), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
-      else if (where === 'sea') focusTo = { target: new THREE.Vector3(0, 0, 0), dist: Math.min(70, Math.max(DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * 1.3, litRadiusWorld(light) * 2.4)), dir: new THREE.Vector3(0.42, 1, 0.72).normalize() };
+      else if (where === 'sea') {
+        const v = seaView(light);
+        focusTo = { target: v.target, dist: v.dist, dir: v.dir };
+      }
       else {
         const o = tagObj.get(where);
         if (o) focusTo = { target: o.position.clone().setY(1), dist: 16 };
@@ -874,6 +877,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       sandMat.dispose();
       groundMat.dispose();
       glowGeo.dispose();
+      beaconMat.dispose();
       hitGeo.dispose();
       beamGeo.dispose();
       beamMat.dispose();
