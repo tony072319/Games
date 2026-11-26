@@ -32,7 +32,7 @@ export const T = {
   /** Islanders' requests: seconds of the net's catch asked for, the glow thank-you, the haul bonus per friendship. */
   ASK_SECONDS: 3600,
   FRIEND_GLOW: 1,
-  FRIEND_HAUL: 0.05,
+  FRIEND_HAUL: 0.04,
   /** Fog sea: extra lighthouse levels the boat needs to find an island. */
   FOG_EXTRA_LIGHT: 1,
   /** Price of the second boat, times BOAT2_COST. */
