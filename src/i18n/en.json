@@ -437,5 +437,7 @@
   "map.build2Desc": "The fog sea dock has room for another boat. Send one near and one far, so they come home at different times.",
   "map.built2": "The second boat is in the water! Both can sail at once.",
   "goal.guide": "A ship is passing in the dark: tap it to guide it with the light",
-  "guide.thanks": "The ship sounds its horn in thanks and leaves you a gift."
+  "guide.thanks": "The ship sounds its horn in thanks and leaves you a gift.",
+  "build.locked": "Mend the dock (lighthouse level 3) and you can start building on the island.",
+  "goal.pass": "The lighthouse is mended! Tap it to pass the light on to the next sea"
 }

@@ -7,7 +7,7 @@ import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } fro
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { islandIcon, itemIcon } from './art';
-import { DOCK_LIGHT, boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo } from '../core/boat';
+import { boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo } from '../core/boat';
 import { createWorld, type AnchorTag, type World } from '../world/scene';
 import { boatPosition, flotsamPosition, shipPosition, worldLayout, type Tag } from '../world/layout';
 import { boatModel } from '../world/looks';
@@ -15,8 +15,8 @@ import { createSeaMap, type SeaMap } from './seaMap';
 import { createIslandView, type IslandView } from './islandView';
 import { createBook, type Book } from './book';
 import { createDecorSheet, type DecorSheet } from './decor';
-import { decorate, type DecorId } from '../core/decor';
-import { LAND_MAX, expand } from '../core/land';
+import { DECOR_IDS, canDecorate, decorate, type DecorId } from '../core/decor';
+import { LAND_MAX, canExpand, expand } from '../core/land';
 import { FRIEND_MAX, deliver, friendOf } from '../core/commission';
 import { createTalentTree } from './talentTree';
 import { CURIOS, chestFind, foundCurio } from '../core/curios';
@@ -27,11 +27,11 @@ import { canPassLight, materialStars, nextSea, passLight, starlightFor, switchSe
 import { nextGoal, type Goal, TUTORIAL_STEPS } from '../core/advice';
 import { canBuy } from '../core/economy';
 import { formatEta } from '../i18n';
-import { SEA_IDS, type SeaId } from '../core/data';
+import { type SeaId } from '../core/data';
 import { destDesc, destName } from './names';
 import { storyText } from './story';
 import { createDebug } from './debug';
-import { dismiss, el, openMenu } from './dom';
+import { dismiss, el } from './dom';
 import { createHud, type Hud } from './hud';
 import { showArrival } from './offlinePopup';
 import { arrivalLines } from '../core/arrival';
@@ -91,16 +91,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   const sound = new SoundEngine(state.settings.sound);
   let boatBtn!: HTMLButtonElement;
   let boatKey = '';
-  let mapBtn!: HTMLButtonElement;
   let seaMap: SeaMap | null = null;
-  let seasBtn!: HTMLButtonElement;
-  let passBtn!: HTMLButtonElement;
-  let chipsKey = '';
   let islandView: IslandView | null = null;
   let book: Book | null = null;
   let decorSheet: DecorSheet | null = null;
-  let decorBtn!: HTMLButtonElement;
-  let bookBtn!: HTMLButtonElement;
   /** Something new went into the book since it was last opened. */
   let newFind = false;
   /** Whether cargo was waiting last frame, to notice the boat coming home. */
@@ -182,29 +176,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   /** The seas button shows once a second sea is reached; it opens a list of them. */
-  function renderSeas() {
-    const key = `${state.sea}:${state.reached.join()}`;
-    if (key === chipsKey) return;
-    chipsKey = key;
-    seasBtn.style.display = state.reached.length < 2 ? 'none' : '';
-    seasBtn.setAttribute('aria-label', `${t(state.settings.lang, 'seas.short')}: ${t(state.settings.lang, `sea.${state.sea}`)}`);
-  }
-
-  function openSeas() {
-    const lang = state.settings.lang;
-    openMenu(
-      game,
-      seasBtn,
-      SEA_IDS.filter((id) => state.reached.includes(id)).map((id) => ({
-        label: t(lang, `sea.${id}`),
-        on: id === state.sea,
-        pick: () => {
-          if (id === state.sea || !switchSea(state, id, opts.now())) return;
-          save();
-          build();
-        },
-      })),
-    );
+  /** Go to another sea you've reached (from the sea map). */
+  function goToSea(id: SeaId) {
+    if (id === state.sea || !switchSea(state, id, opts.now())) return;
+    save();
+    build();
   }
 
   function confirmPass() {
@@ -275,7 +251,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       game.append(dot);
       setTimeout(() => dot.remove(), 600);
     }
-    sparkle(bookBtn);
+    sparkle(hitByName('book'));
     save();
     refresh();
   }
@@ -341,6 +317,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     seaMap = createSeaMap(lang, state, {
       now: opts.now,
+      goToSea,
       deliver: (d: DestId) => {
         if (!deliver(state, d)) return;
         sound.play('upgrade');
@@ -565,6 +542,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   }
 
   const hitEl = (id: UpgradeId) => stage.querySelector<HTMLElement>(`.hit[data-hit="${id}"]`);
+  const hitByName = (name: string) => stage.querySelector<HTMLElement>(`.hit[data-hit="${name}"]`);
 
   function build() {
     const lang = state.settings.lang;
@@ -622,12 +600,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     boatBubble.addEventListener('click', () => unload());
     bubbleKey = '';
     stage.append(chestBtn, flotsamLayer, chestBubble, boatBubble);
-    // The lighthouse and the net open their upgrade.
-    const hit = (id: UpgradeId, tag: Tag) => {
+    // Things on the island open what they are about: the lighthouse and the net their upgrade,
+    // the dock the sea map, the keeper's house the book, the town building. (Buttons for keyboards.)
+    const hit = (name: string, tag: Tag, label = t(lang, `upg.${name}.name`)) => {
       const b = el('button', 'hit');
       b.type = 'button';
-      b.dataset.hit = id;
-      b.setAttribute('aria-label', t(lang, `upg.${id}.name`));
+      b.dataset.hit = name;
+      b.setAttribute('aria-label', label);
       onAct(b, () => tapThing(tag));
       stage.insertBefore(b, flotsamLayer);
       hits.push({ el: b, tag });
@@ -635,6 +614,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     hits = [];
     hit('light', 'light');
     hit('net', 'net');
+    hit('map', 'dock', t(lang, 'map.open'));
+    hit('book', 'house', t(lang, 'book.open'));
+    hit('build', 'town', t(lang, 'decor.title'));
     // Small lights over things that can be mended right now.
     glints = [];
     const glint = (tag: Tag, when: () => boolean) => {
@@ -643,7 +625,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       stage.append(g);
       glints.push({ el: g, tag, when });
     };
-    glint('light', () => canBuy(state, 'light'));
+    glint('light', () => canBuy(state, 'light') || canPassLight(state));
+    glint('house', () => newFind);
+    glint('town', () => state.levels.light >= T.DECOR_FROM_LIGHT && (canExpand(state) || DECOR_IDS.some((d) => canDecorate(state, d))));
     glint('net', () => canBuy(state, 'net'));
     glint('chest', () => canBuy(state, 'storage'));
     glintKey = '';
@@ -710,36 +694,6 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     exit.addEventListener('click', () => setMini(false));
     hud.el.append(exit);
     panel = createPanel(lang, onBuy);
-    // Action bar: sea chart, seas (once there are two), and passing the light on.
-    const toolbar = el('div', 'toolbar');
-    mapBtn = el('button', 'btn-bar map-btn');
-    mapBtn.type = 'button';
-    mapBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3l4-1.5 6 2 4-1.5v11l-4 1.5-6-2-4 1.5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.5v11M11 3.5v11" stroke="currentColor" stroke-width="1"/></svg>`;
-    mapBtn.append(t(lang, 'map.open'));
-    mapBtn.addEventListener('click', openMap);
-    bookBtn = el('button', 'btn-bar book-btn');
-    bookBtn.type = 'button';
-    bookBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3q3-1.5 6 0q3-1.5 6 0v10q-3-1.5-6 0q-3-1.5-6 0z M8 3v10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
-    bookBtn.append(t(lang, 'book.open'));
-    bookBtn.addEventListener('click', openBook);
-    seasBtn = el('button', 'btn-bar seas-btn');
-    seasBtn.type = 'button';
-    seasBtn.setAttribute('aria-haspopup', 'menu');
-    seasBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 10q2-2 4 0t4 0 4 0 2 0M1 13q2-2 4 0t4 0 4 0 2 0M8 2v5M5.5 4.5 8 2l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
-    seasBtn.append(t(lang, 'seas.short'));
-    seasBtn.addEventListener('click', openSeas);
-    passBtn = el('button', 'btn-bar pass-btn');
-    passBtn.type = 'button';
-    passBtn.textContent = `✦ ${t(lang, 'pass.short')}`;
-    passBtn.title = t(lang, 'pass.button');
-    passBtn.addEventListener('click', confirmPass);
-    decorBtn = el('button', 'btn-bar decor-btn');
-    decorBtn.type = 'button';
-    decorBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.7 4.4 12.6l.7-4L2.2 5.8l4-.6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
-    decorBtn.append(t(lang, 'decor.open'));
-    decorBtn.addEventListener('click', openDecor);
-    toolbar.append(mapBtn, bookBtn, decorBtn, seasBtn, passBtn);
-    chipsKey = '';
     // On wide screens this column sits to the right of the scene.
     goalBar = el('button', 'goal');
     goalBar.type = 'button';
@@ -759,7 +713,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     });
     polishKey = '';
     const side = el('div', 'side');
-    side.append(goalBar, toolbar, polishBtn, panel.el);
+    side.append(goalBar, polishBtn, panel.el);
     game.append(hud.el, stage, side);
     book = null;
     decorSheet = null;
@@ -891,7 +845,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     } else if (tag === 'boat') {
       if (state.boat.cargo || state.boat2.cargo) unload();
       else openMap();
-    } else if (tag === 'light' || tag === 'net') panel.show(tag);
+    } else if (tag === 'light' && canPassLight(state)) confirmPass();
+    else if (tag === 'light' || tag === 'net') panel.show(tag);
+    else if (tag === 'house') openBook();
+    else if (tag === 'town' || tag === 'ground') {
+      if (state.levels.light >= T.DECOR_FROM_LIGHT) openDecor();
+      else toast(t(state.settings.lang, 'build.locked'));
+    }
     else if (tag === 'dock') openMap();
     else if (tag.startsWith('island:')) {
       const d = tag.slice(7) as DestId;
@@ -995,7 +955,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     // The first night a ship passes (after the first-time steps): show how to guide it.
     // (Only with the 3D picture: without it there is no ship to tap.)
     const shipOut = !!world && state.stats.tutorial >= TUTORIAL_STEPS && state.stats.guided === 0 && shipField.ships.some((sh) => sh.guidedAt === undefined);
-    const g: Goal = shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);
+    // With the lighthouse mended, the next step is to pass the light on (tap the lighthouse).
+    const passNow = canPassLight(state);
+    const g: Goal = passNow ? { key: 'goal.pass', target: 'light' } : shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);
     const p = { ...(g.params ?? {}) };
     if (typeof p.name === 'string') p.name = t(lang, `upg.${p.name}.name`);
     if (typeof p.time === 'number') p.time = formatEta(p.time, lang);
@@ -1086,12 +1048,6 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     renderGlints();
     renderGoal();
     renderLight();
-    bookBtn.classList.toggle('badge', newFind);
-    decorBtn.style.display = state.levels.light >= T.DECOR_FROM_LIGHT ? '' : 'none';
-    mapBtn.classList.toggle('badge', !!state.boat.cargo);
-    passBtn.style.display = canPassLight(state) ? '' : 'none';
-    renderSeas();
-    mapBtn.classList.toggle('locked', state.levels.light < DOCK_LIGHT);
     seaMap?.update(state);
     decorSheet?.update(state);
     islandView?.update(state);

@@ -1,7 +1,7 @@
 import { T } from '../core/tuning';
 import { FRIEND_MAX, canDeliver, commissionFor, friendOf } from '../core/commission';
 import { boatCost, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere, BOAT2_COST, canBuildBoat2, freeBoat } from '../core/boat';
-import { BOAT_UPGRADES, DEST_IDS, MATERIALS, type DestId, type UpgradeId } from '../core/data';
+import { BOAT_UPGRADES, DEST_IDS, MATERIALS, SEA_IDS, type DestId, type SeaId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
 import { boatSvg, islandIcon, itemIcon } from './art';
@@ -34,6 +34,8 @@ export interface SeaMapActions {
   sail(d: DestId): void;
   land(d: DestId): void;
   build(): void;
+  /** Go to another sea you've reached. */
+  goToSea(id: SeaId): void;
   /** Build the second boat (from the fog sea on). */
   build2(): void;
   /** Bring an island its people's request. */
@@ -58,6 +60,22 @@ export function createSeaMap(lang: Lang, state: GameState, act: SeaMapActions): 
   const close = el('button', 'btn-ghost map-close');
   close.textContent = t(lang, 'map.close');
   close.addEventListener('click', act.close);
+  // Once you've reached a second sea: switch between them here.
+  if (state.reached.length > 1) {
+    const seas = el('div', 'sea-chips');
+    seas.setAttribute('role', 'group');
+    seas.setAttribute('aria-label', t(lang, 'seas.short'));
+    for (const id of SEA_IDS.filter((x) => state.reached.includes(x))) {
+      const chip = el('button', id === state.sea ? 'chip on' : 'chip');
+      chip.type = 'button';
+      chip.dataset.sea = id;
+      chip.textContent = t(lang, `sea.${id}`);
+      chip.setAttribute('aria-pressed', String(id === state.sea));
+      chip.addEventListener('click', () => act.goToSea(id));
+      seas.append(chip);
+    }
+    head.append(seas);
+  }
   head.append(title, close);
 
   const chart = el('div', 'chart');

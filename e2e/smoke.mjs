@@ -33,6 +33,9 @@ const dbg = async (label) => {
   await page.locator('.debug-badge').click();
 };
 
+// Things on the island are tapped in the 3D picture; their hidden buttons are the keyboard way in.
+const tapHit = (name) => page.locator(`.hit[data-hit="${name}"]`).dispatchEvent('click');
+
 const total = (page) =>
   page.$$eval('.hud .mat span', (els) => els.reduce((a, e) => a + Number(e.textContent || 0), 0));
 
@@ -165,7 +168,7 @@ try {
   // Lighthouse to 3 → build boat → sail to the wreck → bring it home → unload → discovery.
   for (let i = 0; i < 2; i++) await page.locator('[data-upgrade="light"] .buy').click();
   await page.locator('.stage[data-world-has~="dock"]').waitFor({ state: 'attached', timeout: 3000 }).catch(() => fail('lighthouse 3 should show the dock'));
-  await page.locator('.map-btn').click();
+  await tapHit('map'); // the dock opens the sea map
   await page.locator('.seamap').waitFor();
   await page.locator('.map-bottom .buy').click();
   if (!(await page.locator('.map-bottom [data-upgrade="speed"]').count())) fail('after building, boat upgrades should show');
@@ -185,7 +188,7 @@ try {
   await page.locator('.discovery').waitFor({ state: 'detached', timeout: 2000 });
   const disc = await page.evaluate(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).discovered);
   if (!disc.includes('wreck')) fail('unloading should record the wreck as discovered');
-  await page.locator('.map-btn').click();
+  await tapHit('map');
   if (!(await page.locator('.node.found[data-dest="wreck"]').count())) fail('the map should show the discovered wreck');
 
   // Go ashore, build the breaking bench, and see the island save up metal.
@@ -218,25 +221,27 @@ try {
 
   // Pass the light on: lighthouse to 10 → button → confirm → arrive at the fog sea.
   await dbg('灯塔修满');
-  await page.locator('.pass-btn').waitFor({ state: 'visible', timeout: 3000 });
-  await page.locator('.pass-btn').click();
+  await page.waitForFunction(() => document.querySelector('.goal')?.textContent?.includes('传'), null, { timeout: 3000 }).catch(async () => fail('the next step should say to pass the light on, got ' + (await page.locator('.goal').textContent())));
+  await tapHit('light'); // a mended lighthouse offers to pass the light on
   await page.locator('.popup.pass .btn-primary').click();
   await page.waitForTimeout(5200);
   const seaNow = () => page.evaluate(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).sea);
   if ((await seaNow()) !== 'fog') fail('should arrive at the fog sea');
-  if (!(await page.locator('.seas-btn').isVisible())) fail('the seas button should appear once there are two seas');
+
   if (!(await page.locator('.starlight').isVisible())) fail('starlight should show in the HUD');
   const fogLight = await page.locator('[data-upgrade="light"] .level').textContent();
   if (!fogLight?.includes('1')) fail(`new sea should start with lighthouse 1, got ${fogLight}`);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/fog.png` });
-  await page.locator('.seas-btn').click();
-  await page.locator('.menu button', { hasText: '黄昏的海' }).click();
+  // The sea map switches between the seas you've reached.
+  await tapHit('map');
+  await page.locator('.sea-chips').waitFor({ timeout: 3000 }).catch(() => fail('the sea map should offer the seas once there are two'));
+  await page.locator('.sea-chips .chip', { hasText: '黄昏的海' }).click();
   const duskLight = await page.locator('[data-upgrade="light"] .level').textContent();
   if (!duskLight?.includes('10')) fail(`the old sea should still be lit at 10, got ${duskLight}`);
-  await page.locator('.seas-btn').click();
-  await page.locator('.menu button', { hasText: '有雾的夜海' }).click();
+  await page.locator('.sea-chips .chip', { hasText: '有雾的夜海' }).click();
+  await page.locator('.seamap .map-close').first().click();
   await dbg('灯塔修满');
-  await page.locator('.pass-btn').click();
+  await tapHit('light');
   await page.locator('.popup.pass .btn-primary').click();
   await page.waitForTimeout(5200);
   if ((await seaNow()) !== 'aurora') fail('should arrive at the aurora sea');
@@ -256,7 +261,7 @@ try {
 
   // The book: 12 cells per sea; a find shows up as found.
   await dbg('+1 珍品');
-  await page.locator('.book-btn').click();
+  await tapHit('book'); // the keeper's house keeps the book
   await page.locator('.book').waitFor();
   if ((await page.locator('.book-cell').count()) !== 12) fail('a book page should have 12 cells');
   if ((await page.locator('.book-cell.found').count()) < 1) fail('the find should be in the book');
@@ -265,10 +270,12 @@ try {
   await page.locator('.book').waitFor({ state: 'detached', timeout: 2000 });
 
   // Decorations: ten cards; placing one moves it to tier 1 and the island shows it.
-  if (await page.locator('.decor-btn').isVisible()) fail('decorations should wait for the dock (lighthouse 3)');
+  await tapHit('build');
+  await page.waitForTimeout(300);
+  if (await page.locator('.seamap.decor').count()) fail('building should wait for the dock (lighthouse 3)');
   await dbg('灯塔修满');
   await page.waitForTimeout(300);
-  await page.locator('.decor-btn').click();
+  await tapHit('build'); // the town opens building
   await page.locator('.seamap.decor').waitFor();
   if ((await page.locator('[data-decor]').count()) !== 11) fail('the sheet should list growing the island and 10 decorations');
   await page.locator('[data-decor="land"] .buy').click();
