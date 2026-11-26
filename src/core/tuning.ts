@@ -76,7 +76,7 @@ export const T = {
   AURORA_GLOW_AMOUNT: 1,
   /** Each sea's richness and the price of mending there, relative to the dusk sea. */
   FOG_RATE: 1.77,
-  FOG_COST: 16.5,
+  FOG_COST: 17.5,
   AURORA_RATE: 3.4,
   AURORA_COST: 95,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
