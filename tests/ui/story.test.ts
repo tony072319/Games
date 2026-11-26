@@ -30,3 +30,18 @@ describe('islanders text', () => {
     }
   });
 });
+
+describe('each sea has its own log', () => {
+  test('fog and aurora lines exist for every island in both languages, and are used for their sea', () => {
+    for (const sea of ['fog', 'aurora'])
+      for (const d of DEST_IDS)
+        for (let n = 1; n <= STORY_COUNT; n++) {
+          const k = `story.${sea}.${d}.${n}`;
+          expect((zh as Record<string, string>)[k], `zh ${k}`).toBeTruthy();
+          expect((en as Record<string, string>)[k], `en ${k}`).toBeTruthy();
+        }
+    const fog = storyText('zh', 'firefly', { n: 1 }, '雾萤岛', 'fog');
+    expect(fog).toContain('雾萤岛');
+    expect(fog).not.toBe(storyText('zh', 'firefly', { n: 1 }, '雾萤岛', 'dusk'));
+  });
+});

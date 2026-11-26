@@ -56,7 +56,7 @@ export function showArrival(container: HTMLElement, lang: Lang, lines: ArrivalLi
     li.append(p);
     if (l.kind === 'boat' && (l.story || l.iceBreak)) {
       const log = el('p', 'arrival-story');
-      log.textContent = l.iceBreak ? t(lang, 'story.ice', { name: act.destName(l.dest!, l.sea) }) : storyText(lang, l.dest!, l.story, act.destName(l.dest!, l.sea));
+      log.textContent = l.iceBreak ? t(lang, 'story.ice', { name: act.destName(l.dest!, l.sea) }) : storyText(lang, l.dest!, l.story, act.destName(l.dest!, l.sea), l.sea);
       li.append(log);
     }
     if (l.mats) li.append(haul(l.mats, lang));

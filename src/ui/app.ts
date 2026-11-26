@@ -415,7 +415,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     refresh();
     save();
     // The voyage log: what happened at sea (and any luck).
-    const log = cargo.iceBreak ? t(lang, 'story.ice', { name: destName(lang, cargo.sea, cargo.dest) }) : storyText(lang, cargo.dest, cargo.story, destName(lang, cargo.sea, cargo.dest));
+    const log = cargo.iceBreak ? t(lang, 'story.ice', { name: destName(lang, cargo.sea, cargo.dest) }) : storyText(lang, cargo.dest, cargo.story, destName(lang, cargo.sea, cargo.dest), cargo.sea);
     if (log) setTimeout(() => toast(log, cargo.rare ? 'rare' : undefined), cargo.discovery || cargo.curio ? 2400 : 300);
     if (cargo.rare) sparkle(boatBtn);
     if (cargo.discovery) setTimeout(() => showDiscovery(cargo.sea, cargo.dest), 900);
