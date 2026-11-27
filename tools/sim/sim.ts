@@ -247,7 +247,7 @@ function run(profile: Profile, opts: SimOpts): SimReport {
           s.materials[pickMaterial(rng())] += v;
           src.taps += v;
         }
-      if (profile.focus) setFocus(s, profile.focus);
+      if (profile.focus) setFocus(s, profile.focus, at);
       learnTalents(s);
       // The last sea has nowhere to pass the light to: it is done when its lighthouse is mended.
       if (s.levels.light >= 10 && nextSea(s) === null && seas.length === seasWanted - 1) {
