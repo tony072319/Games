@@ -47,6 +47,7 @@ Headings: dialog title `h2`, card or section title `h3`.
 ## Depth and motion
 
 - Dark UI separates by tone first (surface-0 → 1 → 2 → dialog). One soft shadow, `--shadow-dialog`, for things that float. `--glow-gold` only for light.
+- Cards carry `--edge-light`: a thin line of lamplight along the top edge, a hairline border (`--c-line`) and a small shadow, so they read as raised against the painted world. Primary buttons are lit from above: `--grad-accent` with `--edge-accent`. Nothing else gets a gradient.
 - `--t-micro` 100ms for presses (buttons shrink with the `scale` property, so positioned buttons keep their place), `--t-small` 200ms for menus and exits, `--t-medium` 300ms for dialogs entering. Enter with `--ease-out`, leave with `--ease-in`.
 - Every dialog uses the shared `.overlay` frame, so it rises in and sinks out the same way; close with `dismiss()`.
 - `prefers-reduced-motion` turns animation off.

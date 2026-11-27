@@ -56,13 +56,14 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   padding: 0 var(--sp-4);
   border: 0;
   border-radius: var(--r-sm);
-  background: var(--c-accent);
+  background: var(--grad-accent);
+  box-shadow: var(--edge-accent);
   color: var(--c-on-accent);
   font-size: var(--fs-label);
   font-weight: var(--fw-bold);
   line-height: var(--lh-tight);
 }
-.buy:disabled, .btn-primary:disabled { background: var(--c-disabled); color: var(--c-ink-faint); }
+.buy:disabled, .btn-primary:disabled { background: var(--c-disabled); box-shadow: none; color: var(--c-ink-faint); }
 /* Affordable now: a slow warm pulse. Almost: shows the time left, in a softer tone. */
 .buy.can:not(:disabled) { animation: can-pulse var(--t-breathe) var(--ease-inout) infinite; }
 @keyframes can-pulse { 50% { box-shadow: var(--glow-gold); } }
@@ -175,7 +176,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-2);
   border-radius: var(--r-md);
+  border: 1px solid var(--c-line);
   background: var(--c-surface-1);
+  box-shadow: var(--edge-light);
   transition: background-color var(--t-small) var(--ease-out);
 }
 .card.open { background: var(--c-surface-2); }
