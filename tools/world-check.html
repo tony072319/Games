@@ -28,6 +28,8 @@ window.__world = w;
 const num = (k, d) => (q.has(k) ? +q.get(k) : d);
 const sky = { ...skyAt(0), sun: num('sun', q.has('night') ? 0 : 1), moon: num('moon', q.has('night') ? 1 : 0) };
 w.setSky(sky, s.sea); w.setLight(L);
+// ?event=storm|meteors|whales shows the sea event's weather.
+if (q.get('event')) w.setEvent(q.get('event'));
 const items = worldLayout(s, Date.now());
 if (q.has('bad')) items.push({ key: 'bad', model: 'test/missing', x: 0, y: 0, z: 3, rotY: 0 });
 window.__bump = () => { s.levels.light = Math.min(10, s.levels.light + 1); s.levels.storage = Math.min(11, s.levels.storage + 1); w.update(worldLayout(s, Date.now()), { boats: [], flotsam: [] }); };

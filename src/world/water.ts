@@ -20,6 +20,8 @@ export interface Water {
   setBeam(angle: number, strength: number): void;
   /** The fog sea's air: how thick (0 = clear), where it starts and where it is full (world units from the camera). */
   setFog(haze: number, near: number, far: number): void;
+  /** 0 = calm, 1 = a storm: a bigger swell and more white on it. */
+  setRough(k: number): void;
   tick(t: number): void;
   dispose(): void;
 }
@@ -39,18 +41,19 @@ export function createWater(): Water {
     night: { value: 0 },
     deepNight: { value: 0 },
     haze: { value: 0 },
+    rough: { value: 0 },
     glint: { value: new THREE.Vector2(SUN_AZIMUTH.x, SUN_AZIMUTH.y) },
     beam: { value: new THREE.Vector3(1, 0, 0) },
     fogR: { value: new THREE.Vector2(70, 220) },
   };
   const mat = new THREE.ShaderMaterial({
     uniforms: u,
-    vertexShader: `uniform float T;varying vec3 W;
+    vertexShader: `uniform float T,rough;varying vec3 W;
       void main(){vec4 w=modelMatrix*vec4(position,1.);
-        w.y+=sin(w.x*.5+T*1.2)*.04+sin(w.z*.6-T)*.04+sin((w.x+w.z)*.23+T*.7)*.03;
+        w.y+=(sin(w.x*.5+T*1.2)*.04+sin(w.z*.6-T)*.04+sin((w.x+w.z)*.23+T*.7)*.03)*(1.+rough*2.2);
         W=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
     fragmentShader: `uniform float T;uniform vec3 B[${MAX_SHORES}];uniform vec3 deep,shal,foam,fogC,far,skyMid,sunC;
-      uniform float lit,night,deepNight,haze;uniform vec2 glint;uniform vec3 beam;uniform vec2 fogR;varying vec3 W;
+      uniform float lit,night,deepNight,haze,rough;uniform vec2 glint;uniform vec3 beam;uniform vec2 fogR;varying vec3 W;
       float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
       void main(){
@@ -63,14 +66,14 @@ export function createWater(): Water {
         // Long soft streaks lying across the swell: lighter crests, darker troughs (two layers, drifting apart).
         float s1=n(W.xz*vec2(.15,.62)+vec2(T*.03,T*.1));
         float s2=n(W.xz*vec2(.085,.36)+vec2(-T*.02,-T*.06)+7.3);
-        float crest=smoothstep(.72,.86,s1)*.65+smoothstep(.74,.9,s2)*.35;
+        float crest=(smoothstep(.72-rough*.14,.86,s1)*.65+smoothstep(.74-rough*.14,.9,s2)*.35)*(1.+rough*.6);
         float trough=smoothstep(.36,.14,s1)*.5+smoothstep(.32,.1,s2)*.5;
         float open=smoothstep(2.2,5.,sd);
         float near=smoothstep(190.,50.,camD);
         dp=mix(dp,dp*.84,trough*.6*open*near);
         dp=mix(dp,mix(dp,foam,.3),crest*open*near*(.8-.35*night));
         // The shallows: turquoise that glows near land and fades out to the deep.
-        vec3 glow=mix(shal,vec3(.05,.78,.82),.82);
+        vec3 glow=mix(shal,vec3(.05,.78,.82),.82-rough*.45-deepNight*.12);
         float ring=1.-smoothstep(1.1,2.8,sd+wob);
         float apron=(1.-smoothstep(2.2,7.,sd+wob*2.))*.42;
         vec3 col=mix(dp,glow,max(ring,apron));
@@ -154,6 +157,9 @@ export function createWater(): Water {
       u.haze.value = haze;
       if (pal) u.far.value.setHex(farSea(pal, haze));
       u.fogR.value.set(near, far);
+    },
+    setRough(k) {
+      u.rough.value = k;
     },
     tick(t) {
       u.T.value = t;

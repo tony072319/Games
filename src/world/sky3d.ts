@@ -21,8 +21,12 @@ export interface SkyDome {
   setPalette(p: Palette): void;
   /** 1 under the aurora sea: green ribbons across the night sky. */
   setAurora(k: number): void;
-  /** 0..1 how thick the air is (the fog sea): the clouds close in and the sun dims. */
+  /** 0..1 how thick the air is (the fog sea, a storm): the clouds close in and the sun dims. */
   setHaze(k: number): void;
+  /** A night of shooting stars (0 or 1). */
+  setMeteors(k: number): void;
+  /** Lightning behind the clouds, 0..1, fading by itself as you lower it. */
+  setFlash(k: number): void;
   tick(t: number): void;
   dispose(): void;
 }
@@ -43,6 +47,8 @@ export function createSky(): SkyDome {
     sunY: { value: 0.1 },
     aurora: { value: 0 },
     haze: { value: 0 },
+    meteors: { value: 0 },
+    flash: { value: 0 },
     sunAz: { value: SUN_AZIMUTH },
     moonDir: { value: MOON_DIR },
   };
@@ -52,7 +58,7 @@ export function createSky(): SkyDome {
     fog: false,
     uniforms: u,
     vertexShader: `varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-    fragmentShader: `uniform vec3 a,b,c,s,cl,cs,sea;uniform float T,night,deep,sunY,aurora,haze;uniform vec2 sunAz;uniform vec3 moonDir;varying vec3 v;
+    fragmentShader: `uniform vec3 a,b,c,s,cl,cs,sea;uniform float T,night,deep,sunY,aurora,haze,meteors,flash;uniform vec2 sunAz;uniform vec3 moonDir;varying vec3 v;
       float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float h3(vec3 p){return fract(sin(dot(p,vec3(12.9,78.2,37.7)))*43758.5);}
       float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
@@ -82,6 +88,18 @@ export function createSky(): SkyDome {
         // A shooting star now and then.
         float m=mod(T,37.);vec3 md=normalize(vec3(.4+m*.02,.55-m*.01,-1.));
         col+=vec3(1.)*pow(max(0.,dot(d,md)),3000.)*step(m,1.2)*smoothstep(.6,1.,night)*2.;
+        // On a night of shooting stars they come every few seconds, low across the sky.
+        if(meteors>0.){
+          for(int i=0;i<3;i++){
+            float fi=float(i);float period=4.3+fi*1.7;float mt=mod(T+fi*2.9,period);float turn=floor((T+fi*2.9)/period);
+            float sx=h(vec2(turn,fi))*1.6-1.1;float sy=.1+h(vec2(fi,turn))*.2;
+            vec3 dir=normalize(vec3(sx+mt*.22,sy-mt*.07,-1.));
+            float head=pow(max(0.,dot(d,dir)),5000.);
+            vec3 tail=normalize(vec3(sx+(mt-.12)*.22,sy-(mt-.12)*.07,-1.));
+            float trail=pow(max(0.,dot(d,tail)),1600.)*.4;
+            col+=vec3(1.,.96,.85)*(head*2.5+trail)*step(mt,.9)*smoothstep(.5,.95,night)*meteors;
+          }
+        }
         // The moon: a pale disc with a soft halo, out once the evening has gone.
         float mdot=max(0.,dot(d,moonDir));
         float moonK=deep*(1.-haze*.6);
@@ -112,6 +130,7 @@ export function createSky(): SkyDome {
           vec3 cc=mix(cs,cl,smoothstep(.15,.85,mix(.55,under,.5+.5*sunUp)));
           cc+=warm*toSun*under*.3*sunUp;
           float fade=smoothstep(.012,.05,y)*(1.-smoothstep(.5,.9,y)*.7);
+          cc+=vec3(.55,.65,1.)*flash*(.4+.6*f);
           col=mix(col,cc,dens*fade*mix(.92,.7,deep));
           // Thin streaks right above the horizon.
           float bandN=n(vec2(ang*5.+T*.004,y*60.));
@@ -148,6 +167,12 @@ export function createSky(): SkyDome {
     setHaze(k) {
       hazeK = k;
       u.haze.value = k;
+    },
+    setMeteors(k) {
+      u.meteors.value = k;
+    },
+    setFlash(k) {
+      u.flash.value = k;
     },
     tick(t) {
       u.T.value = t;

@@ -34,6 +34,8 @@ import { createLife, type Life } from './life';
 import { GradeShader, createBeam, createClouds, createMist } from './atmosphere';
 import { disposeGround, groundMaterial } from './ground';
 import { createGreenery, scatterOn, type Scatter } from './greenery';
+import { createEffects } from './effects';
+import type { SeaEventId } from '../core/seaEvents';
 
 export type AnchorTag = Tag | `flotsam:${number}` | `ship:${number}`;
 export interface FlotsamView {
@@ -61,6 +63,8 @@ export interface World {
   /** The lighthouse level, and how far the water looks lit (as a level; defaults to the same). */
   setLight(level: number, reach?: number): void;
   setCalm(on: boolean): void;
+  /** What is happening at sea just now (a storm brings rain and a darker sky; meteors fill the night). */
+  setEvent(id: SeaEventId | null): void;
   anchor(tag: AnchorTag): ScreenPoint | null;
   /** The tag under a point in the canvas (CSS px from its top-left), if any. */
   pick(x: number, y: number): AnchorTag | null;
@@ -115,6 +119,8 @@ interface Placed {
   mixer?: THREE.AnimationMixer;
   extras: THREE.Object3D[];
   baseY: number;
+  /** Parts that turn: a windmill's sails, a water wheel. */
+  spin?: THREE.Object3D[];
 }
 
 /** The reference island size the default camera frames; bigger islands pull the home view back (homeScale). */
@@ -168,6 +174,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   scene.add(clouds.group);
   const mist = createMist();
   scene.add(mist.group);
+  const effects = createEffects();
+  scene.add(effects.group);
   const sandMat = new THREE.MeshToonMaterial({ color: 0xf6dfae, gradientMap: toonRamp() });
   const sandGeo = new THREE.CylinderGeometry((TILE_D / 2) * 1.28, (TILE_D / 2) * 1.38, 0.5, 6);
   const glowGeo = new THREE.SphereGeometry(1, 14, 10);
@@ -428,6 +436,11 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       obj.userData.key = item.key;
       scene.add(obj);
       const p: Placed = { item, obj, extras: [], baseY: item.y };
+      obj.traverse((c) => {
+        if (/_fan_|_wheel_/.test(c.name)) (p.spin ??= []).push(c);
+      });
+      // Set down while you watch: it grows into place with a puff of dust (not boats, which sail in).
+      if (readySent && !calm && !item.bob && !item.key.startsWith('walker:') && !item.key.startsWith('answer:')) popIn(obj);
       if (item.anim && t.animations.length) {
         p.mixer = new THREE.AnimationMixer(obj);
         const clip = t.animations.find((a) => a.name === item.anim) ?? t.animations[0];
@@ -475,9 +488,11 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     sceneTime = t;
     const tower = tagObj.get('light');
     // Faint while the sun is still up, full once it has set.
-    const strength = tower && !calm ? Math.min(1, Math.max(0, (night - 0.12) * 1.6)) * (1 - 0.25 * pal.deep) + haze * 0.35 * (tower ? 1 : 0) : 0;
+    // Thick air (fog, a storm's rain) shows the beams even by day.
+    const thick = Math.max(haze, storm * 0.9);
+    const strength = tower && !calm ? Math.min(1, Math.max(0, (night - 0.12) * 1.6)) * (1 - 0.25 * pal.deep) + thick * 0.35 : 0;
     if (!tower || strength <= 0.01) {
-      beam.set(lampAt, beamAngle, 0, haze, cam, t);
+      beam.set(lampAt, beamAngle, 0, thick, cam, t);
       water.setBeam(beamAngle, 0);
       return;
     }
@@ -496,7 +511,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     if (d < -Math.PI) d += 2 * Math.PI;
     // Swing smoothly onto a guided ship and back to the sweep.
     beamAngle += Math.abs(d) > 0.05 ? d * 0.15 : d;
-    beam.set(lampAt, beamAngle, strength, haze, cam, t);
+    beam.set(lampAt, beamAngle, strength, thick, cam, t);
     water.setBeam(beamAngle, strength);
   }
 
@@ -590,6 +605,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     const alive = new Set(extra.flotsam.map((f) => f.id));
     for (const [id, o] of drift)
       if (!alive.has(id)) {
+        // Lifted out (one that drifted off the far end just goes).
+        if (Math.abs(o.position.x) < 15 && readySent && !calm) effects.splash(o.position.x, o.position.z);
         scene.remove(o);
         drift.delete(id);
       }
@@ -650,10 +667,46 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const pulses: { obj: THREE.Object3D; t0: number }[] = [];
   /** Pulses asked for before the world caught up with a level-up: started once the new model is in. */
   let pending: { tag: Tag; at: number; updated: boolean }[] = [];
+  const size3 = new THREE.Vector3();
+  const boxOf = new THREE.Box3();
+  /** The foot of a thing and how wide it stands, for effects round it. */
+  function footOf(o: THREE.Object3D): { at: THREE.Vector3; r: number } {
+    boxOf.setFromObject(o).getSize(size3);
+    // Measured at its full size (it may be growing into place just now).
+    const k = o.userData.baseScale ? o.userData.baseScale / o.scale.x : 1;
+    return { at: new THREE.Vector3(o.position.x, boxOf.min.y, o.position.z), r: Math.max(size3.x, size3.z) * 0.5 * k };
+  }
   function startPulse(o: THREE.Object3D, now: number) {
     if (pulses.some((p) => p.obj === o)) return;
+    // Mended: light spreads from its foot (a thing still growing into place has its own show).
+    const f = footOf(o);
+    effects.mend(f.at, f.r);
+    // Still growing into place: its bounce follows once it has arrived.
+    const pop = pops.find((p) => p.obj === o);
+    if (pop) {
+      pop.then = true;
+      return;
+    }
     if (o.userData.baseScale === undefined) o.userData.baseScale = o.scale.x;
     pulses.push({ obj: o, t0: now });
+  }
+  /** Things growing into place, and how many puffs of dust this moment has had (a whole town arriving at once needs only a few). */
+  const pops: { obj: THREE.Object3D; t0: number; then?: boolean }[] = [];
+  let dustAt = 0;
+  let dustCount = 0;
+  function popIn(o: THREE.Object3D) {
+    const now = performance.now();
+    o.userData.baseScale = o.scale.x;
+    if (now - dustAt > 400) {
+      dustAt = now;
+      dustCount = 0;
+    }
+    if (dustCount++ < 5) {
+      const f = footOf(o);
+      effects.dust(f.at, f.r);
+    }
+    o.scale.setScalar(o.userData.baseScale * 0.01);
+    pops.push({ obj: o, t0: now });
   }
 
   // ---------- what grows on the islands ----------
@@ -708,6 +761,83 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     mist.set(haze, pal.fog, (homeGround?.radius ?? 6) * 1.12);
   }
 
+  // ---------- the sky's colours, and the weather over them ----------
+  let seaEvent: SeaEventId | null = null;
+  /** 0..1 how far a storm has come in (it gathers and clears over a few seconds). */
+  let storm = 0;
+  let stormShown = -1;
+  /** Lightning: how bright just now, and when the next one comes (scene seconds). */
+  let flash = 0;
+  let flashAt = 0;
+  let whaleCall = 0;
+  const STORM_SKY = 0x3c4660;
+  function applySky() {
+    pal = paletteFor(lastSky, lastSea);
+    if (storm > 0) {
+      // A storm greys and darkens everything but the lamps.
+      for (const k of ['top', 'mid', 'low', 'cloud', 'cloudShade', 'water', 'shallow', 'fog', 'hemiSky', 'hemiGround', 'key'] as const) pal[k] = mixColour(pal[k], STORM_SKY, 0.5 * storm);
+      pal.keyIntensity *= 1 - 0.4 * storm;
+      pal.hemiIntensity *= 1 - 0.2 * storm;
+    }
+    stormShown = storm;
+    haze = lastSea === 'fog' ? 1 : 0;
+    sky.setHaze(Math.max(haze, storm * 0.85));
+    sky.setPalette(pal);
+    sky.setMeteors(seaEvent === 'meteors' ? 1 : 0);
+    water.setPalette(pal);
+    water.setRough(storm);
+    effects.setRain(storm);
+    (scene.fog as THREE.Fog).color.setHex(pal.fog);
+    hemi.color.setHex(pal.hemiSky);
+    hemi.groundColor.setHex(pal.hemiGround);
+    hemi.intensity = pal.hemiIntensity;
+    key.color.setHex(pal.key);
+    key.intensity = pal.keyIntensity;
+    rim.color.setHex(mixColour(0xffa860, 0x8aa0ff, pal.deep));
+    rim.intensity = (0.9 * (1 - 0.6 * pal.night) + 0.35 * pal.deep) * (1 - 0.7 * storm);
+    // Windows and far lighthouses are faint by day and bright at night (and lit in a storm).
+    const lit = Math.min(1, Math.max(0, (Math.max(pal.night, storm * 0.8) - 0.1) / 0.5));
+    paneMat.color.setHex(0xffb860).multiplyScalar(0.35 + 2.65 * lit);
+    haloMat.opacity = 0.7 * lit;
+    beaconMat.color.setHex(0xffe0a0).multiplyScalar(0.9 + 2.1 * lit);
+    bloom.strength = pal.bloom;
+    renderer.toneMappingExposure = pal.exposure;
+    clouds.setPalette(pal);
+    grade.uniforms.night.value = pal.night;
+    updateAir();
+    sky.setAurora(lastSea === 'aurora' ? 1 : 0);
+  }
+  /** The weather moves on a little each frame. */
+  function updateWeather(dt: number, t: number) {
+    const want = seaEvent === 'storm' ? 1 : 0;
+    if (storm !== want) storm = want > storm ? Math.min(want, storm + dt / 6) : Math.max(want, storm - dt / 6);
+    if (Math.abs(storm - stormShown) > 0.004 || (storm === want && stormShown !== storm)) applySky();
+    // Lightning: now and then a soft flash behind the clouds (never in calm mode).
+    if (storm > 0.6 && !calm && t > flashAt) {
+      flash = 1;
+      flashAt = t + 7 + Math.random() * 10;
+    }
+    if (flash > 0.003) {
+      flash *= Math.exp(-dt * 7);
+      sky.setFlash(flash);
+      hemi.intensity = pal.hemiIntensity * (1 + flash * 0.9);
+    } else if (flash !== 0) {
+      flash = 0;
+      sky.setFlash(0);
+      hemi.intensity = pal.hemiIntensity;
+    }
+    // While the whales are passing, one is never long out of sight.
+    if (seaEvent === 'whales' && !calm && t > whaleCall) {
+      whaleCall = t + 70;
+      life?.summon();
+    }
+    if (seaEvent === 'meteors' !== meteorsOn) {
+      meteorsOn = seaEvent === 'meteors';
+      sky.setMeteors(meteorsOn ? 1 : 0);
+    }
+  }
+  let meteorsOn = false;
+
   // ---------- sizing ----------
   function resize() {
     const w = Math.max(1, host.clientWidth);
@@ -720,6 +850,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     // Portrait phones: step back so the island fits across.
     cam.fov = w < h ? 40 : 34;
     cam.updateProjectionMatrix();
+    effects.resize(h * renderer.getPixelRatio(), cam.fov);
   }
   resize();
 
@@ -728,6 +859,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   let t = 0;
   let raf = 0;
   let lastDraw = 0;
+  let wakeIn = 0;
   const shores: [number, number, number][] = [];
   function loop(now: number) {
     raf = requestAnimationFrame(loop);
@@ -746,6 +878,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     greenery.tick(t, calm);
     mist.tick(t);
     grade.uniforms.T.value = t;
+    updateWeather(dt * speed, t);
     updateAir();
     for (const p of placed.values()) {
       p.mixer?.update(dt * speed);
@@ -753,7 +886,16 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         p.obj.position.y = p.baseY + Math.sin(t * 1.2 + p.item.x) * 0.05;
         p.obj.rotation.z = Math.sin(t * 0.9 + p.item.z) * 0.035;
       }
+      if (p.spin && !calm) for (const part of p.spin) part.rotation.z += dt * (part.name.includes('wheel') ? 0.7 : 1.1);
     }
+    // Boats under way leave rings behind them.
+    wakeIn -= dt * speed;
+    if (wakeIn <= 0 && !calm) {
+      wakeIn = 0.42;
+      for (const vb of voyageBoats.values()) effects.ripple(vb.obj.position.x - Math.sin(vb.obj.rotation.y) * 0.5, vb.obj.position.z - Math.cos(vb.obj.rotation.y) * 0.5, 0.9);
+      for (const o of seaShips.values()) effects.ripple(o.position.x - Math.sin(o.rotation.y) * 2.4, o.position.z - Math.cos(o.rotation.y) * 2.4, 2.6);
+    }
+    effects.tick(dt * speed, t, cam);
     for (const o of seaShips.values()) {
       o.position.y = -0.25 + Math.sin(t * 1.1 + o.position.x) * 0.06;
       // A guided ship flashes its lamp in thanks.
@@ -782,6 +924,20 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       startPulse(o, now);
       return false;
     });
+    for (let i = pops.length - 1; i >= 0; i--) {
+      const p = pops[i];
+      const base = p.obj.userData.baseScale as number;
+      const k = (now - p.t0) / 450;
+      if (k >= 1) {
+        p.obj.scale.setScalar(base);
+        pops.splice(i, 1);
+        if (p.then) pulses.push({ obj: p.obj, t0: now });
+      } else {
+        // Up past its size and back: a soft bounce.
+        const e = 1 - Math.pow(1 - k, 3);
+        p.obj.scale.setScalar(base * (e + Math.sin(k * Math.PI) * 0.16));
+      }
+    }
     for (let i = pulses.length - 1; i >= 0; i--) {
       const p = pulses[i];
       const base = p.obj.userData.baseScale as number;
@@ -899,31 +1055,11 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     setSky(s, sea) {
       lastSky = s;
       lastSea = sea;
-      pal = paletteFor(s, sea);
-      haze = sea === 'fog' ? 1 : 0;
-      sky.setHaze(haze);
-      sky.setPalette(pal);
-      water.setPalette(pal);
-      (scene.fog as THREE.Fog).color.setHex(pal.fog);
-      hemi.color.setHex(pal.hemiSky);
-      hemi.groundColor.setHex(pal.hemiGround);
-      hemi.intensity = pal.hemiIntensity;
-      key.color.setHex(pal.key);
-      key.intensity = pal.keyIntensity;
-      rim.color.setHex(mixColour(0xffa860, 0x8aa0ff, pal.deep));
-      rim.intensity = 0.9 * (1 - 0.6 * pal.night) + 0.35 * pal.deep;
-      // Windows and far lighthouses are faint by day and bright at night.
-      const lit = Math.min(1, Math.max(0, (pal.night - 0.1) / 0.5));
-      paneMat.color.setHex(0xffb860).multiplyScalar(0.35 + 2.65 * lit);
-      haloMat.opacity = 0.7 * lit;
-      beaconMat.color.setHex(0xffe0a0).multiplyScalar(0.9 + 2.1 * lit);
-      bloom.strength = pal.bloom;
-      renderer.toneMappingExposure = pal.exposure;
-      clouds.setPalette(pal);
-      grade.uniforms.night.value = pal.night;
-      updateAir();
-      sky.setAurora(sea === 'aurora' ? 1 : 0);
+      applySky();
       syncGreenery();
+    },
+    setEvent(id) {
+      seaEvent = id;
     },
     setLight(level, reach = level) {
       light = level;
@@ -1024,6 +1160,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       haloTex.dispose();
       hitGeo.dispose();
       beam.dispose();
+      effects.dispose();
       greenery.dispose();
       clouds.dispose();
       mist.dispose();

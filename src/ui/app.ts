@@ -588,6 +588,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         onLost: () => build(),
       });
       world.setSky(currentSky(), state.sea);
+      world.setEvent(eventFor(state, opts.now())?.id ?? null);
       world.setLight(state.levels.light, lightReach(state));
       lightShown = state.levels.light;
     } catch {
@@ -1037,6 +1038,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const key = e ? `${e.id}:${left}` : '';
     if (key === eventKey) return;
     eventKey = key;
+    // The world shows it too: rain and a dark sky in a storm, shooting stars, whales passing.
+    world?.setEvent(e?.id ?? null);
     eventBar.style.display = e ? '' : 'none';
     if (!e) return eventBar.replaceChildren();
     const title = el('span', 'event-title');
