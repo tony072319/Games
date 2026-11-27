@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!-- A contact sheet of models, drawn with the game's own shading, for choosing and checking art.
+     ?ids=kk/barrel,lh/buoy   models from the game's list, at their size in the game
+     ?files=kk/a.gltf,kk/b.gltf   any file under public/models, shown 1.5 high
+     ?all   every model in the game's list;  &cols=8  &night -->
+<html><head><meta charset="utf-8"><base href="/"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;background:#cfe3f2;font:12px system-ui}#c{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { MODELS } from '/src/world/assets.ts';
+import { toonMaterial } from '/src/world/toon.ts';
+const q = new URLSearchParams(location.search);
+const list = [];
+if (q.has('all')) for (const id of Object.keys(MODELS)) list.push({ label: id, url: MODELS[id].url, fit: MODELS[id].fit, size: MODELS[id].size });
+for (const id of (q.get('ids') || '').split(',').filter(Boolean)) list.push({ label: id, url: MODELS[id].url, fit: MODELS[id].fit, size: MODELS[id].size });
+for (const f of (q.get('files') || '').split(',').filter(Boolean)) list.push({ label: f.replace(/\.(gltf|glb|fbx)$/, ''), url: 'models/' + f, fit: 'height', size: 1.5 });
+const cols = +(q.get('cols') || 8);
+const rows = Math.ceil(list.length / cols);
+const CELL = 3.4;
+const W = cols * 200, H = rows * 210;
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(q.has('night') ? 0x1c2450 : 0xcfe3f2);
+scene.add(new THREE.HemisphereLight(0xcfe0ff, 0xf0c0a0, q.has('night') ? 1.0 : 1.6));
+const key = new THREE.DirectionalLight(0xffd2a0, q.has('night') ? 0.9 : 2);
+key.position.set(-14, 18, 10);
+scene.add(key);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(cols * CELL + 4, rows * CELL + 4).rotateX(-Math.PI / 2), new THREE.MeshToonMaterial({ color: 0x9cc86a }));
+ground.position.set((cols * CELL) / 2 - CELL / 2, 0, (rows * CELL) / 2 - CELL / 2);
+scene.add(ground);
+// Looking down at an angle like the game's camera, with no perspective so every cell is alike.
+const cam = new THREE.OrthographicCamera((-cols * CELL) / 2, (cols * CELL) / 2, (rows * CELL * 0.62) / 2 + 1.2, (-rows * CELL * 0.62) / 2 - 0.4, 0.1, 500);
+const centre = new THREE.Vector3((cols * CELL) / 2 - CELL / 2, 0.6, (rows * CELL) / 2 - CELL / 2);
+cam.position.copy(centre).add(new THREE.Vector3(0, 50, 62));
+cam.lookAt(centre);
+const gltf = new GLTFLoader(), fbx = new FBXLoader();
+const label = (text, x, z) => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 40;
+  const g = c.getContext('2d'); g.font = '600 19px system-ui'; g.fillStyle = '#1a2233'; g.textAlign = 'center'; g.fillText(text.slice(-26), 128, 27);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  s.scale.set(3.2, 0.5, 1); s.position.set(x, 0.05, z + 1.45); scene.add(s);
+};
+window.__ready = false;
+await Promise.all(list.map(async (m, i) => {
+  const x = (i % cols) * CELL, z = Math.floor(i / cols) * CELL;
+  label(m.label, x, z);
+  try {
+    const o = m.url.endsWith('.fbx') ? await fbx.loadAsync(m.url) : (await gltf.loadAsync(m.url)).scene;
+    o.traverse((c) => { if (c.isMesh) c.material = Array.isArray(c.material) ? c.material.map((mm) => toonMaterial(mm)) : toonMaterial(c.material); });
+    const box = new THREE.Box3().setFromObject(o); const size = box.getSize(new THREE.Vector3());
+    o.scale.setScalar(m.fit === 'height' ? m.size / (size.y || 1) : m.size / (Math.max(size.x, size.z) || 1));
+    o.position.set(x, 0, z); o.rotation.y = 0.6; scene.add(o);
+    // A person for scale would be 0.85 high: a thin post that tall beside each model.
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.85, 0.06), new THREE.MeshBasicMaterial({ color: 0xff4d6d })); post.position.set(x + 1.4, 0.425, z + 0.9); scene.add(post);
+  } catch (e) { console.error('failed', m.url); }
+}));
+renderer.render(scene, cam);
+window.__ready = true;
+</script></body></html>

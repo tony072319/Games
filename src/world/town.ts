@@ -30,18 +30,18 @@ const clearOf = (a: number, taken: number[], gap: number) =>
     return d > gap;
   });
 
-const HARBOUR: Record<SeaId, ModelId[]> = {
-  dusk: ['huts/fish_shack', 'harbor/fish_market_stall', 'viking/storehouse', 'harbor/harbor_crane', 'viking/fish_drying_rack', 'kk/building_market_blue'],
-  fog: ['viking/storehouse', 'harbor/fish_market_stall', 'viking/longhouse', 'harbor/harbor_crane', 'viking/fish_drying_rack', 'viking/storehouse'],
-  aurora: ['winter/wood_cabin', 'harbor/fish_market_stall', 'viking/storehouse', 'harbor/harbor_crane', 'winter/wood_cabin', 'viking/fish_drying_rack'],
-};
-const TOWN: Record<SeaId, ModelId[]> = {
-  dusk: ['kk/building_home_A_blue', 'kk/building_home_A_blue', 'kk/building_blacksmith_blue', 'kk/building_home_A_blue', 'kk/building_market_blue', 'kk/building_lumbermill_blue', 'huts/stilt_hut', 'kk/building_tower_A_blue'],
-  fog: ['viking/small_hut', 'viking/longhouse', 'viking/forge', 'viking/small_hut', 'viking/storehouse', 'viking/longhouse', 'viking/small_hut', 'viking/watchtower'],
-  aurora: ['winter/wood_cabin', 'winter/wood_cabin', 'viking/forge', 'winter/wood_cabin', 'viking/small_hut', 'winter/wood_cabin', 'viking/longhouse', 'viking/watchtower'],
-};
+/** Each sea's town wears its own roofs: blue at dusk, mossy green in the fog, red under the snow. */
+const ROOF: Record<SeaId, string> = { dusk: 'blue', fog: 'green', aurora: 'red' };
+const kk = (kind: string, sea: SeaId): ModelId => `kk/building_${kind}_${ROOF[sea]}`;
+const SEAS: SeaId[] = ['dusk', 'fog', 'aurora'];
+/** The same kinds of place in every sea, in that sea's colours (a name with a slash is one model for all seas). */
+const inEachSea = (kinds: string[]): Record<SeaId, ModelId[]> =>
+  Object.fromEntries(SEAS.map((sea) => [sea, kinds.map((k) => (k.includes('/') ? k : kk(k, sea)))])) as Record<SeaId, ModelId[]>;
+
+const HARBOUR = inEachSea(['home_B', 'harbor/fish_market_stall', 'tavern', 'harbor/harbor_crane', 'viking/fish_drying_rack', 'watermill']);
+const TOWN = inEachSea(['home_A', 'home_B', 'blacksmith', 'home_A', 'tavern', 'lumbermill', 'home_B', 'tower_A', 'church', 'market']);
 /** Buildings people live in: their windows light up at night. */
-export const TOWN_HOMES: ModelId[] = ['kk/building_home_A_blue', 'huts/fish_shack', 'huts/stilt_hut', 'viking/small_hut', 'viking/longhouse', 'winter/wood_cabin'];
+export const TOWN_HOMES: ModelId[] = SEAS.flatMap((sea) => [kk('home_A', sea), kk('home_B', sea), kk('tavern', sea), kk('church', sea)]);
 
 function slot(frac: number, a: number, i: number, harbour: boolean): TownSlot {
   const set = harbour ? HARBOUR : TOWN;
@@ -84,7 +84,7 @@ export const TOWN_SLOTS: TownSlot[] = (() => {
     if (terrace[i]) out.push(slot(terrace[i][0], terrace[i][1], i, false));
   }
   // Last of all, two buildings up on the peak beside the lighthouse.
-  out.push(slot(0.17, 2.05, 7, false), slot(0.17, -2.95, 2, false));
+  out.push(slot(0.17, 2.05, 7, false), slot(0.17, -2.95, 8, false));
   return out;
 })();
 

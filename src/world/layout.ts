@@ -18,7 +18,7 @@ import type { GameState } from '../core/state';
 import { MODELS, type ModelId } from './assets';
 import { DEST_HEX, hexToWorld, litRadius, hexDist } from './hex';
 import { DEST_SHAPES, heightAt, homeShape, outline, ringPoint, type Shape } from './terrain';
-import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
+import { CHEST_LOOKS, CRANE_WASH, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
 /** Things on the island you can tap. house: the keeper's house (the book); town: the town's first place (building, and where its hint shows); ground: the rest of the town, decorations and the ground (building). */
 export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | 'house' | 'town' | 'ground' | `island:${DestId}` | `bld:${BuildingId}`;
@@ -47,6 +47,9 @@ export interface WorldItem {
   /** Sculpted ground (model 'ground'): the renderer builds the mesh from this shape. */
   ground?: Shape;
 }
+
+/** Things on the horizon take on the colour of the air. */
+export const FAR_HAZE = 0xa9b4d0;
 
 /** Colour for an island the light shows but the boat has not reached yet. */
 export const SILHOUETTE = 0x556070;
@@ -85,7 +88,7 @@ function mooring(land: number, n: 0 | 1 = 0): [number, number] {
 function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az: number, ay: number, tag?: Tag) {
   parts.forEach((p, i) => {
     items.push({
-      key: `${prefix}:${p.part}:${p.model}:${p.size ?? ''}:${p.tint ?? ''}`,
+      key: `${prefix}:${p.part}:${p.model}:${p.size ?? ''}:${p.tint ?? ''}${p.wash ? `:${p.wash}` : ''}`,
       model: p.model,
       x: ax + p.dx,
       y: ay + (p.dy ?? 0),
@@ -93,6 +96,7 @@ function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az
       rotY: p.rotY ?? 0,
       size: p.size,
       tint: p.tint,
+      wash: p.wash,
       glow: p.glow,
       tag: i === 0 ? tag : undefined,
     });
@@ -127,7 +131,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
 
   place(items, `light:${light}`, LIGHT_LOOKS[light] ?? LIGHT_LOOKS[10], 0, 0, 0, 'light');
   // The keeper's house on the peak, in front of the lighthouse (easy to tap); chest and net down at the harbour by the pier.
-  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.17, 0.7), 0, 'house');
+  place(items, 'house', [{ part: 'house', model: 'kk/building_home_A_yellow', dx: 0, dz: 0, rotY: 0.75, glow: 'window' }], ...on(0.17, 0.7), 0, 'house');
   place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...on(0.84, 0.72), 0, 'chest');
   const [nx, nz] = on(0.85, 1.0);
   place(items, `net:${Math.min(50, s.levels.net)}`, netParts(s.levels.net), nx, nz, 0, 'net');
@@ -173,7 +177,9 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     const [x, z] = sl.at(s.land);
     const model = sl.models[s.sea];
     // Only lived-in houses (in this sea's style) have lit windows.
-    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash: townWash, tag: i === 0 ? 'town' : 'ground' });
+    // The crane's red is toned down in every sea; the rest take a touch of the sea's colour.
+    const wash = model === 'harbor/harbor_crane' ? CRANE_WASH : townWash;
+    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, size: model === 'harbor/harbor_crane' ? 1.9 : undefined, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash, tag: i === 0 ? 'town' : 'ground' });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
 
@@ -181,7 +187,8 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   const answering = answeringLights(s);
   for (let i = 0; i < answering; i++) {
     const [x, z] = answerSpot(i);
-    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), glow: 'beacon' });
+    // Far off: pale shapes in the haze.
+    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), glow: 'beacon', wash: [FAR_HAZE, 0.55] });
   }
 
   // Dock and boat.

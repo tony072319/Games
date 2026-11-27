@@ -32,6 +32,8 @@ import { disposeToon, toonMaterial, toonRamp } from './toon';
 import { createWater } from './water';
 import { createLife, type Life } from './life';
 import { GradeShader, createBeam, createClouds, createMist } from './atmosphere';
+import { disposeGround, groundMaterial } from './ground';
+import { createGreenery, scatterOn, type Scatter } from './greenery';
 
 export type AnchorTag = Tag | `flotsam:${number}` | `ship:${number}`;
 export interface FlotsamView {
@@ -167,14 +169,30 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const mist = createMist();
   scene.add(mist.group);
   const sandMat = new THREE.MeshToonMaterial({ color: 0xf6dfae, gradientMap: toonRamp() });
-  // Sculpted ground: colours come from the mesh; flat faces for the low-poly look.
-  const groundMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() });
   const sandGeo = new THREE.CylinderGeometry((TILE_D / 2) * 1.28, (TILE_D / 2) * 1.38, 0.5, 6);
   const glowGeo = new THREE.SphereGeometry(1, 14, 10);
   const hitGeo = new THREE.SphereGeometry(0.75, 8, 6);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const glowMats = new Map<number, THREE.MeshBasicMaterial>();
   const beaconMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe0a0).multiplyScalar(3), toneMapped: false, fog: false });
+  // Lit windows: a warm pane and a soft halo round it, both coming up as the evening falls.
+  const paneMat = new THREE.MeshBasicMaterial({ color: 0xffb860, toneMapped: false });
+  const haloTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d')!;
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,200,120,.9)');
+    gr.addColorStop(0.4, 'rgba(255,170,90,.3)');
+    gr.addColorStop(1, 'rgba(255,150,70,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const haloMat = new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
+  haloMat.toneMapped = false;
   const glowMat = (c: number) => {
     let m = glowMats.get(c);
     if (!m) {
@@ -266,6 +284,26 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     return o;
   }
 
+  /** The meshes of a model, for drawing many copies in one go (trees). */
+  const greenery = createGreenery((id, wash) =>
+    template(id).then((t) => {
+      if (!t || disposed) return [];
+      const info = MODELS[id];
+      const k = info.fit === 'height' ? info.size / t.h : info.size / t.len;
+      const fit = new THREE.Matrix4().makeScale(k, k, k);
+      const out: { geometry: THREE.BufferGeometry; material: THREE.Material; matrix: THREE.Matrix4 }[] = [];
+      t.scene.updateMatrixWorld(true);
+      t.scene.traverse((c) => {
+        const m = c as THREE.Mesh;
+        if (!m.isMesh) return;
+        const src = Array.isArray(m.material) ? m.material[0] : m.material;
+        out.push({ geometry: m.geometry, material: toonMaterial(src, undefined, wash), matrix: fit.clone().multiply(m.matrixWorld) });
+      });
+      return out;
+    }),
+  );
+  scene.add(greenery.group);
+
   // ---------- state ----------
   const placed = new Map<string, Placed>();
   let items: WorldItem[] = [];
@@ -301,14 +339,18 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       lights.push(pl);
       add(pl);
     } else if (g === 'window' || g === 'pane') {
-      const w = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.05), glowMat(0xffb860));
+      const w = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.05), paneMat);
       w.userData.ownGeometry = true;
       // On the building's front, whichever way it faces.
       const r = p.item.rotY;
       const half = Math.min(size.x, size.z) / 2;
-      w.position.set(c.x + Math.sin(r) * half, box.min.y + Math.min(0.75, size.y * 0.45), c.z + Math.cos(r) * half);
+      w.position.set(c.x + Math.sin(r) * half, box.min.y + Math.min(0.75, size.y * 0.42), c.z + Math.cos(r) * half);
       w.rotation.y = r;
       add(w);
+      const halo = new THREE.Sprite(haloMat);
+      halo.position.copy(w.position).add(new THREE.Vector3(Math.sin(r) * 0.12, 0, Math.cos(r) * 0.12));
+      halo.scale.setScalar(1.25);
+      add(halo);
       // A pane only glows; a lit window also casts a little light (kept few: lights are costly).
       if (g === 'pane') return;
       const pl = new THREE.PointLight(0xffa860, 2.5, 3.5);
@@ -320,9 +362,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       // A far lighthouse answering: a big soft glow at its top, no real light (they are many and far).
       // Not fogged: in the fog sea the tower fades out but its light still reads through the fog.
       const s = new THREE.Mesh(glowGeo, beaconMat);
-      s.scale.setScalar(Math.max(0.6, size.x * 0.4));
+      s.scale.setScalar(Math.max(0.32, size.x * 0.22));
       s.position.set(c.x, box.max.y - size.y * 0.12, c.z);
-      s.userData.lamp = true;
+      s.userData.beacon = s.scale.x;
       add(s);
     } else if (g === 'lantern') {
       const s = new THREE.Mesh(glowGeo, glowMat(0xffd080));
@@ -349,6 +391,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     if (!p) return;
     scene.remove(p.obj);
     if (p.obj.userData.ownGeometry) (p.obj as THREE.Mesh).geometry.dispose();
+    if (p.obj.userData.ownMaterial) ((p.obj as THREE.Mesh).material as THREE.Material).dispose();
     for (const e of p.extras) {
       scene.remove(e);
       if (e.userData.ownGeometry) (e as THREE.Mesh).geometry.dispose();
@@ -362,7 +405,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   function putItem(item: WorldItem, gen: number) {
     if (item.ground) {
       // Sculpted ground: built here from its shape, no model to load.
-      const mesh = new THREE.Mesh(terrainGeometry(item.ground, { ...GROUND_COLOURS, wash: item.wash }), groundMat);
+      const paint = { ...GROUND_COLOURS, wash: item.wash, rockAbove: item.ground.kind === 'rock' ? 1 : undefined };
+      const mesh = new THREE.Mesh(terrainGeometry(item.ground, paint), groundMaterial(paint));
+      mesh.userData.ownMaterial = true;
       mesh.receiveShadow = true;
       mesh.castShadow = true;
       mesh.userData.ownGeometry = true;
@@ -611,6 +656,38 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     pulses.push({ obj: o, t0: now });
   }
 
+  // ---------- what grows on the islands ----------
+  /** Plants worked out per island, kept while the island and what stands on it stay the same. */
+  const grown = new Map<string, { sig: string; scatter: Scatter }>();
+  let grownLook = '';
+  function syncGreenery() {
+    // Islands the boat has reached (one still in the dark is bare).
+    const grounds = items.filter((i) => i.ground && !i.key.includes(':dark'));
+    const standing = items.filter((i) => !i.ground && !i.bob && !i.key.startsWith('walker:') && !i.key.startsWith('answer:'));
+    let changed = false;
+    for (const key of [...grown.keys()])
+      if (!grounds.some((g) => g.key === key)) {
+        grown.delete(key);
+        changed = true;
+      }
+    for (const g of grounds) {
+      const sh = g.ground!;
+      const reach = sh.radius * 1.3;
+      // Nothing grows under a building: a wide berth for the big things, a narrow one for the small.
+      const avoid = standing
+        .filter((i) => Math.hypot(i.x - sh.cx, i.z - sh.cz) < reach)
+        .map((i): [number, number, number] => [i.x, i.z, /^(town|house|bld|light|isle)/.test(i.key) ? 1.15 : /^(land|life|deco)/.test(i.key) ? 0.35 : 0.7]);
+      const sig = avoid.map((a) => `${a[0].toFixed(1)},${a[1].toFixed(1)}`).join(';');
+      if (grown.get(g.key)?.sig === sig) continue;
+      grown.set(g.key, { sig, scatter: scatterOn(sh, avoid) });
+      changed = true;
+    }
+    const look = `${lastSea}`;
+    if (!changed && look === grownLook) return;
+    grownLook = look;
+    greenery.set([...grown.values()].map((g) => g.scatter), { snow: lastSea === 'aurora', dull: lastSea === 'fog' });
+  }
+
   // ---------- air ----------
   /**
    * The haze follows the camera, so the home island always reads clearly however far you stand:
@@ -666,6 +743,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     // The sky stands round whoever is looking, so its horizon is always at eye level.
     sky.mesh.position.copy(cam.position);
     clouds.tick(dt * speed, cam.position.y);
+    greenery.tick(t, calm);
     mist.tick(t);
     grade.uniforms.T.value = t;
     updateAir();
@@ -693,6 +771,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     }
     scene.traverse((o) => {
       if (o.userData.flame) o.scale.y = 0.8 + Math.random() * 0.4;
+      // Far lighthouses turn like ours: each swells and dims in its own time.
+      else if (o.userData.beacon) o.scale.setScalar(o.userData.beacon * (0.75 + 0.5 * Math.max(0, Math.sin(t * 0.9 + o.position.x * 0.7))));
     });
     pending = pending.filter((q) => {
       if (now - q.at > 4000) return false;
@@ -814,6 +894,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       }
       islandReach = reach;
       syncExtra();
+      if (d.add.length || d.remove.length) syncGreenery();
     },
     setSky(s, sea) {
       lastSky = s;
@@ -831,12 +912,18 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       key.intensity = pal.keyIntensity;
       rim.color.setHex(mixColour(0xffa860, 0x8aa0ff, pal.deep));
       rim.intensity = 0.9 * (1 - 0.6 * pal.night) + 0.35 * pal.deep;
+      // Windows and far lighthouses are faint by day and bright at night.
+      const lit = Math.min(1, Math.max(0, (pal.night - 0.1) / 0.5));
+      paneMat.color.setHex(0xffb860).multiplyScalar(0.35 + 2.65 * lit);
+      haloMat.opacity = 0.7 * lit;
+      beaconMat.color.setHex(0xffe0a0).multiplyScalar(0.9 + 2.1 * lit);
       bloom.strength = pal.bloom;
       renderer.toneMappingExposure = pal.exposure;
       clouds.setPalette(pal);
       grade.uniforms.night.value = pal.night;
       updateAir();
       sky.setAurora(sea === 'aurora' ? 1 : 0);
+      syncGreenery();
     },
     setLight(level, reach = level) {
       light = level;
@@ -929,11 +1016,15 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       water.dispose();
       sandGeo.dispose();
       sandMat.dispose();
-      groundMat.dispose();
+      disposeGround();
       glowGeo.dispose();
       beaconMat.dispose();
+      paneMat.dispose();
+      haloMat.dispose();
+      haloTex.dispose();
       hitGeo.dispose();
       beam.dispose();
+      greenery.dispose();
       clouds.dispose();
       mist.dispose();
       hitMat.dispose();
