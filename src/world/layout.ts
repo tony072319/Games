@@ -206,8 +206,10 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   const answering = answeringLights(s);
   for (let i = 0; i < answering; i++) {
     const [x, z] = answerSpot(i);
-    // Far off: pale shapes in the haze.
-    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), glow: 'beacon', wash: [FAR_HAZE, 0.55] });
+    // Far off: each at its own distance, smaller and paler the farther it stands.
+    const [, r, tall] = ANSWER_OFF[i % ANSWER_OFF.length];
+    const haze = 0.4 + 0.42 * ((r - 58) / 46);
+    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), size: tall, glow: 'beacon', wash: [FAR_HAZE, haze] });
   }
 
   // Dock and boat.
@@ -401,10 +403,16 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
  */
 export function answerSpot(i: number): [number, number] {
   const n = T.LIGHT_PARTS;
-  const a = FAR_SIDE + ((i - (n - 1) / 2) / (n - 1)) * ANSWER_SPREAD;
-  const r = i % 2 === 0 ? 70 : 82;
+  // Not a row of pegs: each at its own distance and a little off its bearing, like lights on far headlands.
+  const a = FAR_SIDE + ((i - (n - 1) / 2) / (n - 1)) * ANSWER_SPREAD + ANSWER_OFF[i % ANSWER_OFF.length][0];
+  const r = ANSWER_OFF[i % ANSWER_OFF.length][1];
   return [Math.cos(a) * r, Math.sin(a) * r];
 }
+/** Each far lighthouse: how far off its even bearing (radians), how far out, how tall. */
+const ANSWER_OFF: [number, number, number][] = [
+  [0.012, 74, 3.6], [-0.015, 96, 3.2], [0.02, 62, 3.8], [-0.01, 88, 3.4], [0.016, 104, 3.0],
+  [-0.018, 68, 3.7], [0.008, 92, 3.3], [-0.014, 58, 4.0], [0.018, 100, 3.1], [-0.008, 78, 3.5],
+];
 const ANSWER_SPREAD = (28 * Math.PI) / 180;
 
 export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; z: number; rotY: number } {
