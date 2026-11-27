@@ -410,8 +410,8 @@ try {
     const p3 = await ctx3.newPage();
     await p3.goto(BASE);
     const buy = p3.locator('[data-halo="halo"] .buy');
-    // A full late-game town is slow to draw without a graphics card, and the first page is still drawing its own: allow for both.
-    await buy.waitFor({ timeout: 30000 }).catch(() => fail('after the ending the lighthouse card should offer a halo'));
+    // The 3D world loads first on a slow software renderer: give the panel time.
+    await buy.waitFor({ timeout: 20000 }).catch(() => fail('after the ending the lighthouse card should offer a halo'));
     await buy.click();
     await p3.waitForFunction(() => JSON.parse(localStorage.getItem('lightkeeper.save')).halo === 1, null, { timeout: 4000 }).catch(() => fail('buying a ring of halo should be saved'));
     await ctx3.close(); }
