@@ -97,3 +97,29 @@ describe('the recycler', () => {
     expect(r.state.levels.recycle).toBe(0);
   });
 });
+
+describe('the recycler over a very long absence', () => {
+  test('a year away (or a clock gone back to 1970) takes a moment, not seconds', () => {
+    const s = late(10);
+    const t0 = performance.now();
+    recycle(s, 55 * 365 * 24 * 3600);
+    expect(performance.now() - t0).toBeLessThan(300);
+    for (const m of MATERIALS) expect(Number.isFinite(s.materials[m]) && s.materials[m] >= 0).toBe(true);
+  });
+});
+
+import { haloCost } from '../../src/core/halo';
+describe('the recycler after the ending', () => {
+  test('works toward the next ring of halo', () => {
+    const s = newGame(0, 'zh');
+    s.sea = 'aurora';
+    s.reached = ['dusk', 'fog', 'aurora'];
+    s.levels.light = 10;
+    s.levels.recycle = 5;
+    const p = haloCost(s);
+    Object.assign(s.materials, { wood: p.wood * 20, plastic: p.plastic * 20, rope: p.rope * 0.1, metal: p.metal * 20 });
+    const rope = s.materials.rope;
+    recycle(s, 3600);
+    expect(s.materials.rope).toBeGreaterThan(rope);
+  });
+});

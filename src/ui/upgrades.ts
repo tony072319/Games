@@ -66,7 +66,13 @@ export function upgradeThumb(id: UpgradeId, state: GameState): string {
   return boatSvg(id === 'cargo', state.levels.cargo);
 }
 
-/** Cheap fingerprint: the panel is rebuilt only when this changes. */
+/** The halo card redraws when a material crosses its price or the "about N minutes" label would change. */
+function haloSignature(state: GameState): string {
+  const cost = haloCost(state);
+  const eta = etaSeconds(state, cost);
+  return `${state.halo}:` + MATERIALS.map((m) => (state.materials[m] >= cost[m] ? 1 : 0)).join('') + `:${eta === null ? 'x' : Math.ceil(eta / 60)}`;
+}
+
 /** After the ending: the next ring of halo, a card like the upgrades. */
 function haloCard(lang: Lang, state: GameState, onHalo: () => void): HTMLElement {
   const cost = haloCost(state);
@@ -113,6 +119,7 @@ function focusRow(lang: Lang, state: GameState, onFocus: (f: Focus) => void): HT
   return row;
 }
 
+/** Cheap fingerprint: the panel is rebuilt only when this changes. */
 function signature(state: GameState, ids: readonly UpgradeId[]): string {
   return ids
     .map((id) => {
@@ -131,7 +138,16 @@ export interface PanelExtras {
 }
 
 export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: readonly UpgradeId[] = PANEL_UPGRADES, extras: PanelExtras = {}): Panel {
-  const { onFocus, onHalo } = extras;
+  // Keyboard focus goes back to the chip or button just used after the panel redraws.
+  let refocusSel: string | null = null;
+  const onFocus = extras.onFocus && ((f: Focus) => {
+    refocusSel = `.focus-row [data-focus="${f}"]`;
+    extras.onFocus!(f);
+  });
+  const onHalo = extras.onHalo && (() => {
+    refocusSel = '[data-halo] .buy';
+    extras.onHalo!();
+  });
   const root = el('div', 'panel');
   let last = '';
   let flashing: UpgradeId | null = null;
@@ -180,10 +196,14 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
 
   function update(state: GameState) {
     current = state;
-    const sig = signature(state, ids) + '|' + [...open].join() + '|' + focusOn(state) + '|' + (haloOpen(state) ? `${state.halo}${canBuyHalo(state) ? 'y' : 'n'}` : '');
+    const sig = signature(state, ids) + '|' + [...open].join() + '|' + focusOn(state) + '|' + (haloOpen(state) ? haloSignature(state) : '');
     if (sig !== last) {
       last = sig;
       render(state);
+      if (refocusSel) {
+        root.querySelector<HTMLElement>(refocusSel)?.focus();
+        refocusSel = null;
+      }
       if (refocus) {
         root.querySelector<HTMLElement>(`[data-upgrade="${refocus}"] .card-main`)?.focus();
         refocus = null;

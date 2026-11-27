@@ -82,3 +82,32 @@ describe('a storm night', () => {
     }
   });
 });
+
+describe('a storm night starts at once', () => {
+  test('the first ship in distress comes within seconds, even if a calm ship was not due for a while', () => {
+    const { t } = stormNight();
+    const s = docked();
+    const f = newShipField(t);
+    f.nextAt = t + 90e3; // the calm schedule's next ship
+    let first = -1;
+    for (let now = t; now < t + 20e3 && first < 0; now += 250) {
+      updateShips(f, now, () => 0.5, s);
+      if (f.ships.length) first = now - t;
+    }
+    expect(first).toBeGreaterThanOrEqual(0);
+    expect(first).toBeLessThan(2000);
+  });
+  test('ships already guided (showing their thanks) do not hold back the next', () => {
+    const { t } = stormNight();
+    const s = docked();
+    const f = newShipField(t - 10e3);
+    let spawned = 0;
+    for (let now = t; now < t + 60e3; now += 250) {
+      const before = f.nextId;
+      updateShips(f, now, () => 0.5, s);
+      spawned += f.nextId - before;
+      for (const sh of f.ships) if (sh.guidedAt === undefined) guideShip(s, f, sh.id, now, () => 0.99);
+    }
+    expect(spawned).toBeGreaterThanOrEqual(9);
+  });
+});

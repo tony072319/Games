@@ -49,7 +49,8 @@ export function nextEffect(s: GameState, id: UpgradeId): Effect | null {
   if (id === 'net') return { kind: 'percent', value: Math.round((autoRate(L + 1) / autoRate(L) - 1) * 100) };
   if (id === 'storage') return { kind: 'hours', value: 1 };
   if (id === 'light') {
-    const key = L + 1 === DOCK_LIGHT ? 'dock' : L + 1 === MAX_LEVEL.light ? 'end' : 'reach';
+    // The dock (and the first boat) only means something before there is a boat.
+    const key = L + 1 === DOCK_LIGHT && !s.boat.built ? 'dock' : L + 1 === MAX_LEVEL.light ? 'end' : 'reach';
     return { kind: 'unlock', key: `upg.light.next.${key}` };
   }
   if (id === 'recycle') return { kind: 'unlock', key: L === 0 ? 'upg.recycle.next.build' : 'upg.recycle.next.faster' };

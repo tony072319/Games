@@ -718,7 +718,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     hud.el.append(exit);
     panel = createPanel(lang, onBuy, undefined, {
       onFocus: (f) => {
-        if (!setFocus(state, f)) return;
+        if (!setFocus(state, f, opts.now())) return;
         sound.play('tap');
         save();
         refresh();
@@ -1026,18 +1026,21 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     const now = opts.now();
     const e = eventFor(state, now);
-    // Announce an event once when it starts while you are here.
+    // Announce an event once when it starts while you are here (one already on when you arrive just shows).
+    if (eventToldAt === 0) eventToldAt = e?.startAt ?? -1;
     if (e && e.startAt !== eventToldAt) {
       eventToldAt = e.startAt;
       toast(t(lang, `event.${e.id}.start`), 'rare');
     }
-    const key = e ? `${e.id}:${Math.ceil((e.endAt - now) / 60e3)}` : '';
+    // Redrawn (and re-read by screen readers) only when the words change.
+    const left = e ? formatEta((e.endAt - now) / 1000, lang) : '';
+    const key = e ? `${e.id}:${left}` : '';
     if (key === eventKey) return;
     eventKey = key;
     eventBar.style.display = e ? '' : 'none';
     if (!e) return eventBar.replaceChildren();
     const title = el('span', 'event-title');
-    title.textContent = t(lang, `event.${e.id}`, { time: formatEta((e.endAt - now) / 1000, lang) });
+    title.textContent = t(lang, `event.${e.id}`, { time: left });
     const hint = el('span', 'event-hint');
     hint.textContent = t(lang, `event.${e.id}.hint`);
     eventBar.replaceChildren(title, hint);

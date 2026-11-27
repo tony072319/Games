@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { canFocus, focusOn, setFocus } from '../../src/core/focus';
 import { catchRate, chestCapacity, chestSeconds, netRate } from '../../src/core/economy';
-import { voyageMs } from '../../src/core/boat';
+import { startVoyage, voyageMs } from '../../src/core/boat';
 import { newField, updateField } from '../../src/core/flotsam';
 import { newShipField, updateShips } from '../../src/core/ships';
 import { newGame } from '../../src/core/state';
@@ -25,32 +25,32 @@ describe('where the light shines', () => {
     expect(s.focus).toBe('net');
     expect(canFocus(s)).toBe(false);
     expect(focusOn(s)).toBeNull();
-    expect(setFocus(s, 'route')).toBe(false);
+    expect(setFocus(s, 'route', 0)).toBe(false);
     expect(catchRate(s)).toBe(netRate(s));
     s.levels.light = 3;
     expect(canFocus(s)).toBe(true);
-    expect(setFocus(s, 'route')).toBe(true);
+    expect(setFocus(s, 'route', 0)).toBe(true);
     expect(focusOn(s)).toBe('route');
   });
   test('fishing grounds: the net catches more, and the chest holds the same hours', () => {
     const s = docked();
-    setFocus(s, 'net');
+    setFocus(s, 'net', 0);
     expect(catchRate(s)).toBeCloseTo(netRate(s) * (1 + T.FOCUS_NET));
     expect(chestCapacity(s) / catchRate(s)).toBeCloseTo(chestSeconds(s));
-    setFocus(s, 'route');
+    setFocus(s, 'route', 0);
     expect(catchRate(s)).toBe(netRate(s));
   });
   test('the route: voyages are shorter', () => {
     const s = docked();
-    setFocus(s, 'net');
+    setFocus(s, 'net', 0);
     const before = voyageMs(s, 'wreck');
-    setFocus(s, 'route');
+    setFocus(s, 'route', 0);
     expect(voyageMs(s, 'wreck')).toBeCloseTo(before * (1 - T.FOCUS_ROUTE));
   });
   test('the open sea: more finds drift by and more ships pass at night', () => {
     const count = (focus: 'net' | 'sea') => {
       const s = docked();
-      setFocus(s, focus);
+      setFocus(s, focus, 0);
       const f = newField(0);
       let n = 0;
       for (let t = 0; t < 600_000; t += 500) {
@@ -64,7 +64,7 @@ describe('where the light shines', () => {
     expect(count('sea')).toBeGreaterThan(count('net') * 1.6);
     const ships = (focus: 'net' | 'sea') => {
       const s = docked();
-      setFocus(s, focus);
+      setFocus(s, focus, 0);
       const night = 0.5 * 20 * 60 * 1000;
       const f = newShipField(night);
       let n = 0;
@@ -81,7 +81,7 @@ describe('where the light shines', () => {
   test('kept in the save; a bad value falls back to the fishing grounds', () => {
     const kv = mem();
     const s = docked();
-    setFocus(s, 'sea');
+    setFocus(s, 'sea', 0);
     saveGame(kv, s);
     expect(loadGame(kv, 0, 'zh').state.focus).toBe('sea');
     const raw = JSON.parse(kv.getItem('lightkeeper.save')!);
@@ -93,5 +93,27 @@ describe('where the light shines', () => {
     const r = loadGame(kv, 0, 'zh');
     expect(r.state.focus).toBe('net');
     expect(r.status).toBe('loaded');
+  });
+});
+
+describe('the route counts only while the light is on it', () => {
+  test('switching to the route to send the boats, then back, gives back the saved time', () => {
+    const s = docked();
+    s.boat.built = true;
+    setFocus(s, 'net', 0);
+    const full = voyageMs(s, 'wreck');
+    setFocus(s, 'route', 0);
+    startVoyage(s, 'wreck', 0, () => 0.99);
+    setFocus(s, 'net', 0);
+    expect(s.boat.voyage!.returnAt).toBeCloseTo(full);
+  });
+  test('half the trip on the route saves half the time', () => {
+    const s = docked();
+    s.boat.built = true;
+    setFocus(s, 'net', 0);
+    const full = voyageMs(s, 'wreck');
+    startVoyage(s, 'wreck', 0, () => 0.99);
+    setFocus(s, 'route', full / 2);
+    expect(s.boat.voyage!.returnAt).toBeCloseTo(full / 2 + (full / 2) * (1 - T.FOCUS_ROUTE));
   });
 });

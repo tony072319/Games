@@ -118,3 +118,16 @@ describe('small events at sea', () => {
     expect(count(d.e.startAt)).toBeGreaterThan(count(quiet) * 2.5);
   });
 });
+
+import { autoSail } from '../../src/core/boat';
+describe('events reward being there, not time away', () => {
+  test('a boat sailing again on its own while you are away does not get the whales', () => {
+    const w = findEvent('whales')!;
+    const s = docked();
+    s.talents.push('autoBoat');
+    startVoyage(s, 'wreck', w.e.startAt - 10 * 60e3, () => 0.99);
+    // Catch up an absence that ends after the whales have gone.
+    autoSail(s, w.e.endAt + 60e3, () => 0.99);
+    expect(s.boat.voyage?.whales).toBeUndefined();
+  });
+});

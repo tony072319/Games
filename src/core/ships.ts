@@ -49,8 +49,12 @@ export function updateShips(f: ShipField, nowMs: number, rng: () => number, s?: 
   const storm = s ? eventFor(s, nowMs) : null;
   if (storm?.id === 'storm' && isNight(nowMs)) {
     // A storm night: ships in distress, one every few seconds, a few at a time.
-    if (!f.storm || f.storm.startAt !== storm.startAt) f.storm = { startAt: storm.startAt, endAt: storm.endAt, total: 0, rescued: 0 };
-    if (nowMs < f.nextAt || f.ships.filter((sh) => sh.storm).length >= 3) return;
+    if (!f.storm || f.storm.startAt !== storm.startAt) {
+      f.storm = { startAt: storm.startAt, endAt: storm.endAt, total: 0, rescued: 0 };
+      // The storm does not wait for the calm schedule's next ship.
+      f.nextAt = Math.min(f.nextAt, nowMs);
+    }
+    if (nowMs < f.nextAt || f.ships.filter((sh) => sh.storm && sh.guidedAt === undefined).length >= 3) return;
     f.ships.push({ id: f.nextId++, spawnedAt: nowMs, lane: rng(), storm: true });
     f.storm.total++;
     f.nextAt = nowMs + T.STORM_SHIP_EVERY_MS * (0.8 + 0.4 * rng());

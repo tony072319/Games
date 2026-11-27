@@ -156,12 +156,13 @@ export function startVoyage(s: GameState, d: DestId, nowMs: number, rng: () => n
 }
 
 /** A trip leaving now: its story is rolled as it sails (luck can bring it home early). */
-function planVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number): NonNullable<GameState['boat']['voyage']> {
+function planVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number, present = true): NonNullable<GameState['boat']['voyage']> {
   const rolled = rollStory(d, rng);
   // Breaking the ice (an aurora island's first trip) has no luck: full time, nothing aboard.
   const story = s.sea === 'aurora' && !s.discovered.includes(d) ? { n: rolled.n } : rolled;
   const ms = voyageMs(s, d) * (story.bonus === 'early' ? 1 - T.STORY_EARLY : 1);
-  const whales = eventIs(s, nowMs, 'whales');
+  // Only a boat you send yourself follows the whales (not one sailing again on its own while you are away).
+  const whales = present && eventIs(s, nowMs, 'whales');
   return { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + ms, story, ...(whales ? { whales } : {}) };
 }
 
@@ -236,7 +237,7 @@ export function autoSail(s: GameState, nowMs: number, rng: () => number = Math.r
       // Sail again from the sea it was at; reachability is judged there.
       const at = seaView(s, v.sea) ?? s;
       if (!canSail(at, v.dest, n)) break;
-      boat.voyage = { ...planVoyage(at, v.dest, back, rng), sea: v.sea };
+      boat.voyage = { ...planVoyage(at, v.dest, back, rng, false), sea: v.sea };
     }
   }
 }

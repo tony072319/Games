@@ -91,7 +91,6 @@ export const T = {
   FOG_RATE: 1.77,
   FOG_COST: 23,
   AURORA_RATE: 3.4,
-  /** In a new sea (after the first) the net's first levels (below this) and the lighthouse up to the dock cost this share. */
   /** Where the light shines: the net's extra catch, the voyage time saved, and the open sea's extra finds and ships. */
   FOCUS_NET: 0.2,
   FOCUS_ROUTE: 0.2,
@@ -109,6 +108,7 @@ export const T = {
   HALO_BASE: 0.15,
   HALO_GROWTH: 1.35,
   HALO_GLOW: 10,
+  /** In a new sea (after the first) the net's first levels (below this) and the lighthouse up to the dock cost this share. */
   NEW_SEA_NET: 5,
   NEW_SEA_LIGHT: 3,
   NEW_SEA_EARLY: 0.1,

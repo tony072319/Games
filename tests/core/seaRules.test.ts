@@ -74,3 +74,15 @@ describe('an ice-breaking trip brings nothing at all', () => {
     }
   });
 });
+
+import { nextEffect } from '../../src/core/advice';
+describe('the lighthouse card in a new sea', () => {
+  test('does not promise the dock and a boat when the boats are already here', () => {
+    const s = at('fog', 2);
+    s.boat.built = true;
+    expect(nextEffect(s, 'light')).toEqual({ kind: 'unlock', key: 'upg.light.next.reach' });
+    const d = newGame(0, 'zh');
+    d.levels.light = 2;
+    expect(nextEffect(d, 'light')).toEqual({ kind: 'unlock', key: 'upg.light.next.dock' });
+  });
+});
