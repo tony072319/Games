@@ -1,5 +1,4 @@
 import { shipLife } from '../core/ships';
-import { FAR_SIDE } from './view';
 import { DECOR_IDS } from '../core/decor';
 /**
  * What the world should contain for a game state: a flat list of placed models.
@@ -7,9 +6,7 @@ import { DECOR_IDS } from '../core/decor';
  */
 import { DESTS, boatOf, seeLight } from '../core/boat';
 import { townShown } from '../core/town';
-import { answeringLights } from '../core/answering';
 import type { Ship } from '../core/ships';
-import { T } from '../core/tuning';
 import { TOWN_HOMES, TOWN_SLOTS, townWalkers } from './town';
 import { FLOAT_LIFETIME_MS, type BuildingId, type DestId } from '../core/data';
 import type { FloatingItem } from '../core/flotsam';
@@ -48,9 +45,6 @@ export interface WorldItem {
   /** Sculpted ground (model 'ground'): the renderer builds the mesh from this shape. */
   ground?: Shape;
 }
-
-/** Things on the horizon take on the colour of the air. */
-export const FAR_HAZE = 0xa9b4d0;
 
 /** Colour for an island the light shows but the boat has not reached yet. */
 export const SILHOUETTE = 0x556070;
@@ -204,16 +198,6 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, size: model === 'harbor/harbor_crane' ? 1.7 : MODELS[model].size * TOWN_SCALE, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash, tag: i === 0 ? 'town' : 'ground' });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
-
-  // The last climb: far lighthouses on the horizon answer, one per part mended.
-  const answering = answeringLights(s);
-  for (let i = 0; i < answering; i++) {
-    const [x, z] = answerSpot(i);
-    // Far off: each at its own distance, smaller and paler the farther it stands.
-    const [, r, tall] = ANSWER_OFF[i % ANSWER_OFF.length];
-    const haze = 0.4 + 0.42 * ((r - 58) / 46);
-    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), size: tall, glow: 'beacon', wash: [FAR_HAZE, haze] });
-  }
 
   // Dock and boat.
   const hasDock = light >= 3 || s.boat.built;
@@ -417,24 +401,6 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
  * A ship passing at night: right to left far out behind the island, beyond the islands the boat
  * sails to, where the camera sees it against the horizon.
  */
-/**
- * Where far lighthouse i stands: on the horizon the everyday camera looks at (across the island),
- * in two staggered rows so they fit a phone's narrow view, and beyond the night ships' lane.
- */
-export function answerSpot(i: number): [number, number] {
-  const n = T.LIGHT_PARTS;
-  // Not a row of pegs: each at its own distance and a little off its bearing, like lights on far headlands.
-  const a = FAR_SIDE + ((i - (n - 1) / 2) / (n - 1)) * ANSWER_SPREAD + ANSWER_OFF[i % ANSWER_OFF.length][0];
-  const r = ANSWER_OFF[i % ANSWER_OFF.length][1];
-  return [Math.cos(a) * r, Math.sin(a) * r];
-}
-/** Each far lighthouse: how far off its even bearing (radians), how far out, how tall. */
-const ANSWER_OFF: [number, number, number][] = [
-  [0.012, 74, 3.6], [-0.015, 96, 3.2], [0.02, 62, 3.8], [-0.01, 88, 3.4], [0.016, 104, 3.0],
-  [-0.018, 68, 3.7], [0.008, 92, 3.3], [-0.014, 58, 4.0], [0.018, 100, 3.1], [-0.008, 78, 3.5],
-];
-const ANSWER_SPREAD = (28 * Math.PI) / 180;
-
 export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; z: number; rotY: number } {
   void land;
   const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / shipLife(ship)));

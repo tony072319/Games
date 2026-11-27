@@ -535,7 +535,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       const lang = state.settings.lang;
       save();
       sound.play('upgrade');
-      // On the last climb each part is answered by a far lighthouse.
+      // On the last climb each part is answered by a far lighthouse (told in words; none is drawn).
       if (state.levels.light === 9) toast(t(lang, 'answer.part', { n: state.lightParts, total: T.LIGHT_PARTS }), 'rare');
       else toast(t(lang, 'toast.part', { name: t(lang, `part.${state.lightParts}`), n: state.lightParts, total: T.LIGHT_PARTS }));
       refresh();
@@ -552,7 +552,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const target = id === 'net' ? hitEl('net') : id === 'storage' ? chestBtn : id === 'light' ? hitEl('light') : boatBtn;
     if (id === 'light' && state.levels.light >= MAX_LEVEL.light) {
       setTimeout(() => toast(t(lang, state.sea === 'aurora' ? 'toast.allLit' : 'toast.lit'), 'rare'), 1200);
-      // Look out over the lit sea: every far lighthouse is answering now.
+      // Look out over the whole lit sea.
       if (!state.settings.calm) setTimeout(() => world?.focus('sea'), 600);
     }
     const tag: Tag = id === 'net' ? 'net' : id === 'storage' ? 'chest' : id === 'light' ? 'light' : 'boat';

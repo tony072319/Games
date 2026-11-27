@@ -439,7 +439,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         if (/_fan_|_wheel_/.test(c.name)) (p.spin ??= []).push(c);
       });
       // Set down while you watch: it grows into place with a puff of dust (not boats, which sail in).
-      if (readySent && !calm && !item.bob && !item.key.startsWith('walker:') && !item.key.startsWith('answer:')) popIn(obj);
+      if (readySent && !calm && !item.bob && !item.key.startsWith('walker:')) popIn(obj);
       if (item.anim && t.animations.length) {
         p.mixer = new THREE.AnimationMixer(obj);
         const clip = t.animations.find((a) => a.name === item.anim) ?? t.animations[0];
@@ -715,7 +715,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   function syncGreenery() {
     // Islands the boat has reached (one still in the dark is bare).
     const grounds = items.filter((i) => i.ground && !i.key.includes(':dark'));
-    const standing = items.filter((i) => !i.ground && !i.bob && !i.key.startsWith('walker:') && !i.key.startsWith('answer:'));
+    const standing = items.filter((i) => !i.ground && !i.bob && !i.key.startsWith('walker:'));
     let changed = false;
     for (const key of [...grown.keys()])
       if (!grounds.some((g) => g.key === key)) {
