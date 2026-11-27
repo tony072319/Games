@@ -36,11 +36,29 @@ const dbg = async (label) => {
 // Things on the island are tapped in the 3D picture; their hidden buttons are the keyboard way in.
 const tapHit = async (name) => {
   const b = page.locator(`.hit[data-hit="${name}"]`);
-  if (await b.evaluate((e) => e.classList.contains('offscreen'))) fail(`the ${name} button should be placed over its thing on the island`);
+  // A thing that just appeared (the dock) is placed over it on the next frames.
+  await page.locator(`.hit[data-hit="${name}"]:not(.offscreen)`).waitFor({ state: 'attached', timeout: 3000 }).catch(() => {});
+  if (await b.evaluate((e) => e.classList.contains('offscreen'))) {
+    if (process.env.FAIL_SHOT) await page.screenshot({ path: process.env.FAIL_SHOT });
+    fail(`the ${name} button should be placed over its thing on the island`);
+  }
   await b.focus();
   await page.keyboard.press('Enter');
 };
 /** A real tap in the 3D picture where an island thing's button sits (retried once in slow screenshot runs). */
+// The upgrades live in a sheet: tapping a thing opens its card, the upgrades button opens them all.
+const closeSheet = async () => {
+  if (!(await page.locator('.sheet-bottom').count())) return;
+  await page.locator('.sheet-bottom .map-close').click();
+  await page.locator('.sheet-bottom').waitFor({ state: 'detached', timeout: 2000 }).catch(() => {});
+};
+const sheet = async (name) => {
+  await closeSheet();
+  if (name === 'all') await page.locator('.upgrades-btn').click();
+  else await tapHit(name);
+  await page.locator('.sheet-bottom').waitFor({ timeout: 3000 }).catch(() => fail(`the ${name} sheet should open`));
+  if (name !== 'all' && !(await page.locator(`.sheet-bottom [data-upgrade="${name}"]`).count())) fail(`the ${name} sheet should show its card, got "${await page.locator('.sheet-bottom h2').textContent()}"`);
+};
 const tapIsland = async (name, opened) => {
   for (let tries = SHOTS ? 3 : 2; tries > 0; tries--) {
     const pos = await page.locator(`.hit[data-hit="${name}"]`).evaluate((e) => {
@@ -124,6 +142,12 @@ try {
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/fail-light.png` });
     fail(`tapping the lighthouse should open its card (under the finger: ${under}, at ${JSON.stringify(lh)})`);
   }
+  // It opens as a sheet over the island with only the lighthouse in it; tapping outside closes it.
+  if ((await page.locator('.sheet-bottom [data-upgrade]').count()) !== 1) fail('tapping the lighthouse should show only its card');
+  await page.mouse.click(10, 200);
+  await page.locator('.sheet-bottom').waitFor({ state: 'detached', timeout: 2000 }).catch(() => fail('tapping outside should close the sheet'));
+  // The main screen is the island: no upgrade cards until something is tapped.
+  if (await page.locator('[data-upgrade]').count()) fail('the main screen should not show upgrade cards');
   // Dragging the view from the chest turns the camera and collects nothing.
   { const cb = await page.locator('.chest').boundingBox();
     const save0 = await page.evaluate(() => localStorage.getItem('lightkeeper.save'));
@@ -145,10 +169,12 @@ try {
   // Test build: separate save, infinite materials on by default.
   await page.goto(BASE + '?debug=1');
   if (!(await page.locator('.debug-badge').count())) fail('test build should show its badge');
+  await sheet('net');
   for (let i = 0; i < 3; i++) await page.locator('[data-upgrade="net"] .buy').click();
   if ((await page.locator('.toast').count()) < 1) fail('upgrading should show a toast');
   const lvl = await page.locator('[data-upgrade="net"] .level').textContent();
   if (!lvl?.includes('4')) fail(`infinite materials should allow buying net to 4, got ${lvl}`);
+  await closeSheet();
 
   const savedTotal = () =>
     page.evaluate(() => {
@@ -184,8 +210,8 @@ try {
   const emptyPct = await page.$eval('.chest .bar i', (e) => parseFloat(e.style.width));
   if (emptyPct !== 0) fail(`chest should be empty after collecting, got ${emptyPct}%`);
 
-  // The card the next step is about wears a ring, so the goal and the cards agree.
   // Lighthouse to 3 → build boat → sail to the wreck → bring it home → unload → discovery.
+  await sheet('light');
   for (let i = 0; i < 2; i++) await page.locator('[data-upgrade="light"] .buy').click();
   await page.locator('.stage[data-world-has~="dock"]').waitFor({ state: 'attached', timeout: 3000 }).catch(() => fail('lighthouse 3 should show the dock'));
   // With the dock, the lighthouse card offers where the light shines; the choice is saved.
@@ -195,13 +221,15 @@ try {
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).focus === 'route', null, { timeout: 3000 }).catch(() => fail('choosing the route should be saved'));
     if (!(await page.locator('.focus-row .chip.on[data-focus="route"]').count())) fail('the chosen focus should be marked');
     await page.locator('.focus-row .chip[data-focus="net"]').click(); }
+  await closeSheet();
   // The test build can jump to the next event at sea: it shows under the goal while it lasts.
   await dbg('跳到下一个海上事件');
   await page.locator('.sea-event .event-title').waitFor({ timeout: 4000 }).catch(() => fail('an event at sea should show under the goal'));
   if (!(await page.locator('.sea-event .event-title').textContent())?.includes('还剩')) fail('the event should say how long it lasts');
   // The jump is time away: close the arrival report first, then tapping the banner goes where the event is.
   await page.waitForTimeout(600);
-  if (await page.locator('.popup').count()) await page.locator('.popup .btn-primary, .popup button').first().click();
+  if (await page.locator('.popup').count()) await page.locator('.popup .actions button').first().click();
+  await closeSheet();
   if ((await page.locator('.sea-event').textContent())?.includes('鲸群')) {
     await page.locator('.sea-event').click();
     await page.locator('.seamap').waitFor({ timeout: 3000 }).catch(() => fail('tapping the whales banner should open the sea map'));
@@ -209,7 +237,8 @@ try {
   }
   // The jump is time away: close the arrival report if it shows.
   await page.waitForTimeout(600);
-  if (await page.locator('.popup').count()) await page.locator('.popup .btn-primary, .popup button').first().click();
+  if (await page.locator('.popup').count()) await page.locator('.popup .actions button').first().click();
+  await closeSheet();
   await tapHit('map'); // the dock opens the sea map
   await page.locator('.seamap').waitFor();
   await page.locator('.map-bottom .buy').click();
@@ -245,7 +274,7 @@ try {
   await page.locator('.plot-btn[data-b="boatshed"]').click();
   await page.locator('[data-building="boatshed"] .buy').click();
   await dbg('+8 小时');
-  await page.locator('.popup button').first().click();
+  await page.locator('.popup .actions button').first().click();
   await page.waitForTimeout(400);
   if (!(await page.locator('.island-store .haul').count())) fail('the island should save up what it makes');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/island.png` });
@@ -255,7 +284,9 @@ try {
   await page.locator('.map-close').click();
 
   await page.reload();
+  await sheet('net');
   const lvl2 = await page.locator('[data-upgrade="net"] .level').textContent();
+  await closeSheet();
   if (!lvl2?.includes('4')) fail(`test save should persist after reload, got ${lvl2}`);
 
   await dbg('天色 +4 分钟');
@@ -271,15 +302,17 @@ try {
   if ((await seaNow()) !== 'fog') fail('should arrive at the fog sea');
 
   if (!(await page.locator('.starlight').isVisible())) fail('starlight should show in the HUD');
+  await sheet('light');
   const fogLight = await page.locator('[data-upgrade="light"] .level').textContent();
+  await closeSheet();
   if (!fogLight?.includes('1')) fail(`new sea should start with lighthouse 1, got ${fogLight}`);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/fog.png` });
   // The sea map switches between the seas you've reached.
   await tapHit('map');
   await page.locator('.sea-chips').waitFor({ timeout: 3000 }).catch(() => fail('the sea map should offer the seas once there are two'));
   await page.locator('.sea-chips .chip', { hasText: '黄昏的海' }).click();
-  const duskLight = await page.locator('[data-upgrade="light"] .level').textContent();
-  if (!duskLight?.includes('10')) fail(`the old sea should still be lit at 10, got ${duskLight}`);
+  const duskLight = await page.evaluate(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).levels.light);
+  if (duskLight !== 10) fail(`the old sea should still be lit at 10, got ${duskLight}`);
   await page.locator('.sea-chips .chip', { hasText: '有雾的夜海' }).click();
   await page.locator('.seamap .map-close').first().click();
   await dbg('灯塔修满');
@@ -299,7 +332,9 @@ try {
   await page.locator('.debug-badge').click();
 
   // Milestones: the net card shows progress to its next milestone.
+  await sheet('net');
   if (!(await page.locator('[data-upgrade="net"] .progress').count())) fail('net card should show milestone progress');
+  await closeSheet();
 
   // The book: 12 cells per sea; a find shows up as found.
   await dbg('+1 珍品');
@@ -359,11 +394,11 @@ try {
   // Corner mode: controls fold away, survive a reload, and come back.
   await page.locator('.hud .settings-btn').click();
   await page.locator('.menu button', { hasText: '角落模式' }).click();
-  if (await page.locator('.side').isVisible()) fail('corner mode should hide the controls');
+  if (await page.locator('.dock').isVisible()) fail('corner mode should hide the controls');
   await page.reload();
-  if (await page.locator('.side').isVisible()) fail('corner mode should survive a reload');
+  if (await page.locator('.dock').isVisible()) fail('corner mode should survive a reload');
   await page.locator('.mini-exit').click();
-  if (!(await page.locator('.side').isVisible())) fail('expand should bring the controls back');
+  if (!(await page.locator('.dock').isVisible())) fail('expand should bring the controls back');
 
   // The real save was never touched by the test build.
   await page.goto(BASE);
@@ -372,12 +407,17 @@ try {
   await page.locator('.popup').waitFor({ timeout: 8000 }).catch(() => {});
   await page.locator('.popup button').first().click({ timeout: 2000 }).catch(() => {});
   await page.locator('.popup').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
+  await sheet('net');
   const realLvl = await page.locator('[data-upgrade="net"] .level').textContent();
   if (!realLvl?.includes('1')) fail(`real save should still be net 1, got ${realLvl}`);
+  await closeSheet();
 
   await page.locator('.hud .settings-btn').click();
   await page.locator('.menu button').nth(3).click();
+  await page.locator('.upgrades-btn').click();
+  await page.locator('.sheet-bottom').waitFor({ timeout: 3000 });
   if (!(await page.locator('.panel').textContent())?.includes('Net')) fail('language toggle should switch to English');
+  await closeSheet();
 
   // A short wide window: every hint and bubble that shows stays inside the picture.
   await page.setViewportSize({ width: 1280, height: 600 });
@@ -424,6 +464,8 @@ try {
     });
     const p3 = await ctx3.newPage();
     await p3.goto(BASE);
+    await p3.locator('.upgrades-btn').waitFor({ timeout: 20000 });
+    await p3.locator('.upgrades-btn').click();
     const buy = p3.locator('[data-halo="halo"] .buy');
     // The 3D world loads first on a slow software renderer: give the panel time.
     await buy.waitFor({ timeout: 20000 }).catch(() => fail('after the ending the lighthouse card should offer a halo'));
@@ -481,6 +523,8 @@ try {
     await pg.waitForTimeout(500);
     const g = await pg.locator('.goal-text').textContent();
     if (!g?.includes('灯塔')) fail(`after the first steps the goal should be the lighthouse, got ${g}`);
+    await pg.locator('.upgrades-btn').click();
+    await pg.locator('.sheet-bottom').waitFor({ timeout: 3000 });
     if (!(await pg.locator('[data-upgrade="light"].is-goal').count())) fail('the lighthouse card should wear the goal ring');
     if (await pg.locator('[data-upgrade="net"].is-goal').count()) fail('only the goal card wears the ring');
     await c.close(); }

@@ -20,6 +20,8 @@ export interface Panel {
   show(id: UpgradeId): void;
   /** Mark the card the next step points at (or none), so the goal and the cards agree. */
   mark(id: UpgradeId | null): void;
+  /** Show only this card (with what belongs under it), or every card (null). */
+  only(id: UpgradeId | null): void;
 }
 
 /** The lighthouse needs glowshards from level 7: say where they come from. */
@@ -145,6 +147,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
   // Keyboard focus goes back to the chip or button just used after the panel redraws.
   let refocusSel: string | null = null;
   let marked: UpgradeId | null = null;
+  let onlyId: UpgradeId | null = null;
   const onFocus = extras.onFocus && ((f: Focus) => {
     refocusSel = `.focus-row [data-focus="${f}"]`;
     extras.onFocus!(f);
@@ -164,7 +167,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
   function render(state: GameState) {
     root.replaceChildren();
     for (const id of ids) {
-      if (upgradeLocked(state, id)) continue;
+      if (upgradeLocked(state, id) || (onlyId && id !== onlyId)) continue;
       const cost = isMaxLevel(state, id) ? null : priceOf(state, id);
       root.append(
         upgradeCard(lang, {
@@ -202,7 +205,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
 
   function update(state: GameState) {
     current = state;
-    const sig = signature(state, ids) + '|' + [...open].join() + '|' + marked + '|' + focusOn(state) + '|' + (haloOpen(state) ? haloSignature(state) : '');
+    const sig = signature(state, ids) + '|' + [...open].join() + '|' + marked + '|' + onlyId + '|' + focusOn(state) + '|' + (haloOpen(state) ? haloSignature(state) : '');
     if (sig !== last) {
       last = sig;
       render(state);
@@ -232,6 +235,11 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
       setTimeout(() => {
         if (flashing === id) flashing = null;
       }, 900);
+    },
+    only(id) {
+      onlyId = id && ids.includes(id) ? id : null;
+      last = '';
+      if (current) update(current);
     },
     mark(id) {
       if (id === marked) return;

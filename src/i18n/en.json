@@ -513,5 +513,7 @@
   "end.text": "The dusk sea, the foggy night sea and the sea under the aurora: all three lighthouses are shining. Ships find their way home at night. Thank you, keeper.",
   "end.halo": "The light can still grow: give the lighthouse rings of halo, each adding {p}% to every sea's income, without end. The town and decorations can keep growing too.",
   "end.ok": "See the halo",
-  "book.where": "Curios turn up among glowing drifting finds, in the boat's cargo, and now and then in the chest; tap a question mark for a hint."
+  "book.where": "Curios turn up among glowing drifting finds, in the boat's cargo, and now and then in the chest; tap a question mark for a hint.",
+  "upgrades.open": "Upgrades",
+  "upgrades.title": "All upgrades"
 }

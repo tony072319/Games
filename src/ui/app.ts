@@ -79,6 +79,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let glints: { el: HTMLElement; tag: Tag; when: () => boolean }[] = [];
   let glintKey = '';
   let goalBar!: HTMLButtonElement;
+  /** The upgrades sheet while it is open. */
+  let upgradesSheet: HTMLElement | null = null;
   /** The event at sea right now (under the goal), and the last one announced. */
   let eventBar!: HTMLElement;
   let eventKey = '';
@@ -138,7 +140,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     popupEl = showArrival(game, lang, lines, {
       destName: (d, sea) => destName(lang, sea ?? state.sea, d),
-      showUpgrade: (id) => panel.show(id),
+      showUpgrade: (id) => openUpgrades(id),
       collect: (double) => {
         const moved = takeChest();
         if (double) claimDouble(state, moved);
@@ -251,13 +253,59 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     ok.textContent = t(lang, 'end.ok');
     ok.addEventListener('click', () => {
       dismiss(overlay);
-      panel.show('light');
+      openUpgrades('light');
     });
     actions.append(ok);
     box.append(h, p1, p2, actions);
     overlay.append(box);
     game.append(overlay);
     ok.focus();
+  }
+
+  /**
+   * The upgrades sheet: rises from the bottom (a floating panel on wide screens) with one thing's card,
+   * or every card from the upgrades button. Closes from its button, a tap outside it, or Escape.
+   */
+  function openUpgrades(id: UpgradeId | null) {
+    const lang = state.settings.lang;
+    panel.only(id);
+    if (!upgradesSheet) {
+      const overlay = el('div', 'overlay sheet-bottom');
+      const box = el('div', 'seamap upgrades');
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-modal', 'true');
+      const head = el('div', 'map-head');
+      const title = el('h2');
+      const close = el('button', 'btn-ghost map-close');
+      close.type = 'button';
+      close.textContent = t(lang, 'map.close');
+      close.addEventListener('click', closeUpgrades);
+      head.append(title, close);
+      box.append(head, panel.el);
+      overlay.append(box);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeUpgrades();
+      });
+      overlay.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeUpgrades();
+      });
+      game.append(overlay);
+      upgradesSheet = overlay;
+    }
+    upgradesSheet.querySelector('h2')!.textContent = id ? t(lang, `upg.${id}.name`) : t(lang, 'upgrades.title');
+    // Polishing the lamp belongs with the lighthouse.
+    const box = upgradesSheet.querySelector('.upgrades')!;
+    if (id === 'light' || id === null) box.insertBefore(polishBtn, panel.el);
+    else polishBtn.remove();
+    refresh();
+    if (id) panel.show(id);
+    (upgradesSheet.querySelector<HTMLElement>('.card-main, .buy') ?? upgradesSheet.querySelector<HTMLElement>('.map-close'))?.focus();
+  }
+
+  function closeUpgrades() {
+    if (!upgradesSheet) return;
+    dismiss(upgradesSheet);
+    upgradesSheet = null;
   }
 
   /** A quiet fade to black and back, sailing from one sea to the next. */
@@ -700,6 +748,13 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       b.addEventListener('click', () => world?.focus(v));
       viewBtns.append(b);
     }
+    // All the upgrades in one place, beside the view buttons.
+    const allBtn = el('button', 'btn-quiet view-btn upgrades-btn');
+    allBtn.type = 'button';
+    allBtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13l6-6M8 3.5l4.5 4.5M9.5 2l4.5 4.5-2 2L7.5 4z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+    allBtn.append(t(lang, 'upgrades.open'));
+    allBtn.addEventListener('click', () => openUpgrades(null));
+    viewBtns.prepend(allBtn);
     stage.append(viewBtns);
     if (world) watchTaps(world);
     lightShown = -1;
@@ -782,7 +837,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       refresh();
     });
     polishKey = '';
-    const side = el('div', 'side');
+    // Over the picture: the next step and the event at sea, small, under the bar of materials.
+    const dock = el('div', 'dock');
     // Tapping it goes where the event is: the sea map for the whales, the sea for the rest.
     eventBar = el('button', 'sea-event');
     (eventBar as HTMLButtonElement).type = 'button';
@@ -795,8 +851,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     });
     eventBar.style.display = 'none';
     eventKey = '';
-    side.append(goalBar, eventBar, polishBtn, panel.el);
-    game.append(hud.el, stage, side);
+    dock.append(goalBar, eventBar);
+    stage.append(dock);
+    // The upgrades live in a sheet that opens when you tap something (or this button); the island has the screen.
+    upgradesSheet = null;
+    game.append(hud.el, stage);
     book = null;
     decorSheet = null;
     tree = null;
@@ -956,7 +1015,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (tag.startsWith('flotsam:')) return grabFlotsam(Number(tag.slice(8)), x, y);
     if (tag.startsWith('ship:')) return guide(Number(tag.slice(5)), x, y);
     if (tag === 'chest') {
-      if (chestTotal(state.chest) < 1) return panel.show('storage');
+      if (chestTotal(state.chest) < 1) return openUpgrades('storage');
       takeChest();
       refresh();
       save();
@@ -964,7 +1023,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       if (state.boat.cargo || state.boat2.cargo) unload();
       else openMap();
     } else if (tag === 'light' && canPassLight(state)) confirmPass();
-    else if (tag === 'light' || tag === 'net') panel.show(tag);
+    else if (tag === 'light' || tag === 'net') openUpgrades(tag);
     else if (tag === 'house') openBook();
     else if (tag === 'town' || tag === 'ground') {
       if (state.levels.light >= T.DECOR_FROM_LIGHT) openDecor();
@@ -1113,6 +1172,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const hint = el('span', 'event-hint');
     hint.textContent = t(lang, `event.${e.id}.hint`);
     eventBar.replaceChildren(title, hint);
+    eventBar.title = `${title.textContent} · ${hint.textContent}`;
   }
 
   function renderGoal() {
@@ -1155,7 +1215,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (g === 'map') return openMap();
     if (g === 'light' && canPassLight(state)) return confirmPass();
     if (g === 'ship') return world?.focus('sea');
-    if (g === 'net' || g === 'storage' || g === 'light' || g === 'recycle') panel.show(g);
+    if (g === 'net' || g === 'storage' || g === 'light' || g === 'recycle') return openUpgrades(g);
     const spotOn: Element | null =
       g === 'chest' ? chestBtn : g === 'boat' ? boatBtn : g === 'flotsam' ? flotsamLayer : g === 'storage' ? chestBtn : stage.querySelector(`.hit[data-hit="${g}"]`);
     if (!spotOn) return;

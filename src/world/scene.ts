@@ -113,6 +113,9 @@ interface Placed {
 
 /** The reference island size the default camera frames; bigger islands pull the home view back (homeScale). */
 const HOME_REACH = 6;
+/** On a portrait screen: how wide the view is across (degrees), and the tallest it may get. */
+const PORTRAIT_ACROSS_DEG = 37;
+const PORTRAIT_FOV_MAX = 66;
 
 export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -604,8 +607,10 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     canvas.style.height = `${h}px`;
     composer.setSize(w, h);
     cam.aspect = w / h;
-    // Portrait phones: step back so the island fits across.
-    cam.fov = w < h ? 40 : 34;
+    // Portrait phones: keep the island's width in view however tall the screen is (the picture now has
+    // the whole screen), by widening the view upward and downward rather than cutting the sides.
+    const across = (PORTRAIT_ACROSS_DEG * Math.PI) / 180;
+    cam.fov = w < h ? Math.min(PORTRAIT_FOV_MAX, (2 * Math.atan(Math.tan(across / 2) / cam.aspect) * 180) / Math.PI) : 34;
     cam.updateProjectionMatrix();
   }
   resize();
