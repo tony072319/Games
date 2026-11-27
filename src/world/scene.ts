@@ -10,6 +10,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { MaterialId, SeaId } from '../core/data';
 import type { Sky } from '../ui/sky';
@@ -25,11 +26,12 @@ const SHIP_MODEL: ModelId = 'kp/ship-medium';
 
 /** Ground colours for sculpted islands (the sea's wash is applied on top). */
 const GROUND_COLOURS = { sand: 0xf2dca0, grass: 0x8cc25a, rock: 0xa39a8c, path: 0xcdb48a };
-import { paletteFor, type Palette } from './palette';
-import { createSky } from './sky3d';
+import { mixColour, paletteFor, type Palette } from './palette';
+import { SUN_AZIMUTH, createSky } from './sky3d';
 import { disposeToon, toonMaterial, toonRamp } from './toon';
 import { createWater } from './water';
 import { createLife, type Life } from './life';
+import { GradeShader, createBeam, createClouds, createMist } from './atmosphere';
 
 export type AnchorTag = Tag | `flotsam:${number}` | `ship:${number}`;
 export interface FlotsamView {
@@ -74,6 +76,8 @@ export interface World {
   readonly info: () => { geometries: number; textures: number };
   /** Test hook: the three.js scene. */
   readonly scene: THREE.Scene;
+  /** Test hook: lower the camera toward the horizon (tilt 0..1) and move it nearer or farther (zoom). */
+  testView(tilt: number, zoom: number): void;
 }
 export interface WorldOptions {
   calm: boolean;
@@ -152,8 +156,16 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   Object.assign(key.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });
   key.shadow.bias = -0.0006;
   scene.add(key);
+  // The setting sun behind the island: a warm edge on everything that faces it (no shadows of its own).
+  const rim = new THREE.DirectionalLight(0xffb070, 0);
+  rim.position.set(SUN_AZIMUTH.x * 30, 5, SUN_AZIMUTH.y * 30);
+  scene.add(rim);
   const water = createWater();
   scene.add(water.mesh);
+  const clouds = createClouds();
+  scene.add(clouds.group);
+  const mist = createMist();
+  scene.add(mist.group);
   const sandMat = new THREE.MeshToonMaterial({ color: 0xf6dfae, gradientMap: toonRamp() });
   // Sculpted ground: colours come from the mesh; flat faces for the low-poly look.
   const groundMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() });
@@ -177,6 +189,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.6, 0.97);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  const grade = new ShaderPass(GradeShader);
+  composer.addPass(grade);
 
   // ---------- models ----------
   const gltf = new GLTFLoader();
@@ -401,31 +415,33 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   const drift = new Map<number, THREE.Object3D>();
   const seaShips = new Map<number, THREE.Object3D>();
 
-  // The lighthouse beam: at night it sweeps the sea; guiding a ship, it swings onto it for a moment.
-  // Long enough to reach the ships passing far out.
-  const beamGeo = new THREE.ConeGeometry(4, 60, 24, 1, true).translate(0, -30, 0).rotateZ(Math.PI / 2);
-  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffe3a0, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  const beam = new THREE.Mesh(beamGeo, beamMat);
-  beam.visible = false;
-  scene.add(beam);
+  // The lighthouse beams: from dusk on they sweep the sea; guiding a ship, one swings onto it for a moment.
+  const beam = createBeam();
+  scene.add(beam.group);
   let beamAim: { x: number; z: number; until: number } | null = null;
   let beamAngle = 0;
   let beamTower: THREE.Object3D | null = null;
-  let beamHeight = 0;
+  const lampAt = new THREE.Vector3();
   /** The scene clock last seen by updateBeam (it pauses with the tab and slows in calm mode). */
   let sceneTime = 0;
+  /** 0..1 how thick the air is: the fog sea. */
+  let haze = 0;
   function updateBeam(t: number, night: number) {
     sceneTime = t;
     const tower = tagObj.get('light');
-    beam.visible = !!tower && night > 0.3 && !calm;
-    if (!beam.visible || !tower) return;
+    // Faint while the sun is still up, full once it has set.
+    const strength = tower && !calm ? Math.min(1, Math.max(0, (night - 0.12) * 1.6)) * (1 - 0.25 * pal.deep) + haze * 0.35 * (tower ? 1 : 0) : 0;
+    if (!tower || strength <= 0.01) {
+      beam.set(lampAt, beamAngle, 0, haze, cam, t);
+      water.setBeam(beamAngle, 0);
+      return;
+    }
     // The lamp's height, measured once per lighthouse model (it changes with the light level).
     if (beamTower !== tower) {
       beamTower = tower;
       const box = new THREE.Box3().setFromObject(tower);
-      beamHeight = box.max.y - Math.min(1.2, (box.max.y - box.min.y) * 0.15);
+      lampAt.set(tower.position.x, box.max.y - Math.min(1.2, (box.max.y - box.min.y) * 0.15), tower.position.z);
     }
-    beam.position.set(0, beamHeight, 0);
     let want = t * 0.35;
     if (beamAim && t < beamAim.until) want = Math.atan2(-beamAim.z, beamAim.x);
     else beamAim = null;
@@ -435,8 +451,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     if (d < -Math.PI) d += 2 * Math.PI;
     // Swing smoothly onto a guided ship and back to the sweep.
     beamAngle += Math.abs(d) > 0.05 ? d * 0.15 : d;
-    beam.rotation.set(0, beamAngle, -0.06);
-    beamMat.opacity = 0.16 * Math.min(1, (night - 0.3) * 3);
+    beam.set(lampAt, beamAngle, strength, haze, cam, t);
+    water.setBeam(beamAngle, strength);
   }
 
   /** Coming home lucky: a warm lantern on the boat and two gulls flying along. */
@@ -595,6 +611,26 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     pulses.push({ obj: o, t0: now });
   }
 
+  // ---------- air ----------
+  /**
+   * The haze follows the camera, so the home island always reads clearly however far you stand:
+   * in the fog sea the island is in thin mist and everything beyond it sinks into the fog; in the
+   * other seas only the far distance softens.
+   */
+  function updateAir() {
+    const fog = scene.fog as THREE.Fog;
+    const d = cam.position.distanceTo(controls.target);
+    if (haze > 0) {
+      fog.near = d * 0.62;
+      fog.far = d * 0.62 + 46 * homeScale();
+    } else {
+      fog.near = Math.max(70 * homeScale(), d * 1.5);
+      fog.far = fog.near + 170 * homeScale();
+    }
+    water.setFog(haze, fog.near, fog.far);
+    mist.set(haze, pal.fog, (homeGround?.radius ?? 6) * 1.12);
+  }
+
   // ---------- sizing ----------
   function resize() {
     const w = Math.max(1, host.clientWidth);
@@ -627,6 +663,12 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     t += dt * speed;
     water.tick(t);
     sky.tick(t);
+    // The sky stands round whoever is looking, so its horizon is always at eye level.
+    sky.mesh.position.copy(cam.position);
+    clouds.tick(dt * speed, cam.position.y);
+    mist.tick(t);
+    grade.uniforms.T.value = t;
+    updateAir();
     for (const p of placed.values()) {
       p.mixer?.update(dt * speed);
       if (p.item.bob) {
@@ -777,6 +819,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       lastSky = s;
       lastSea = sea;
       pal = paletteFor(s, sea);
+      haze = sea === 'fog' ? 1 : 0;
+      sky.setHaze(haze);
       sky.setPalette(pal);
       water.setPalette(pal);
       (scene.fog as THREE.Fog).color.setHex(pal.fog);
@@ -785,14 +829,13 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       hemi.intensity = pal.hemiIntensity;
       key.color.setHex(pal.key);
       key.intensity = pal.keyIntensity;
+      rim.color.setHex(mixColour(0xffa860, 0x8aa0ff, pal.deep));
+      rim.intensity = 0.9 * (1 - 0.6 * pal.night) + 0.35 * pal.deep;
       bloom.strength = pal.bloom;
       renderer.toneMappingExposure = pal.exposure;
-      const fog = scene.fog as THREE.Fog;
-      // The fog sea lives up to its name; the others keep a soft, far haze.
-      // Fog distances follow the home view, so a grown island is not lost in the fog sea's fog.
-      const k = homeScale();
-      fog.near = (sea === 'fog' ? 10 : 70) * k;
-      fog.far = (sea === 'fog' ? 55 : 220) * k;
+      clouds.setPalette(pal);
+      grade.uniforms.night.value = pal.night;
+      updateAir();
       sky.setAurora(sea === 'aurora' ? 1 : 0);
     },
     setLight(level, reach = level) {
@@ -830,6 +873,16 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       let o: THREE.Object3D | null = hit.object;
       while (o && !o.userData.tag) o = o.parent;
       return (o?.userData.tag as AnchorTag) ?? null;
+    },
+    testView(tilt, zoom) {
+      const off = cam.position.clone().sub(controls.target);
+      const dist = off.length() * zoom;
+      const flat = Math.hypot(off.x, off.z);
+      const pitch = Math.atan2(off.y, flat) * (1 - tilt) + 0.2 * tilt;
+      const k = (Math.cos(pitch) * dist) / flat;
+      cam.position.set(controls.target.x + off.x * k, controls.target.y + Math.sin(pitch) * dist, controls.target.z + off.z * k);
+      lastInput = Infinity;
+      controls.update();
     },
     aimBeam(x, z) {
       // Measured on the scene's own clock (the one updateBeam is given).
@@ -880,8 +933,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       glowGeo.dispose();
       beaconMat.dispose();
       hitGeo.dispose();
-      beamGeo.dispose();
-      beamMat.dispose();
+      beam.dispose();
+      clouds.dispose();
+      mist.dispose();
       hitMat.dispose();
       glowMats.forEach((m) => m.dispose());
       disposeToon();

@@ -91,19 +91,6 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
     return m;
   });
 
-  // Clouds.
-  const clouds = [
-    [-22, 13, -30, 2.2],
-    [18, 15, -34, 2.8],
-    [4, 18, -45, 3.2],
-    [-34, 11, -10, 2],
-    [30, 12, -8, 2.4],
-  ].map(([x, y, z, s]) => {
-    const c = holder('kk/cloud_big', 2 * s, 0xfff0f4);
-    c.position.set(x, y, z);
-    return c;
-  });
-
   // Whale and dolphins (Quaternius, with their swim animation).
   const mixers: THREE.AnimationMixer[] = [];
   const animal = (model: ModelId) => {
@@ -200,11 +187,6 @@ export function createLife(scene: THREE.Scene, template: TemplateFn, instance: I
         s.visible = i < nShip;
         s.scale.setScalar(0.7 + 0.3 * Math.max(0, Math.sin(t * 1.5 + i * 2)));
       });
-      // Clouds drift.
-      for (const c of clouds) {
-        c.position.x += dt * 0.25;
-        if (c.position.x > 45) c.position.x = -45;
-      }
       // The whale passes far out every few minutes once the light reaches 5.
       if ((ctx.light >= 5 || forced) && !ctx.calm && t > whaleAt) {
         const k = (t - whaleAt) / 40;

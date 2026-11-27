@@ -3,6 +3,7 @@ import { paletteFor } from '../../src/world/palette';
 import { skyAt, type Sky } from '../../src/ui/sky';
 
 const dusk: Sky = { ...skyAt(0), sun: 1, moon: 0 };
+const evening: Sky = { ...skyAt(0), sun: 0, moon: 0.4 };
 const night: Sky = { ...skyAt(0), sun: 0, moon: 1 };
 
 describe('paletteFor', () => {
@@ -12,11 +13,24 @@ describe('paletteFor', () => {
     expect(p.shallow).toBe(0x8ff0dc);
     expect(p.night).toBe(0);
   });
-  test('deep night gives the sample G evening colours', () => {
-    const p = paletteFor(night, 'dusk');
+  test('once the sun has set, the sample G evening colours', () => {
+    const p = paletteFor(evening, 'dusk');
     expect(p.water).toBe(0x2c5f8f);
     expect(p.night).toBe(1);
+    expect(p.deep).toBe(0);
     expect(p.bloom).toBeGreaterThan(paletteFor(dusk, 'dusk').bloom);
+  });
+  test('with the moon high the night deepens: darker water, a darker sky', () => {
+    const e = paletteFor(evening, 'dusk');
+    const p = paletteFor(night, 'dusk');
+    expect(p.deep).toBe(1);
+    expect(p.night).toBe(1);
+    const lum = (c: number) => ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255);
+    expect(lum(p.water)).toBeLessThan(lum(e.water));
+    expect(lum(p.top)).toBeLessThan(lum(e.top));
+  });
+  test('the sun does not deepen the night while it is still up', () => {
+    expect(paletteFor({ ...dusk, sun: 0.5, moon: 1 }, 'dusk').deep).toBe(0);
   });
   test('the fog and aurora seas have their own air', () => {
     const d = paletteFor(dusk, 'dusk');
