@@ -52,9 +52,18 @@ export function buildBoat(s: GameState): boolean {
   return true;
 }
 
-/** Light the boat needs to find an island here: in the fog, one level more than elsewhere. */
+/**
+ * Light that shows an island on the sea. The boats follow the light to a new sea, so there the
+ * nearest island (the wreck) is in sight from the first level: they can sail at once.
+ */
+export function seeLight(s: GameState, d: DestId): number {
+  return d === 'wreck' && s.sea !== 'dusk' ? 1 : DESTS[d].needLight;
+}
+
+/** Light the boat needs to find an island here: in the fog, one level more than elsewhere (not the nearest). */
 export function needLightHere(s: GameState, d: DestId): number {
-  return DESTS[d].needLight + (s.sea === 'fog' ? T.FOG_EXTRA_LIGHT : 0);
+  const see = seeLight(s, d);
+  return see + (s.sea === 'fog' && see > 1 ? T.FOG_EXTRA_LIGHT : 0);
 }
 
 export function reachable(s: GameState, d: DestId): boolean {

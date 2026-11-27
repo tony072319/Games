@@ -1,6 +1,6 @@
 import { T } from '../core/tuning';
 import { FRIEND_MAX, canDeliver, commissionFor, friendOf } from '../core/commission';
-import { boatCost, DESTS, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere, BOAT2_COST, canBuildBoat2, freeBoat } from '../core/boat';
+import { boatCost, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needLightHere, seeLight, BOAT2_COST, canBuildBoat2, freeBoat } from '../core/boat';
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, SEA_IDS, type DestId, type SeaId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
@@ -120,7 +120,7 @@ ${path}
   function nodes(s: GameState) {
     for (const d of DEST_IDS) {
       const p = pos(d);
-      const lit = s.levels.light >= DESTS[d].needLight;
+      const lit = s.levels.light >= seeLight(s, d);
       const found = s.discovered.includes(d);
       const b = el('button', `node ${lit ? (found ? 'found' : 'unknown') : 'dark'}${selected === d ? ' sel' : ''}${found && islandTier(s, d) > 0 ? ' flourish' : ''}`);
       b.style.left = `${(p.x / 360) * 100}%`;
@@ -181,7 +181,7 @@ ${path}
       return;
     }
     const d = selected;
-    const lit = s.levels.light >= DESTS[d].needLight;
+    const lit = s.levels.light >= seeLight(s, d);
     const found = s.discovered.includes(d);
     const h = el('h3');
     h.textContent = lit ? (found ? destName(lang, s.sea, d) : t(lang, 'map.unknown')) : '…';

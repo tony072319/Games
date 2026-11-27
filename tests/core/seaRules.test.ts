@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest';
 import { MATERIALS } from '../../src/core/data';
 import { buildBoat, reachable, settleVoyage, startVoyage, unloadBoat } from '../../src/core/boat';
 import { newGame, type GameState } from '../../src/core/state';
+import { nextGoal } from '../../src/core/advice';
+import { worldLayout } from '../../src/world/layout';
 
 const quiet = () => 0.99;
 const at = (sea: GameState['sea'], light: number): GameState => {
@@ -16,9 +18,23 @@ const at = (sea: GameState['sea'], light: number): GameState => {
 
 describe('each sea has its own islands', () => {
   test('in the fog an island needs one more level of light before the boat finds it', () => {
-    expect(reachable(at('dusk', 3), 'wreck')).toBe(true);
-    expect(reachable(at('fog', 3), 'wreck')).toBe(false);
-    expect(reachable(at('fog', 4), 'wreck')).toBe(true);
+    expect(reachable(at('dusk', 4), 'gullrock')).toBe(true);
+    expect(reachable(at('fog', 4), 'gullrock')).toBe(false);
+    expect(reachable(at('fog', 5), 'gullrock')).toBe(true);
+  });
+  test('the boats follow the light to a new sea: its nearest island is there from the first level', () => {
+    for (const sea of ['fog', 'aurora'] as const) {
+      const s = at(sea, 1);
+      s.boat.built = true;
+      expect(reachable(s, 'wreck')).toBe(true);
+      expect(reachable(s, 'gullrock')).toBe(false);
+      expect(nextGoal(s).key).not.toBe('goal.dock');
+      expect(worldLayout(s, 0).some((i) => i.key.startsWith('isle:wreck'))).toBe(true);
+    }
+    // The first sea is unchanged: the first boat and the dock come at lighthouse 3.
+    const d = at('dusk', 2);
+    d.boat.built = true;
+    expect(reachable(d, 'wreck')).toBe(false);
   });
   test('under the aurora the first trip breaks the ice and brings nothing', () => {
     const s = at('aurora', 6);

@@ -4,7 +4,7 @@ import { DECOR_IDS } from '../core/decor';
  * What the world should contain for a game state: a flat list of placed models.
  * Pure, so it can be tested; the renderer diffs it by `key`.
  */
-import { DESTS, boatOf } from '../core/boat';
+import { DESTS, boatOf, seeLight } from '../core/boat';
 import { townShown } from '../core/town';
 import { answeringLights } from '../core/answering';
 import type { Ship } from '../core/ships';
@@ -229,7 +229,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   // Islands the light reaches.
   for (const d of Object.keys(DESTS) as DestId[]) {
     const [q, r] = DEST_HEX[d];
-    if (litRadius(light) < hexDist(q, r)) continue;
+    if (litRadius(light) < hexDist(q, r) && light < seeLight(s, d)) continue;
     const [ix, iz] = hexToWorld(q, r);
     const found = s.discovered.includes(d);
     const shape = DEST_SHAPES[d];
