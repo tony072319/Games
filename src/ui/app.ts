@@ -305,6 +305,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   function openDecor() {
     if (decorSheet) return;
     const lang = state.settings.lang;
+    const closeDecor = () => {
+      if (decorSheet) dismiss(decorSheet.el);
+      decorSheet = null;
+    };
     decorSheet = createDecorSheet(lang, state, {
       buy: (id: DecorId | 'land') => {
         if (id === 'land') {
@@ -316,12 +320,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         }
         sound.play('upgrade');
         save();
+        // Close the sheet so the new piece (and the toast) can be seen on the island.
+        closeDecor();
         refresh();
       },
-      close: () => {
-        if (decorSheet) dismiss(decorSheet.el);
-        decorSheet = null;
-      },
+      close: closeDecor,
     });
     game.append(decorSheet.el);
   }
@@ -1050,9 +1053,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const lang = state.settings.lang;
     // The first night a ship passes (after the first-time steps): show how to guide it.
     // (Only with the 3D picture: without it there is no ship to tap.)
-    const hinted = world ? guideHint(state, shipField.ships, hintShip) : undefined;
-    if (hinted !== undefined) hintShip = hinted;
-    const shipOut = hinted !== undefined;
+    // Only while that ship is in the picture: a goal about a ship you cannot see helps nobody.
+    const onScreen = (id: number) => !!world?.anchor(`ship:${id}`)?.visible;
+    const open = world ? shipField.ships.filter((sh) => hintShip !== undefined || onScreen(sh.id)) : [];
+    const hinted = world ? guideHint(state, open, hintShip) : undefined;
+    if (hinted !== undefined && onScreen(hinted)) hintShip = hinted;
+    const shipOut = hinted !== undefined && onScreen(hinted);
     // With the lighthouse mended, the next step is to pass the light on (tap the lighthouse).
     const passNow = canPassLight(state);
     const g: Goal = passNow ? { key: 'goal.pass', target: 'light' } : shipOut ? { key: 'goal.guide', target: 'ship' } : nextGoal(state);

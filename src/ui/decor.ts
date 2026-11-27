@@ -24,8 +24,11 @@ export function createDecorSheet(lang: Lang, state: GameState, opts: { buy(id: D
   close.textContent = t(lang, 'map.close');
   close.addEventListener('click', opts.close);
   head.append(title, close);
+  // Why every price goes up after a purchase (they share one ladder), and that they only change the look.
+  const note = el('p', 'decor-note');
+  note.textContent = t(lang, 'decor.note');
   const list = el('div', 'panel decor-list');
-  box.append(head, list);
+  box.append(head, note, list);
   overlay.append(box);
   let last = '';
 

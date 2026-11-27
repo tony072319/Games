@@ -323,7 +323,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   max-height: 100%;
   margin: auto;
   overflow-y: auto;
-  display: grid;
+  /* A column that scrolls: nothing in it may shrink, or the boat cards slide over the sail row on short screens. */
+  display: flex;
+  flex-direction: column;
   gap: var(--sp-3);
   padding: var(--sp-3);
   border-radius: var(--r-lg);
@@ -331,6 +333,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   border: 1px solid var(--c-line);
   box-shadow: var(--shadow-dialog);
 }
+.seamap > * { flex-shrink: 0; }
 .map-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 .map-head h2 { margin: 0; }
 .chart { position: relative; width: 100%; max-width: var(--w-dialog); margin: 0 auto; aspect-ratio: 1; }
@@ -512,6 +515,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .ask-row .hearts { color: var(--c-gold); letter-spacing: 1px; }
 .ask-row .ask-text { flex: 1 1 12em; color: var(--c-ink-dim); font-size: var(--fs-body); }
 
+.decor-note { margin: 0; color: var(--c-ink-dim); font-size: var(--fs-caption); }
 .sea-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); width: 100%; order: 3; }
 .sea-chips .chip { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-sm); border: 1px solid var(--c-surface-2); background: none; color: var(--c-ink-dim); font-size: var(--fs-body); cursor: pointer; }
 .sea-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
@@ -522,7 +526,8 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .focus-chips { display: flex; gap: var(--sp-1); }
 .focus-chips .chip { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-sm); border: 1px solid var(--c-surface-2); background: none; color: var(--c-ink-dim); font-size: var(--fs-body); cursor: pointer; min-height: var(--tap); }
 .focus-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
-.focus-row .focus-hint { flex: 1 1 100%; color: var(--c-ink-dim); font-size: var(--fs-caption); }
+.focus-row .focus-hint { flex: 1 1 8em; color: var(--c-ink-dim); font-size: var(--fs-caption); }
+.focus-row .focus-chips { flex: 1 1 100%; }
 
 /* Island buttons: invisible over the 3D picture; without it, a plain tappable list. */
 .hit { font-size: 0; color: transparent; }

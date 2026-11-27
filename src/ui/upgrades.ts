@@ -115,7 +115,8 @@ function focusRow(lang: Lang, state: GameState, onFocus: (f: Focus) => void): HT
   }
   const hint = el('span', 'focus-hint');
   hint.textContent = t(lang, `focus.${state.focus}.hint`);
-  row.append(label, chips, hint);
+  // What the chosen focus does comes first, so it is seen before the choice even on a short screen.
+  row.append(label, hint, chips);
   return row;
 }
 
@@ -220,7 +221,9 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
       last = '';
       flashing = id;
       if (current) update(current);
-      root.querySelector(`[data-upgrade="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // The lighthouse brings its light-focus row into view with it (it sits just below the card).
+      const shown = (id === 'light' && root.querySelector('.focus-row')) || root.querySelector(`[data-upgrade="${id}"]`);
+      shown?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       setTimeout(() => {
         if (flashing === id) flashing = null;
       }, 900);

@@ -73,7 +73,7 @@ function decorCards(lang: Lang, state: GameState, buy: (id: DecorId) => void): C
       effect: tier === 0 ? undefined : next ? t(lang, 'decor.next', { name: next }) : t(lang, 'decor.done'),
       cost,
       have: state.materials,
-      buyLabel: t(lang, 'decor.buy'),
+      buyLabel: t(lang, tier === 0 ? 'decor.buy' : 'decor.upgrade'),
       canBuy: canDecorate(state, id),
       state: cost ? affordState(state, cost) : 'far',
       eta: cost ? etaText(state, cost, lang) : undefined,

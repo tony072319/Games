@@ -504,5 +504,7 @@
   "halo.desc": "All three seas are lit, and the light can still grow. Each ring of halo adds 5% to every sea's income, without end.",
   "halo.next": "Next ring: every sea earns 5% more (now +{n}%)",
   "halo.bought": "The lighthouse has a new ring of halo (ring {n}); the whole sea is brighter.",
-  "goal.halo": "Add a ring of halo to the lighthouse"
+  "goal.halo": "Add a ring of halo to the lighthouse",
+  "decor.upgrade": "Upgrade",
+  "decor.note": "Decorations only change the look, not what you earn. Each one placed or upgraded makes every decoration cost a little more."
 }

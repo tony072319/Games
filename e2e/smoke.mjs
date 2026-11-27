@@ -312,11 +312,17 @@ try {
   await page.locator('.seamap.decor').waitFor();
   if ((await page.locator('[data-decor]').count()) !== 11) fail('the sheet should list growing the island and 10 decorations');
   await page.locator('[data-decor="land"] .buy').click();
-  await page.waitForTimeout(300);
+  // Buying closes the sheet so the change can be seen on the island.
+  await page.locator('.seamap.decor').waitFor({ state: 'detached', timeout: 2000 }).catch(() => fail('growing the island should close the sheet to show it'));
+  await tapHit('build');
+  await page.locator('.seamap.decor').waitFor();
   if (!(await page.locator('[data-decor="land"]').textContent())?.includes('1/')) fail('growing the island should count one tile');
   await page.locator('[data-decor="lantern"] .buy').click();
-  await page.waitForTimeout(300);
+  await page.locator('.seamap.decor').waitFor({ state: 'detached', timeout: 2000 }).catch(() => fail('placing a decoration should close the sheet to show it'));
+  await tapHit('build');
+  await page.locator('.seamap.decor').waitFor();
   if (!(await page.locator('[data-decor="lantern"] .level').textContent())?.includes('1')) fail('placing the lantern should show tier 1');
+  if ((await page.locator('[data-decor="lantern"] .buy').textContent())?.trim() !== '升级') fail('a placed decoration should offer to upgrade');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/decor.png` });
   await page.locator('.seamap.decor .map-close').click();
   await page.locator('.seamap.decor').waitFor({ state: 'detached', timeout: 2000 });
@@ -414,6 +420,38 @@ try {
     await buy.click();
     await p3.waitForFunction(() => JSON.parse(localStorage.getItem('lightkeeper.save')).halo === 1, null, { timeout: 4000 }).catch(() => fail('buying a ring of halo should be saved'));
     await ctx3.close(); }
+  // On a small phone and a short wide window the sea map's buttons are not covered by the boat cards.
+  for (const vp of [{ width: 360, height: 640 }, { width: 1280, height: 720 }]) {
+    const c = await browser.newContext({ viewport: vp, locale: 'zh-CN' });
+    const p0 = await c.newPage();
+    await p0.goto(BASE);
+    await p0.waitForTimeout(1500);
+    await p0.close();
+    await c.addInitScript(() => {
+      if (localStorage.getItem('__seeded')) return;
+      const s = JSON.parse(localStorage.getItem('lightkeeper.save'));
+      s.levels.light = 4;
+      s.boat.built = true;
+      s.discovered = ['wreck'];
+      s.stats.tutorial = 3;
+      for (const m of Object.keys(s.materials)) s.materials[m] = 1e6;
+      localStorage.setItem('lightkeeper.save', JSON.stringify(s));
+      localStorage.setItem('__seeded', '1');
+    });
+    const pm = await c.newPage();
+    await pm.goto(BASE);
+    await pm.locator('.hit[data-hit="map"]').waitFor({ state: 'attached', timeout: 8000 });
+    await pm.locator('.hit[data-hit="map"]').focus();
+    await pm.keyboard.press('Enter');
+    await pm.locator('.node[data-dest="wreck"]').click();
+    for (const sel of ['.buy.sail', '.land']) {
+      const b = pm.locator(sel).first();
+      await b.scrollIntoViewIfNeeded();
+      const covered = await b.evaluate((e) => { const r = e.getBoundingClientRect(); const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(top === e || e.contains(top)); });
+      if (covered) fail(`at ${vp.width}x${vp.height} the sea map's ${sel} button is covered`);
+    }
+    await c.close();
+  }
   if (errors.length) fail('page errors: ' + errors.join('; '));
   await browser.close();
   console.log('e2e smoke: PASS');
