@@ -91,6 +91,10 @@ export const T = {
   FOG_RATE: 1.77,
   FOG_COST: 21,
   AURORA_RATE: 3.4,
+  /** In a new sea (after the first) the net's first levels (below this) and the lighthouse up to the dock cost this share. */
+  NEW_SEA_NET: 5,
+  NEW_SEA_LIGHT: 3,
+  NEW_SEA_EARLY: 0.1,
   AURORA_COST: 110,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
   LIGHT_COST_MULT: 0.8,

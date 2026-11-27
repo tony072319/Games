@@ -84,7 +84,9 @@ describe('sea economy', () => {
     const s = newGame(0, 'zh');
     s.sea = 'fog';
     expect(netRate(s)).toBeCloseTo(autoRate(1) * SEA_DEF.fog.rate);
-    expect(upgradeCost('net', 1, s).wood).toBe(Math.round(15 * SEA_DEF.fog.cost));
+    // From net 5 a sea costs SEA_DEF.cost times the first; below that a new sea is a quick restart.
+    expect(upgradeCost('net', 5, s).wood).toBe(Math.ceil(upgradeCost('net', 5).wood * SEA_DEF.fog.cost));
+    expect(upgradeCost('net', 1, s).wood).toBe(Math.ceil(15 * SEA_DEF.fog.cost * T.NEW_SEA_EARLY));
     expect(upgradeCost('speed', 1, s).wood).toBe(150); // boat upgrades don't scale
     s.starlight = 10;
     expect(netRate(s)).toBeCloseTo(autoRate(1) * SEA_DEF.fog.rate * (1 + 10 * T.STAR_BONUS));

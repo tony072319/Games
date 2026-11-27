@@ -82,6 +82,9 @@ export function upgradeCost(id: UpgradeId, currentLevel: number, state?: GameSta
   if (state && (id === 'net' || id === 'storage' || id === 'light')) {
     const k = SEA_DEF[state.sea].cost;
     if (k !== 1) for (const m of MATERIALS) c[m] = Math.ceil(c[m] * k);
+    // A fresh start after passing the light: a new sea's first net and lighthouse levels come back quickly.
+    if (state.sea !== 'dusk' && ((id === 'net' && L < T.NEW_SEA_NET) || (id === 'light' && L < T.NEW_SEA_LIGHT)))
+      for (const m of MATERIALS) c[m] = Math.ceil(c[m] * T.NEW_SEA_EARLY);
   }
   if (id === 'speed') {
     c.wood = g(150, 1.9);

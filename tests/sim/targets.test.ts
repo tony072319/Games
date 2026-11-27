@@ -69,3 +69,28 @@ describe('robust', () => {
   test('an ideal player for a week never breaks the numbers', () => expect(simulate(IDEAL, { seas: 3, maxDays: 7 }).broken).toBe(false));
   test('a keen player is faster than a normal one', () => expect(keen.seas[0].days).toBeLessThan(normal.seas[0].days));
 });
+
+describe('a new sea starts quickly (passing the light is a fresh start, not a wall)', () => {
+  // When each milestone is first seen after arriving in a sea, in hours (normal player).
+  const reach: Record<string, Record<string, number>> = {};
+  let sea = '';
+  let at = 0;
+  simulate(NORMAL, {
+    seas: 3,
+    maxDays: 120,
+    onVisit: (s, now) => {
+      if (s.sea !== sea) {
+        sea = s.sea;
+        at = now;
+      }
+      const r = (reach[s.sea] ??= {});
+      if (s.levels.net >= 5) r.net5 ??= (now - at) / 3600e3;
+      if (s.levels.light >= 3) r.light3 ??= (now - at) / 3600e3;
+    },
+  });
+  for (const id of ['fog', 'aurora'])
+    test(`${id}: net 5 and lighthouse 3 by the next visit (within 12 hours)`, () => {
+      expect(reach[id]?.net5, 'net 5').toBeLessThanOrEqual(12);
+      expect(reach[id]?.light3, 'lighthouse 3').toBeLessThanOrEqual(12);
+    });
+});
