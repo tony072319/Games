@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { mixColour, type Palette } from './palette';
 
 /** The colour of the sea far out, where it meets the sky: its own colour, lightened by the air. */
-export const farSea = (p: Palette, haze = 0) => mixColour(mixColour(mixColour(p.water, p.low, 0.42), p.fog, 0.12), p.fog, haze * 0.9);
+export const farSea = (p: Palette, haze = 0) => mixColour(mixColour(mixColour(p.water, p.low, 0.3), p.fog, 0.06), p.fog, haze * 0.9);
 
 /** Where the sun sets and the moon stands (shared with the sea, so the glitter lies under them). */
 export const SUN_AZIMUTH = new THREE.Vector2(-0.334, -0.942).normalize();

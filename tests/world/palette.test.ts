@@ -9,7 +9,7 @@ const night: Sky = { ...skyAt(0), sun: 0, moon: 1 };
 describe('paletteFor', () => {
   test('the sun up gives the cozy day colours of sample G', () => {
     const p = paletteFor(dusk, 'dusk');
-    expect(p.water).toBe(0x3aa6c9);
+    expect(p.water).toBe(0x36a2c8);
     expect(p.shallow).toBe(0x8ff0dc);
     expect(p.night).toBe(0);
   });
@@ -40,7 +40,7 @@ describe('paletteFor', () => {
   test('half way is in between', () => {
     const p = paletteFor({ ...dusk, sun: 0.5 }, 'dusk');
     expect(p.night).toBeCloseTo(0.5);
-    expect(p.water).not.toBe(0x3aa6c9);
+    expect(p.water).not.toBe(0x36a2c8);
     expect(p.water).not.toBe(0x2c5f8f);
   });
 });

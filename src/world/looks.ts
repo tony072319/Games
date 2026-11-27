@@ -158,21 +158,30 @@ export function boatModel(speed: number, cargo: number): ModelId {
 
 /** Each island's own look once found; the same main model, darkened, before. */
 export const ISLAND_DECOR: Record<DestId, Part[]> = {
+  // A wooden wreck high on the reef, its anchor and a few crates washed up beside it.
   wreck: [
-    { part: 'hull', model: 'under/shipwreck_hull', dx: -1.2, dz: -0.9, dy: -0.25, rotY: 0.7 },
-    { part: 'rock', model: 'under/sea_rock_big', dx: 1.4, dz: -1.4, dy: -0.2 },
+    { part: 'hull', model: 'kp/ship-wreck', dx: -1.0, dz: -0.8, dy: -0.1, rotY: 0.7, size: 2.6 },
+    { part: 'rock', model: 'kk/rock_single_C', dx: 1.4, dz: -1.3, dy: -0.1, size: 1.1 },
+    { part: 'anchor', model: 'under/ship_anchor', dx: 0.9, dz: 0.9, rotY: 0.5, size: 0.7 },
+    { part: 'crate', model: 'kp/crate', dx: -0.2, dz: 1.2, rotY: 0.4, size: 0.4 },
   ],
   gullrock: [
     { part: 'stack', model: 'lh/sea_stack', dx: -0.4, dz: -1.6, dy: -0.2, size: 4 },
-    { part: 'rock', model: 'lh/sea_rock_large', dx: 1.6, dz: -1.2, dy: -0.2 },
+    { part: 'rock', model: 'kk/rock_single_B', dx: 1.6, dz: -1.1, dy: -0.15, size: 1.0 },
+    { part: 'rock2', model: 'kk/rock_single_D', dx: -1.7, dz: 0.6, dy: -0.1, size: 0.7 },
   ],
   oldlight: [
     { part: 'tower', model: 'lh/lighthouse_small', dx: -0.6, dz: -1.2, size: 3.6, tint: 0x9a96a8 },
-    { part: 'rock', model: 'nature/rock_cluster', dx: 1.4, dz: -1.0 },
+    { part: 'rock', model: 'kk/rock_single_C', dx: 1.5, dz: -1.0, size: 0.9 },
+    { part: 'fir', model: 'kk/tree_single_A', dx: -1.7, dz: 0.3, size: 1.5 },
+    { part: 'fir2', model: 'kk/tree_single_B', dx: 0.6, dz: 1.5, size: 1.2 },
   ],
   firefly: [
     { part: 'palm', model: 'volcano/palm_tree', dx: -0.8, dz: -1.3 },
     { part: 'banana', model: 'huts/banana_plant', dx: 1.3, dz: -1.0 },
+    { part: 'tree', model: 'nature/round_tree', dx: 0.2, dz: -1.6, size: 1.7 },
+    { part: 'tree2', model: 'nature/round_tree', dx: -1.6, dz: 0.2, size: 1.4 },
+    { part: 'palm2', model: 'huts/palm_small', dx: 1.5, dz: 0.8 },
   ],
 };
 

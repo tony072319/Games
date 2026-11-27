@@ -36,9 +36,9 @@ export interface Palette {
 type Colours = Omit<Palette, 'night' | 'deep' | 'sunUp'>;
 
 const DAY: Colours = {
-  top: 0x6fa6ea, mid: 0xf2a3bf, low: 0xffc58c, sun: 0xfff0cc, cloud: 0xfff4e4, cloudShade: 0xdf98b4,
-  water: 0x3aa6c9, shallow: 0x8ff0dc, foam: 0xffffff, fog: 0xf4c6c0,
-  hemiSky: 0xcfe0ff, hemiGround: 0xf0c0a0, hemiIntensity: 1.6, key: 0xffd2a0, keyIntensity: 2.0, bloom: 0.32, exposure: 0.98,
+  top: 0x5f93e2, mid: 0xf09ab4, low: 0xffb673, sun: 0xffe2a6, cloud: 0xfff0dc, cloudShade: 0xd98aae,
+  water: 0x36a2c8, shallow: 0x8ff0dc, foam: 0xffffff, fog: 0xf2bcae,
+  hemiSky: 0xcfe0ff, hemiGround: 0xf0c0a0, hemiIntensity: 1.6, key: 0xffcf98, keyIntensity: 2.0, bloom: 0.34, exposure: 0.98,
 };
 const EVENING: Colours = {
   top: 0x2b3a78, mid: 0x6a5a9e, low: 0xd8899a, sun: 0xfff1d0, cloud: 0xf2a6a4, cloudShade: 0x55488c,

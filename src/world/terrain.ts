@@ -73,10 +73,13 @@ export function heightAt(s: Shape, x: number, z: number): number {
       h = beach + s.plateau * Math.pow(smooth(0.85, 0.2, t), 1.4);
       break;
     case 'grove':
-      h = beach + s.plateau * Math.pow(smooth(0.95, 0, t), 0.8) + 0.25 * hills(s, x, z) * inland;
+      h = beach + s.plateau * Math.pow(smooth(0.95, 0, t), 0.8) * (0.75 + 0.5 * hills(s, x * 1.9, z * 1.9)) + 0.25 * hills(s, x, z) * inland;
       break;
-    default:
-      h = beach + inland * (s.plateau + 0.45 * hills(s, x, z));
+    default: {
+      // Low ground that rolls, with a rise to one side rather than a dome in the middle.
+      const rise = Math.exp(-((dx - s.radius * 0.3) ** 2 + (dz + s.radius * 0.25) ** 2) / (s.radius * s.radius * 0.18));
+      h = beach + inland * (s.plateau + 0.55 * hills(s, x * 2.3, z * 2.3) + 0.5 * rise);
+    }
   }
   return withCliff(s, a, t, h);
 }
@@ -93,8 +96,11 @@ function rawHome(s: Shape, x: number, z: number, t: number): number {
   let land = 0.38 + 0.22 * (hills(s, x, z) - 0.5) + 0.2 * smooth(0.35, -0.7, v);
   for (const h of HILLS) land += hillAt(h, u, v);
   // The shore: the land comes down to the beach over the last stretch (steeply, where it is high).
-  const beach = BEACH_TOP * Math.min(1, (1 - t) / 0.07);
-  return beach + Math.max(0, land) * smooth(0.985, 0.86, t);
+  // The shore is not the same all round: wide sand in the coves, a short step up from the water on the headlands.
+  const a = Math.atan2(z - s.cz, x - s.cx);
+  const cove = 0.5 + 0.5 * Math.sin(3 * a + 2.0) * Math.cos(a - 0.6);
+  const beach = BEACH_TOP * Math.min(1, (1 - t) / (0.045 + 0.05 * cove));
+  return beach + Math.max(0, land) * smooth(0.985, 0.9 - 0.13 * cove, t);
 }
 
 /** The home island's ground: its terrain, levelled where something stands (each house on its own plot, cut into the slope). */

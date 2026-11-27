@@ -76,6 +76,8 @@ export function groundMaterial(p: GroundPaint): THREE.MeshToonMaterial {
           g=mix(g,g*.84,smoothstep(.62,.8,n3*.6+n2*.4)*.5);
           // Slopes are deeper and cooler than the flats; the hilltops catch a little more sun.
           g=mix(g,g*vec3(.74,.84,.8),smoothstep(.03,.3,slope));
+          // A steep bank (a plot cut into the hill) is rough grass over earth, not bare stone.
+          g=mix(g,uGrass*vec3(.78,.74,.5),smoothstep(.3,.5,slope)*.45);
           g*=1.+.07*smoothstep(1.5,4.,hgt);
           // Flowers: small round dabs, in drifts.
           vec2 fc=W.xz*6.;vec2 fi=floor(fc);
@@ -99,7 +101,7 @@ export function groundMaterial(p: GroundPaint): THREE.MeshToonMaterial {
           pth=mix(pth,pth*.8,step(.88,gh(floor(W.xz*5.)))*smoothstep(.3,.14,length(fract(W.xz*5.)-.5))*.7);
           pth=mix(pth*.86,pth,smoothstep(.5,.9,vRoad));
           // What lies where.
-          float rockK=max(smoothstep(.34,.5,slope+(n2-.5)*.1),smoothstep(uRockAbove,uRockAbove+.3,hgt));
+          float rockK=max(smoothstep(.46,.62,slope+(n2-.5)*.1),smoothstep(uRockAbove,uRockAbove+.3,hgt));
           float sandK=1.-smoothstep(.33,.46,hgt+(n2-.5)*.1);
           float roadK=smoothstep(.35,.6,vRoad+(n3-.5)*.25)*(1.-sandK);
           vec3 col=mix(g,s,sandK);

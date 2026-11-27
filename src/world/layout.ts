@@ -109,6 +109,9 @@ export const GROUND: Record<GameState['sea'], [number, number] | undefined> = { 
 /** The town's buildings take a lighter touch of the sea's colour (grey stone in the fog, snow on the roofs). */
 const TOWN_WASH: Record<GameState['sea'], [number, number] | undefined> = { dusk: undefined, fog: [0x9aa49a, 0.22], aurora: [0xf4f8ff, 0.3] };
 
+/** Town houses stand a little smaller than the models' own size, so roads, gardens and grass show between them. */
+const TOWN_SCALE = 0.8;
+
 /** One sculpted island. Its key changes with its shape and colour, so the renderer rebuilds it then. */
 function ground(items: WorldItem[], key: string, shape: Shape, wash?: [number, number], tag?: Tag) {
   items.push({ key: `ground:${key}:${shape.radius.toFixed(2)}:${shape.pads?.length ?? ''}:${wash ?? ''}`, model: 'ground', x: shape.cx, y: 0, z: shape.cz, rotY: 0, wash, ground: shape, tag });
@@ -198,7 +201,7 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     // Only lived-in houses (in this sea's style) have lit windows.
     // The crane's red is toned down in every sea; the rest take a touch of the sea's colour.
     const wash = model === 'harbor/harbor_crane' ? CRANE_WASH : townWash;
-    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, size: model === 'harbor/harbor_crane' ? 1.9 : undefined, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash, tag: i === 0 ? 'town' : 'ground' });
+    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, size: model === 'harbor/harbor_crane' ? 1.7 : MODELS[model].size * TOWN_SCALE, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash, tag: i === 0 ? 'town' : 'ground' });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
 
@@ -249,6 +252,23 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     const [kx, kz] = on(...SPOTS.chick);
     items.push({ key: 'life:chick', model: 'kpet/animal-chick', x: kx, y: 0, z: kz, rotY: -0.6 });
   }
+  // More company as the light grows: a dog by the harbour street, a rabbit on the hill, gulls resting on the rocks.
+  const plan = (u: number, v: number): [number, number] => [u * home.radius, v * home.radius];
+  if (light >= 3) {
+    const [dx, dz] = plan(0.5, 0.5);
+    items.push({ key: 'life:dog', model: 'kpet/animal-dog', x: dx, y: 0, z: dz, rotY: 2.2 });
+  }
+  if (light >= 5) {
+    const [bx, bz] = plan(-0.2, 0.2);
+    items.push({ key: 'life:bunny', model: 'kpet/animal-bunny', x: bx, y: 0, z: bz, rotY: 0.8 });
+    const [fx, fz] = plan(0.3, 0.6);
+    items.push({ key: 'life:fisher', model: 'kc/character-male-c', x: fx, y: 0, z: fz, rotY: 0.9, anim: 'idle' });
+  }
+  ([[1.13, -1.9, 1.45], [1.08, 2.9, 1.05], [1.1, 0.95, 1.05]] as const).forEach(([frac, a, up], k) => {
+    if (light < 2 + k * 2) return;
+    const [gx, gz] = on(frac, a);
+    items.push({ key: `life:gull:${k}`, model: 'lh/seagull', x: gx, y: up - 0.35, z: gz, rotY: k * 2.1, bob: false });
+  });
   if (light >= 7) items.push({ key: 'life:parrot', model: 'kpet/animal-parrot', x: 0.9, y: 1.35, z: 0.7, rotY: 0 });
   if (hasDock) {
     const [ex, ez] = pierEnd(s.land);
