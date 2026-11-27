@@ -142,7 +142,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
       else dropped = true;
       const v = b.voyage;
       if (isObj(v) && DEST_IDS.includes(v.dest as DestId) && Number.isFinite(v.departAt) && Number.isFinite(v.returnAt)) {
-        target.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number, story: readStory(v.story) };
+        target.voyage = { sea: isSea(v.sea) ? v.sea : 'dusk', dest: v.dest as DestId, departAt: v.departAt as number, returnAt: v.returnAt as number, story: readStory(v.story), ...(v.whales === true ? { whales: true } : {}) };
       } else if (v !== null && v !== undefined) dropped = true;
       const c = b.cargo;
       if (isObj(c) && DEST_IDS.includes(c.dest as DestId) && isObj(c.haul)) {

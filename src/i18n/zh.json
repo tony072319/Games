@@ -35,6 +35,7 @@
   "debug.resetConfirm": "清空测试存档，从头开始？（不影响正式存档）",
   "settings.sound": "声音",
   "debug.skyPlus": "天色 +4 分钟",
+  "debug.seaEvent": "跳到下一个海上事件",
   "debug.event": "随机海上事件",
   "mat.glow": "萤光",
   "upg.light.name": "灯塔",
@@ -485,5 +486,17 @@
   "focus.sea": "海面",
   "focus.route.hint": "船出海的时间短 20%",
   "focus.net.hint": "渔网多捞 20%",
-  "focus.sea.hint": "漂流物和夜里的船多一倍（开着游戏时）"
+  "focus.sea.hint": "漂流物和夜里的船多一倍（开着游戏时）",
+  "event.whales": "鲸群正经过 · 还剩 {time}",
+  "event.whales.hint": "现在出航的船收获 +30%",
+  "event.whales.start": "一群鲸鱼正从附近经过，跟着它们出海，能带回更多东西。",
+  "event.meteors": "流星雨 · 还剩 {time}",
+  "event.meteors.hint": "点漂流物有机会多得一个星光碎片",
+  "event.meteors.start": "流星雨开始了！这时候漂来的东西里，偶尔夹着星光碎片。",
+  "event.driftwood": "漂流木潮 · 还剩 {time}",
+  "event.driftwood.hint": "海上漂来的东西多两倍",
+  "event.driftwood.start": "漂流木潮来了，海面上漂来好多东西。",
+  "event.storm": "风暴 · 还剩 {time}",
+  "event.storm.hint": "夜里有船遇险，点它们用光引回来，谢礼加倍",
+  "event.storm.start": "风暴来了！夜里会有船遇险，用灯光把它们引回来。"
 }

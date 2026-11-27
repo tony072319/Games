@@ -194,6 +194,13 @@ try {
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).focus === 'route', null, { timeout: 3000 }).catch(() => fail('choosing the route should be saved'));
     if (!(await page.locator('.focus-row .chip.on[data-focus="route"]').count())) fail('the chosen focus should be marked');
     await page.locator('.focus-row .chip[data-focus="net"]').click(); }
+  // The test build can jump to the next event at sea: it shows under the goal while it lasts.
+  await dbg('跳到下一个海上事件');
+  await page.locator('.sea-event .event-title').waitFor({ timeout: 4000 }).catch(() => fail('an event at sea should show under the goal'));
+  if (!(await page.locator('.sea-event .event-title').textContent())?.includes('还剩')) fail('the event should say how long it lasts');
+  // The jump is time away: close the arrival report if it shows.
+  await page.waitForTimeout(600);
+  if (await page.locator('.popup').count()) await page.locator('.popup .btn-primary, .popup button').first().click();
   await tapHit('map'); // the dock opens the sea map
   await page.locator('.seamap').waitFor();
   await page.locator('.map-bottom .buy').click();

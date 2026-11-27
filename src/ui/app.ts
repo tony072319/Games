@@ -1,3 +1,4 @@
+import { eventFor, nextSeaEvent } from '../core/seaEvents';
 import { setFocus } from '../core/focus';
 import { guideShip, newShipField, updateShips, type ShipField } from '../core/ships';
 import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
@@ -76,6 +77,10 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let glints: { el: HTMLElement; tag: Tag; when: () => boolean }[] = [];
   let glintKey = '';
   let goalBar!: HTMLButtonElement;
+  /** The event at sea right now (under the goal), and the last one announced. */
+  let eventBar!: HTMLElement;
+  let eventKey = '';
+  let eventToldAt = 0;
   let goalKey = '';
   let goal: Goal | null = null;
   let lightShown = -1;
@@ -735,7 +740,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     });
     polishKey = '';
     const side = el('div', 'side');
-    side.append(goalBar, polishBtn, panel.el);
+    eventBar = el('div', 'sea-event');
+    eventBar.setAttribute('role', 'status');
+    eventBar.style.display = 'none';
+    eventKey = '';
+    side.append(goalBar, eventBar, polishBtn, panel.el);
     game.append(hud.el, stage, side);
     book = null;
     decorSheet = null;
@@ -793,6 +802,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
             nextSkyAt = 0;
           },
           ambient: () => world?.summon(),
+          seaEvent: () => {
+            const now = opts.now();
+            const e = nextSeaEvent(now);
+            if (e && opts.clock) opts.clock.jump(e.startAt - now + 1000);
+          },
           reset: () => {
             Object.assign(state, newGame(opts.now(), state.settings.lang));
             pending = null;
@@ -911,7 +925,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const rect = b?.getBoundingClientRect();
     const cx = x ?? (rect ? rect.left + rect.width / 2 : 0);
     const cy = y ?? (rect ? rect.top + rect.height / 2 : 0);
-    const got = collect(field, state, id);
+    const got = collect(field, state, id, Math.random, opts.now());
     if (!got) return;
     b?.remove();
     itemEls.delete(id);
@@ -921,6 +935,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const srect = stage.getBoundingClientRect();
     floatText(`+${formatNumber(got.amount, state.settings.lang)}`, cx - srect.left + 8, cy - srect.top - 4);
     flyToHud(got.material, cx, cy, 1);
+    // A meteor shower's glow shard.
+    if (got.glow) floatText(`+${got.glow}`, cx - srect.left + 8, cy - srect.top - 24, itemIcon('glow'));
   }
 
   function syncFlotsam() {
@@ -993,6 +1009,27 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (key === glintKey) return;
     glintKey = key;
     glints.forEach((g, i) => (g.el.style.display = key[i] === '1' ? '' : 'none'));
+  }
+
+  function renderEvent() {
+    const lang = state.settings.lang;
+    const now = opts.now();
+    const e = eventFor(state, now);
+    // Announce an event once when it starts while you are here.
+    if (e && e.startAt !== eventToldAt) {
+      eventToldAt = e.startAt;
+      toast(t(lang, `event.${e.id}.start`), 'rare');
+    }
+    const key = e ? `${e.id}:${Math.ceil((e.endAt - now) / 60e3)}` : '';
+    if (key === eventKey) return;
+    eventKey = key;
+    eventBar.style.display = e ? '' : 'none';
+    if (!e) return eventBar.replaceChildren();
+    const title = el('span', 'event-title');
+    title.textContent = t(lang, `event.${e.id}`, { time: formatEta((e.endAt - now) / 1000, lang) });
+    const hint = el('span', 'event-hint');
+    hint.textContent = t(lang, `event.${e.id}.hint`);
+    eventBar.replaceChildren(title, hint);
   }
 
   function renderGoal() {
@@ -1095,6 +1132,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     renderBubbles();
     renderGlints();
     renderGoal();
+    renderEvent();
     renderLight();
     seaMap?.update(state);
     decorSheet?.update(state);

@@ -16,6 +16,8 @@ export interface DebugActions {
   curio(): void;
   lightMax(): void;
   ambient(): void;
+  /** Jump the clock to the next event at sea. */
+  seaEvent(): void;
 }
 
 /** Test-build panel. Infinite materials start switched on. */
@@ -56,6 +58,7 @@ export function createDebug(lang: Lang, infinite: boolean, actions: DebugActions
   add(t(lang, 'debug.lightMax'), () => actions.lightMax());
   add(t(lang, 'debug.skyPlus'), () => actions.skySkip());
   add(t(lang, 'debug.event'), () => actions.ambient());
+  add(t(lang, 'debug.seaEvent'), () => actions.seaEvent());
   add(t(lang, 'debug.reset'), () => {
     if (confirm(t(lang, 'debug.resetConfirm'))) actions.reset();
   });

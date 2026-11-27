@@ -96,6 +96,10 @@ export const T = {
   FOCUS_NET: 0.2,
   FOCUS_ROUTE: 0.2,
   FOCUS_SEA: 1,
+  /** Sea events: a voyage sailed with the whales, a find's chance of a glow shard in a meteor shower, the driftwood tide's extra finds. */
+  WHALE_HAUL: 0.3,
+  METEOR_GLOW: 0.15,
+  DRIFT_TIDE: 2,
   NEW_SEA_NET: 5,
   NEW_SEA_LIGHT: 3,
   NEW_SEA_EARLY: 0.1,

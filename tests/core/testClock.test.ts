@@ -33,3 +33,22 @@ describe('test clock', () => {
     expect(b.speed()).toBe(1000);
   });
 });
+
+import { nextSeaEvent, seaEventAt } from '../../src/core/seaEvents';
+describe('jumping to the next event at sea (test build)', () => {
+  test('the clock jumps ahead by a given time', () => {
+    let real = 1000;
+    const m = new Map<string, string>();
+    const c = createTestClock(() => real, { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) });
+    c.jump(5000);
+    expect(c.now()).toBe(6000);
+    real += 10;
+    expect(c.now()).toBe(6010);
+  });
+  test('the next event starts at or after now, and is on at its start', () => {
+    const e = nextSeaEvent(0)!;
+    expect(e.startAt).toBeGreaterThanOrEqual(0);
+    expect(seaEventAt(e.startAt)?.startAt).toBe(e.startAt);
+    expect(nextSeaEvent(e.startAt + 1)!.startAt).toBeGreaterThan(e.startAt);
+  });
+});

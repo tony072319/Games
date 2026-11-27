@@ -8,6 +8,8 @@ export interface TestClock {
   now(): number;
   speed(): number;
   setSpeed(n: number): void;
+  /** Move game time ahead by ms (e.g. to the next event at sea). */
+  jump(ms: number): void;
   /** Remember where game time is (call on save). */
   save(): void;
 }
@@ -35,6 +37,11 @@ export function createTestClock(realNow: () => number, kv: KV): TestClock {
       gameAt = now();
       realAt = realNow();
       speed = n;
+      this.save();
+    },
+    jump(ms) {
+      gameAt = now() + Math.max(0, ms);
+      realAt = realNow();
       this.save();
     },
     save() {

@@ -35,6 +35,7 @@
   "debug.resetConfirm": "Wipe the test save and start over? (Your real save is untouched.)",
   "settings.sound": "Sound",
   "debug.skyPlus": "Sky +4 min",
+  "debug.seaEvent": "Next event at sea",
   "debug.event": "Random sea event",
   "mat.glow": "Glowshard",
   "upg.light.name": "Lighthouse",
@@ -485,5 +486,17 @@
   "focus.sea": "Open sea",
   "focus.route.hint": "Voyages are 20% shorter",
   "focus.net.hint": "The net catches 20% more",
-  "focus.sea.hint": "Twice the drifting finds and night ships (while you play)"
+  "focus.sea.hint": "Twice the drifting finds and night ships (while you play)",
+  "event.whales": "Whales passing · {time} left",
+  "event.whales.hint": "Boats that sail now bring home 30% more",
+  "event.whales.start": "A pod of whales is passing. Sail with them and bring home more.",
+  "event.meteors": "Meteor shower · {time} left",
+  "event.meteors.hint": "Finds sometimes carry a glow shard",
+  "event.meteors.start": "A meteor shower! Now and then a find carries a glow shard.",
+  "event.driftwood": "Driftwood tide · {time} left",
+  "event.driftwood.hint": "Three times the drifting finds",
+  "event.driftwood.start": "The driftwood tide is in: lots is drifting by.",
+  "event.storm": "Storm · {time} left",
+  "event.storm.hint": "At night ships in distress: guide them home for double thanks",
+  "event.storm.start": "A storm! At night ships will be in distress: guide them home with the light."
 }

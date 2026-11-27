@@ -9,6 +9,8 @@ export interface Voyage {
   returnAt: number;
   /** What the log will say about this trip (rolled when it sails). */
   story?: import('./voyageLog').Story;
+  /** Sailed while the whales passed: brings home more. */
+  whales?: boolean;
 }
 
 /** What the boat brought back, waiting on the dock to be unloaded. */

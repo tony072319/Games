@@ -1,3 +1,4 @@
+import { eventIs } from './seaEvents';
 import { focusOn } from './focus';
 import {
   FLOAT_LIFETIME_MS,
@@ -49,7 +50,8 @@ export function updateField(field: FlotsamField, nowMs: number, rng: () => numbe
   // Finds drift by more often at night.
   const polished = state && isPolished(state, nowMs) ? T.POLISH_SPAWN_BONUS : 0;
   const open = state && focusOn(state) === 'sea' ? T.FOCUS_SEA : 0;
-  const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished) / (1 + open);
+  const tide = eventIs(state, nowMs, 'driftwood') ? T.DRIFT_TIDE : 0;
+  const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished) / (1 + open) / (1 + tide);
   if (nowMs - field.lastSpawnAt >= interval && field.items.length < MAX_FLOATING) {
     const item: FloatingItem = { id: field.nextId++, material: pickMaterial(rng()), spawnedAt: nowMs, lane: rng() };
     // Under the aurora at night, some of what drifts by is glow.
@@ -65,7 +67,8 @@ export function collect(
   state: GameState,
   id: number,
   rng: () => number = Math.random,
-): { material: MaterialId; amount: number; curio?: string | null } | null {
+  nowMs: number = state.lastActiveAt,
+): { material: MaterialId; amount: number; curio?: string | null; glow?: number } | null {
   const idx = field.items.findIndex((i) => i.id === id);
   if (idx < 0) return null;
   const [item] = field.items.splice(idx, 1);
@@ -77,8 +80,13 @@ export function collect(
       return { material: item.material, amount: 0, curio: found };
     }
   }
-  const amount = item.material === 'glow' ? T.AURORA_GLOW_AMOUNT : tapYield(state, state.lastActiveAt);
+  const amount = item.material === 'glow' ? T.AURORA_GLOW_AMOUNT : tapYield(state, nowMs);
   state.materials[item.material] += amount;
   state.stats.tapped += 1;
+  // In a meteor shower a find sometimes carries a glow shard too.
+  if (eventIs(state, nowMs, 'meteors') && rng() < T.METEOR_GLOW) {
+    state.materials.glow += 1;
+    return { material: item.material, amount, glow: 1 };
+  }
   return { material: item.material, amount };
 }

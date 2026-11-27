@@ -1,3 +1,4 @@
+import { eventIs } from './seaEvents';
 import { focusOn } from './focus';
 import { MATERIALS, type DestId, type Materials } from './data';
 import { addMaterials, netRate } from './economy';
@@ -160,7 +161,8 @@ function planVoyage(s: GameState, d: DestId, nowMs: number, rng: () => number): 
   // Breaking the ice (an aurora island's first trip) has no luck: full time, nothing aboard.
   const story = s.sea === 'aurora' && !s.discovered.includes(d) ? { n: rolled.n } : rolled;
   const ms = voyageMs(s, d) * (story.bonus === 'early' ? 1 - T.STORY_EARLY : 1);
-  return { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + ms, story };
+  const whales = eventIs(s, nowMs, 'whales');
+  return { sea: s.sea, dest: d, departAt: nowMs, returnAt: nowMs + ms, story, ...(whales ? { whales } : {}) };
 }
 
 /** If the boat is due back, put its haul on the dock. Returns the new cargo, if any. */
@@ -179,6 +181,8 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
   const luck = iceBreak ? undefined : v.story?.bonus;
   if (luck === 'haul') for (const m of MATERIALS) haul[m] *= 1 + T.STORY_HAUL;
   if (luck === 'find') haul.glow += T.STORY_FIND_GLOW;
+  // Following the whales.
+  if (v.whales && !iceBreak) for (const m of MATERIALS) haul[m] *= 1 + T.WHALE_HAUL;
   // Whatever the island's buildings made comes home too.
   const fromIsland = takeIslandStore(at, v.dest);
   for (const m of MATERIALS) haul[m] += fromIsland[m];
