@@ -1,3 +1,4 @@
+import { has } from '../core/talents';
 import { eventFor, nextSeaEvent } from '../core/seaEvents';
 import { setFocus } from '../core/focus';
 import { buyHalo } from '../core/halo';
@@ -1240,8 +1241,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     wasFast = fast;
     const hasCargo = state.boat.cargo !== null || state.boat2.cargo !== null;
     if (hasCargo && !hadCargo && !report) {
-      toast(t(state.settings.lang, 'toast.boatBack'));
-      sound.play('chest');
+      // With the old sailor (auto-boat talent) the boat unloads itself and waits for you.
+      if (has(state, 'autoBoat') && !popupEl) unload();
+      else {
+        toast(t(state.settings.lang, 'toast.boatBack'));
+        sound.play('chest');
+      }
     }
     hadCargo = hasCargo;
     updateField(field, now, Math.random, state);

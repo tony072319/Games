@@ -40,7 +40,7 @@ describe('talents need choosing', () => {
     const s = newGame(0, 'zh');
     s.starlight = 100;
     learn(s, 'net1');
-    learn(s, 'voy1');
+    learn(s, 'autoBoat');
     const spent = 100 - talentPoints(s);
     expect(resetCost(s)).toBe(Math.max(1, Math.ceil(spent * 0.1)));
     const cost = resetCost(s);

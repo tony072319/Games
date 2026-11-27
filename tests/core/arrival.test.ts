@@ -36,3 +36,18 @@ describe('arrival report', () => {
     expect(arrivalLines(s, r).find((l) => l.kind === 'tip')).toMatchObject({ upgrade: 'net' });
   });
 });
+
+import { seaEventAt } from '../../src/core/seaEvents';
+describe('the arrival report and events at sea', () => {
+  test('says when an event is on as you arrive, with what it gives', () => {
+    let t = 0;
+    while (seaEventAt(t)?.id !== 'whales') t += 60e3;
+    const s = newGame(0, 'zh');
+    s.levels.light = 3;
+    s.chest.wood = 50;
+    const lines = arrivalLines(s, { seconds: 3600, creditedSeconds: 3600, gained: s.chest }, t);
+    const ev = lines.find((l) => l.kind === 'event');
+    expect(ev?.event).toBe('whales');
+    expect(arrivalLines(s, { seconds: 3600, creditedSeconds: 3600, gained: s.chest }, seaEventAt(t)!.endAt + 1).some((l) => l.kind === 'event')).toBe(false);
+  });
+});

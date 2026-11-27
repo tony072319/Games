@@ -232,26 +232,37 @@ export const AUTO_TRIPS_MAX = 200;
  * With the auto-boat talent: a returned boat unloads itself and sails again to the
  * same place, trip after trip, each leaving when the last one got back.
  */
-export function autoSail(s: GameState, nowMs: number, rng: () => number = Math.random): void {
-  if (!has(s, 'autoBoat')) return;
+/**
+ * The auto-boat talent while you are away: a boat that comes home unloads and sails again to the same
+ * island (in the sea you are in), as long as the trip is back before you are. Returns what it
+ * unloaded. When you come back (and while you are here) the boat is home, waiting for you to send it.
+ */
+export function autoSail(s: GameState, nowMs: number, rng: () => number = Math.random): Cargo[] {
+  const got: Cargo[] = [];
+  if (!has(s, 'autoBoat')) return got;
   for (const n of [0, 1] as const) {
     const boat = boatOf(s, n);
     if (!boat.built) continue;
+    // Cargo waiting at the dock is unloaded; the boat then waits for you.
     if (boat.cargo && !boat.voyage) {
-      const dest = boat.cargo.dest;
-      unloadBoat(s, n);
-      startVoyage(s, boat.lastDest ?? dest, nowMs, rng, n);
+      const c = unloadBoat(s, n);
+      if (c) got.push(c);
     }
     for (let i = 0; i < AUTO_TRIPS_MAX; i++) {
       const v = boat.voyage;
       if (!v || nowMs < v.returnAt) break;
       const back = v.returnAt;
       settleVoyage(s, back, rng, n);
-      unloadBoat(s, n);
-      // Sail again from the sea it was at; reachability is judged there.
-      const at = seaView(s, v.sea) ?? s;
+      const c = unloadBoat(s, n);
+      if (c) got.push(c);
+      // Only again in the sea you are in: a boat that sailed in a sea you have left comes home to you.
+      if (v.sea !== s.sea) break;
+      const at = s;
       if (!canSail(at, v.dest, n)) break;
+      // Only a trip that is back before you are: when you come back the boat is home, free to send anywhere.
+      if (back + voyageMs(at, v.dest) > nowMs) break;
       boat.voyage = { ...planVoyage(at, v.dest, back, rng, false), sea: v.sea };
     }
   }
+  return got;
 }

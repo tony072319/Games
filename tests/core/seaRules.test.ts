@@ -97,3 +97,13 @@ describe('the lit water reaches every island in sight', () => {
     expect(lightReach(at('fog', 5))).toBe(5);
   });
 });
+
+import { discoveryFind } from '../../src/core/boat';
+import { SEA_DEF } from '../../src/core/data';
+describe('the first-visit find keeps up with the sea', () => {
+  test('the wreck’s scrap metal grows with the sea’s prices', () => {
+    expect(discoveryFind(at('dusk', 3), 'wreck').metal).toBe(200);
+    expect(discoveryFind(at('fog', 3), 'wreck').metal).toBe(Math.round(200 * SEA_DEF.fog.cost));
+    expect(discoveryFind(at('aurora', 3), 'firefly').glow).toBe(5);
+  });
+});

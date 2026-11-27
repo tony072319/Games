@@ -306,7 +306,7 @@
   "talent.isl3.name": "热闹的岛",
   "talent.isl3.desc": "岛上建筑产出 +30%。",
   "talent.autoBoat.name": "老水手",
-  "talent.autoBoat.desc": "小船回港后自己卸货，再去上次的地方。你不在时也会继续。",
+  "talent.autoBoat.desc": "小船回港后自己卸货，停在码头等你派。你不在的时候，它会自己再去上次的地方。",
   "talent.cur1.name": "好眼力",
   "talent.cur1.desc": "珍品出现的机会 ×1.5。",
   "talent.rare2.name": "老地图",

@@ -5,7 +5,7 @@ import type { GameState } from './state';
 /** The starlight tree: three branches of four. Each star is one point; a reset costs a little starlight. */
 export type TalentId =
   | 'net1' | 'chest2' | 'prod3' | 'autoChest'
-  | 'voy1' | 'haul2' | 'isl3' | 'autoBoat'
+  | 'autoBoat' | 'voy1' | 'haul2' | 'isl3'
   | 'cur1' | 'rare2' | 'drift3' | 'start3';
 
 export interface Talent {
@@ -21,7 +21,8 @@ const branch = (b: Talent['branch'], ids: TalentId[]): Talent[] =>
 
 export const TALENTS: Talent[] = [
   ...branch('fire', ['net1', 'chest2', 'prod3', 'autoChest']),
-  ...branch('sail', ['voy1', 'haul2', 'isl3', 'autoBoat']),
+  // The boat unloading and sailing again on its own comes first: it saves the most chores.
+  ...branch('sail', ['autoBoat', 'voy1', 'haul2', 'isl3']),
   ...branch('star', ['cur1', 'rare2', 'drift3', 'start3']),
 ];
 export const TALENT_BY_ID = Object.fromEntries(TALENTS.map((x) => [x.id, x])) as Record<TalentId, Talent>;

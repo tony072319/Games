@@ -306,7 +306,7 @@
   "talent.isl3.name": "Busy islands",
   "talent.isl3.desc": "Island buildings produce 30% more.",
   "talent.autoBoat.name": "Old sailor",
-  "talent.autoBoat.desc": "The boat unloads itself and sails back to the same place, even while you're away.",
+  "talent.autoBoat.desc": "The boat unloads itself when it comes home and waits for you. While you are away it sails again to the same place on its own.",
   "talent.cur1.name": "Keen eye",
   "talent.cur1.desc": "Curios turn up 1.5× as often.",
   "talent.rare2.name": "Old charts",

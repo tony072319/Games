@@ -15,19 +15,21 @@ export interface OfflineReport {
   /** Time that actually filled the chest (stops when the chest is full). */
   creditedSeconds: number;
   gained: Materials;
+  /** Trips the auto boat made and unloaded while you were away. */
+  autoCargo?: import('./state').Cargo[];
 }
 
 export function applyOffline(state: GameState, nowMs: number): OfflineReport {
   accrueIslands(state, nowMs);
   accrueOtherSeas(state, nowMs);
-  autoSail(state, nowMs);
+  const autoCargo = autoSail(state, nowMs);
   settleVoyage(state, nowMs);
   settleVoyage(state, nowMs, Math.random, 1);
   const seconds = Math.max(0, (nowMs - state.lastActiveAt) / 1000);
   const { creditedSeconds, gained } = fillChest(state, seconds);
   recycle(state, seconds);
   state.lastActiveAt = nowMs;
-  return { seconds, creditedSeconds, gained };
+  return { seconds, creditedSeconds, gained, autoCargo };
 }
 
 /** Empty the chest into the inventory. Returns what was moved. */
@@ -50,7 +52,7 @@ export function claimDouble(state: GameState, collected: Materials): void {
 export function tick(state: GameState, nowMs: number): OfflineReport | null {
   accrueIslands(state, nowMs);
   accrueOtherSeas(state, nowMs);
-  autoSail(state, nowMs);
+  // (The auto boat only sails again on its own while you are away: see applyOffline.)
   settleVoyage(state, nowMs);
   settleVoyage(state, nowMs, Math.random, 1);
   const dt = (nowMs - state.lastActiveAt) / 1000;

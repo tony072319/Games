@@ -218,7 +218,13 @@ function run(profile: Profile, opts: SimOpts): SimReport {
   for (let i = 0; i < times.length && seas.length < seasWanted; i++) {
     const now = times[i];
     const untilNext = (times[i + 1] ?? now + DAY) - now;
-    tick(s, now);
+    const away = tick(s, now);
+    // Trips the auto boat made while the player was away count as the boat's income.
+    for (const c of away?.autoCargo ?? []) {
+      const isl = total(c.fromIsland);
+      src.islands += isl;
+      src.boat += total(c.haul) - isl;
+    }
     visits++;
     let bought = 0;
     // A visit: a few rounds of collecting, unloading, tapping and buying, minute by minute.
