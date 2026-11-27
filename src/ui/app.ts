@@ -1,6 +1,6 @@
 import { eventFor, nextSeaEvent } from '../core/seaEvents';
 import { setFocus } from '../core/focus';
-import { guideShip, newShipField, updateShips, type ShipField } from '../core/ships';
+import { guideShip, newShipField, stormSummary, updateShips, type ShipField } from '../core/ships';
 import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
 import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
 import { collect, newField, updateField, type FlotsamField } from '../core/flotsam';
@@ -1159,6 +1159,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     hadCargo = hasCargo;
     updateField(field, now, Math.random, state);
     updateShips(shipField, now, Math.random, state);
+    const storm = stormSummary(shipField, now);
+    if (storm) toast(t(state.settings.lang, 'storm.over', { n: storm.rescued, total: storm.total }), storm.rescued > 0 ? 'rare' : undefined);
     syncFlotsam();
     syncShips();
     if (world) {

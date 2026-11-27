@@ -100,6 +100,10 @@ export const T = {
   WHALE_HAUL: 0.3,
   METEOR_GLOW: 0.15,
   DRIFT_TIDE: 2,
+  /** A storm night: a ship in distress every few seconds, staying this long, thanking this many times over. */
+  STORM_SHIP_EVERY_MS: 6000,
+  STORM_SHIP_LIFE_MS: 14000,
+  STORM_THANKS: 2,
   NEW_SEA_NET: 5,
   NEW_SEA_LIGHT: 3,
   NEW_SEA_EARLY: 0.1,

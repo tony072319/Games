@@ -498,5 +498,6 @@
   "event.driftwood.start": "The driftwood tide is in: lots is drifting by.",
   "event.storm": "Storm · {time} left",
   "event.storm.hint": "At night ships in distress: guide them home for double thanks",
-  "event.storm.start": "A storm! At night ships will be in distress: guide them home with the light."
+  "event.storm.start": "A storm! At night ships will be in distress: guide them home with the light.",
+  "storm.over": "The storm has passed. You guided {n} of {total} ships in distress home."
 }

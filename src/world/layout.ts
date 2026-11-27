@@ -1,3 +1,4 @@
+import { shipLife } from '../core/ships';
 import { FAR_SIDE } from './view';
 import { DECOR_IDS } from '../core/decor';
 /**
@@ -368,9 +369,11 @@ const ANSWER_SPREAD = (28 * Math.PI) / 180;
 
 export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; z: number; rotY: number } {
   void land;
-  const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / T.SHIP_LIFE_MS));
+  const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / shipLife(ship)));
   const lane = Math.min(1, Math.max(0, ship.lane));
-  return { x: 42 - 84 * age, z: -(37 + lane * 5), rotY: -Math.PI / 2 };
+  // A ship in distress in a storm crosses a shorter stretch, quickly.
+  const half = ship.storm ? 30 : 42;
+  return { x: half - 2 * half * age, z: -(37 + lane * 5), rotY: -Math.PI / 2 };
 }
 
 /** Drifting finds cross the lit water in front of the island, far lane to near lane. */
