@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { DEST_HEX, hexDist, hexToWorld, litRadius, litRadiusWorld, ring } from '../../src/world/hex';
+import { DEST_HEX, TILE_W, hexDist, hexToWorld, litRadius, litRadiusWorld, ring } from '../../src/world/hex';
 import { DESTS } from '../../src/core/boat';
 import type { DestId } from '../../src/core/data';
 
@@ -7,7 +7,7 @@ const DESTS_IDS = Object.keys(DESTS) as DestId[];
 
 describe('hex grid', () => {
   test('one step east is one tile width', () => {
-    expect(hexToWorld(1, 0)).toEqual([2, 0]);
+    expect(hexToWorld(1, 0)).toEqual([TILE_W, 0]);
     expect(hexToWorld(0, 0)).toEqual([0, 0]);
   });
 
@@ -42,6 +42,6 @@ describe('hex grid', () => {
 
   test('lit radius in world units', () => {
     expect(litRadius(3)).toBe(13);
-    expect(litRadiusWorld(3)).toBe(26);
+    expect(litRadiusWorld(3)).toBeCloseTo(13 * TILE_W);
   });
 });

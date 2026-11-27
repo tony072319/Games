@@ -63,7 +63,7 @@ function pierStart(land: number): [number, number] {
   while (r < 20 && heightAt(home, PDX * r, PDZ * r) > 0) r += 0.05;
   return [PDX * (r - 0.6), PDZ * (r - 0.6)];
 }
-const PIER_PLANKS = 3;
+const PIER_PLANKS = 5;
 const PLANK = 1.6;
 
 function pierEnd(land: number): [number, number] {
@@ -360,7 +360,7 @@ export function boatPosition(s: GameState, nowMs: number, n: 0 | 1 = 0): { x: nu
 function boatRoute(dest: DestId, land: number, n: 0 | 1 = 0): [number, number][] {
   const [mx, mz] = mooring(land, n);
   // Sailing room: just outside the island's widest lobe.
-  const SEA_RING = homeShape(land).radius * 1.17 + 2;
+  const SEA_RING = homeShape(land).radius * 1.27 + 2;
   const [ix, iz] = hexToWorld(...DEST_HEX[dest]);
   const a0 = Math.atan2(mz, mx);
   const a1 = Math.atan2(iz, ix);
@@ -406,8 +406,8 @@ export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; 
   const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / shipLife(ship)));
   const lane = Math.min(1, Math.max(0, ship.lane));
   // A ship in distress in a storm crosses a shorter stretch, quickly.
-  const half = ship.storm ? 30 : 42;
-  return { x: half - 2 * half * age, z: -(37 + lane * 5), rotY: -Math.PI / 2 };
+  const half = ship.storm ? 40 : 56;
+  return { x: half - 2 * half * age, z: -(50 + lane * 6), rotY: -Math.PI / 2 };
 }
 
 /** Drifting finds cross the lit water in front of the island, far lane to near lane. */
@@ -416,5 +416,5 @@ export function flotsamPosition(item: FloatingItem, nowMs: number, land = 0): { 
   const lane = Math.min(1, Math.max(0, item.lane));
   // Just off the island's front beach: further out as the island grows (the camera pulls back with it).
   const near = Math.max(8.5, homeShape(land).radius * 1.17 + 2);
-  return { x: -16 + 32 * age, z: near + lane * 3 };
+  return { x: -21 + 42 * age, z: near + lane * 3 };
 }

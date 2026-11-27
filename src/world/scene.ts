@@ -143,7 +143,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   controls.target.copy(DEFAULT_TARGET);
   controls.enablePan = false;
   controls.minDistance = 8;
-  controls.maxDistance = 70;
+  controls.maxDistance = 95;
   controls.maxPolarAngle = 1.36;
   controls.enableDamping = !opts.calm;
   controls.update();
@@ -605,7 +605,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     for (const [id, o] of drift)
       if (!alive.has(id)) {
         // Lifted out (one that drifted off the far end just goes).
-        if (Math.abs(o.position.x) < 15 && readySent && !calm) effects.splash(o.position.x, o.position.z);
+        if (Math.abs(o.position.x) < 20 && readySent && !calm) effects.splash(o.position.x, o.position.z);
         scene.remove(o);
         drift.delete(id);
       }

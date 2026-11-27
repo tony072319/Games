@@ -172,7 +172,7 @@ export function homeShape(land: number, built = PLOT_PADS.length): Shape {
   const id = `${land}:${n}`;
   const known = homes.get(id);
   if (known) return known;
-  const s: Shape = { kind: 'home', cx: 0, cz: 0, radius: 13 + Math.max(0, land) * 0.1, lobes: HOME_LOBES, plateau: 0, cliff: [0, 0], seed: 1.3 };
+  const s: Shape = { kind: 'home', cx: 0, cz: 0, radius: 17 + Math.max(0, land) * 0.13, lobes: HOME_LOBES, plateau: 0, cliff: [0, 0], seed: 1.3 };
   // Each plot is levelled at the height the hill has there.
   s.pads = [...FIXED_PADS, ...PLOT_PADS.slice(0, n)].map(([u, v, r]) => {
     const x = u * s.radius;
@@ -190,10 +190,10 @@ function destShape(d: DestId, kind: ShapeKind, radius: number, plateau: number, 
 
 /** The four islands the boat sails to, each with its own build. */
 export const DEST_SHAPES: Record<DestId, Shape> = {
-  wreck: destShape('wreck', 'reef', 2.6, 0.12, [[0.18, 2, 0.5], [0.1, 5, 1.2]], [0, 0], 2.2),
-  gullrock: destShape('gullrock', 'rock', 2.4, 3.4, [[0.12, 3, 1.0], [0.08, 6, 0.2]], [1.2, 0.3], 3.7),
-  oldlight: destShape('oldlight', 'cape', 3.0, 0.7, [[0.35, 2, 0.9], [0.06, 5, 2.5]], [-0.6, 0.25], 4.4),
-  firefly: destShape('firefly', 'grove', 2.8, 1.2, [[0.1, 3, 2.0], [0.06, 4, 0.7]], [0, 0], 5.9),
+  wreck: destShape('wreck', 'reef', 3.6, 0.12, [[0.18, 2, 0.5], [0.1, 5, 1.2]], [0, 0], 2.2),
+  gullrock: destShape('gullrock', 'rock', 3.2, 3.4, [[0.12, 3, 1.0], [0.08, 6, 0.2]], [1.2, 0.3], 3.7),
+  oldlight: destShape('oldlight', 'cape', 4.2, 0.7, [[0.35, 2, 0.9], [0.06, 5, 2.5]], [-0.6, 0.25], 4.4),
+  firefly: destShape('firefly', 'grove', 3.9, 1.2, [[0.1, 3, 2.0], [0.06, 4, 0.7]], [0, 0], 5.9),
 };
 
 export interface GroundColours {

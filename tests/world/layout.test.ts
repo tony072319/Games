@@ -177,8 +177,8 @@ describe('a lucky boat', () => {
 describe('flotsam drift', () => {
   const item = { id: 1, material: 'wood' as const, spawnedAt: NOW, lane: 0 };
   test('crosses the sea from left to right over its life', () => {
-    expect(flotsamPosition(item, NOW).x).toBeCloseTo(-16);
-    expect(flotsamPosition(item, NOW + FLOAT_LIFETIME_MS).x).toBeCloseTo(16);
+    expect(flotsamPosition(item, NOW).x).toBeCloseTo(-21);
+    expect(flotsamPosition(item, NOW + FLOAT_LIFETIME_MS).x).toBeCloseTo(21);
   });
   test('near lane is closer to the camera, and nothing is NaN', () => {
     const far = flotsamPosition({ ...item, lane: 0 }, NOW + 1000);

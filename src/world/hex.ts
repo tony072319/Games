@@ -4,9 +4,9 @@
  */
 import type { DestId } from '../core/data';
 
-/** One KayKit tile: 2 wide (flat side to flat side), 2.3094 deep (point to point). */
-export const TILE_W = 2;
-export const TILE_D = 2.3094;
+/** One step of the sea's grid: 2.6 wide (flat side to flat side), 3.0022 deep (point to point). The sea was let out by a third when the home island grew. */
+export const TILE_W = 2.6;
+export const TILE_D = 3.0022;
 
 export type Hex = [q: number, r: number];
 
