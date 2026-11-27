@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!-- Photographs the world's models for the cards (see src/ui/art/thumbs.ts and tools/make-thumbs.mjs).
+     Open it to look at them all; the script asks it for each picture in turn. -->
+<html><head><meta charset="utf-8"><base href="/"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0;background:#231d3a;color:#eee;font:12px system-ui;display:flex;flex-wrap:wrap;gap:8px;padding:8px}
+figure{margin:0;text-align:center}img{width:112px;height:112px;background:radial-gradient(circle at 50% 70%,#35305a,#1d1934);border-radius:8px;display:block}</style></head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MODELS } from '/src/world/assets.ts';
+import { toonMaterial } from '/src/world/toon.ts';
+import { allThumbs } from '/src/ui/art/thumbs.ts';
+
+const SIZE = 128;
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(SIZE, SIZE);
+renderer.setPixelRatio(2);
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+const gltf = new GLTFLoader();
+const cache = new Map();
+const load = (id) => {
+  if (!cache.has(id)) cache.set(id, gltf.loadAsync(MODELS[id].url).then((g) => g.scene));
+  return cache.get(id);
+};
+const glowMat = (c) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2.2), toneMapped: false });
+// A soft round shadow for the thing to stand on.
+const shadowTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(8,6,24,.55)'); gr.addColorStop(0.6, 'rgba(8,6,24,.25)'); gr.addColorStop(1, 'rgba(8,6,24,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c);
+})();
+
+async function render(parts) {
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0xf0c0a0, 1.7));
+  const key = new THREE.DirectionalLight(0xffdcb0, 2.1);
+  key.position.set(-6, 9, 7);
+  scene.add(key);
+  // A cool light from behind picks out the edges.
+  const back = new THREE.DirectionalLight(0xbcd0ff, 1.3);
+  back.position.set(7, 5, -8);
+  scene.add(back);
+  const group = new THREE.Group();
+  scene.add(group);
+  for (const p of parts) {
+    const src = await load(p.model);
+    const o = src.clone(true);
+    o.traverse((c) => { if (c.isMesh) c.material = toonMaterial(c.material, p.tint, p.wash); });
+    const box = new THREE.Box3().setFromObject(o);
+    const size = box.getSize(new THREE.Vector3());
+    const info = MODELS[p.model];
+    const want = p.size ?? info.size;
+    o.scale.setScalar(info.fit === 'height' ? want / (size.y || 1) : want / (Math.max(size.x, size.z) || 1));
+    o.position.set(p.dx, p.dy ?? 0, p.dz);
+    o.rotation.y = p.rotY ?? 0;
+    group.add(o);
+    // The lights that make a thing look lived in.
+    if (p.glow) {
+      const b = new THREE.Box3().setFromObject(o); const s = b.getSize(new THREE.Vector3()); const c = b.getCenter(new THREE.Vector3());
+      const r = p.glow === 'lamp' ? Math.max(0.25, s.x * 0.28) : p.glow === 'fire' ? 0.14 : 0.1;
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), glowMat(p.glow === 'fire' ? 0xff9a40 : 0xffd890));
+      m.position.set(c.x, p.glow === 'lamp' ? b.min.y + s.y * 0.855 : p.glow === 'window' ? b.min.y + s.y * 0.4 : b.max.y - (p.glow === 'fire' ? -0.1 : 0.12), c.z + (p.glow === 'window' ? s.z * 0.5 : 0));
+      group.add(m);
+    }
+  }
+  const box = new THREE.Box3().setFromObject(group);
+  const size = box.getSize(new THREE.Vector3());
+  const centre = box.getCenter(new THREE.Vector3());
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+  const wide = Math.max(size.x, size.z) * 1.5 + 0.3;
+  shadow.scale.set(wide, 1, wide);
+  shadow.position.set(centre.x, box.min.y + 0.01, centre.z);
+  scene.add(shadow);
+  // Looking down at it the way the game's camera does, close enough to fill the picture.
+  const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 200);
+  const dir = new THREE.Vector3(0.52, 0.5, 0.7).normalize();
+  const radius = Math.max(size.y * 0.56, Math.hypot(size.x, size.z) * 0.5, 0.3);
+  cam.position.copy(centre).addScaledVector(dir, (radius * 1.12) / Math.tan((13 * Math.PI) / 180));
+  cam.lookAt(centre);
+  renderer.render(scene, cam);
+  // On a soft pool of lamplight, so dark and slender things still read on the cards' dark ground.
+  const px = renderer.domElement.width;
+  const flat = document.createElement('canvas'); flat.width = flat.height = px;
+  const g = flat.getContext('2d');
+  const pool = g.createRadialGradient(px / 2, px * 0.56, 0, px / 2, px * 0.56, px * 0.5);
+  pool.addColorStop(0, 'rgba(255,236,200,.30)'); pool.addColorStop(0.6, 'rgba(255,226,180,.12)'); pool.addColorStop(1, 'rgba(255,226,180,0)');
+  g.fillStyle = pool; g.fillRect(0, 0, px, px);
+  g.drawImage(renderer.domElement, 0, 0);
+  const url = flat.toDataURL('image/webp', 0.86);
+  shadow.geometry.dispose(); shadow.material.dispose();
+  return url;
+}
+
+const list = allThumbs();
+window.__names = list.map((t) => t.name);
+window.__thumb = (name) => render(list.find((t) => t.name === name).parts);
+window.__ready = true;
+// Opened by a person: show them all.
+if (!new URLSearchParams(location.search).has('quiet'))
+  for (const t of list) {
+    const f = document.createElement('figure'); const im = new Image(); im.src = await render(t.parts);
+    f.append(im, t.name); document.body.append(f);
+  }
+</script></body></html>

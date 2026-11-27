@@ -1,5 +1,4 @@
 import { shipLife } from '../core/ships';
-import { FAR_SIDE } from './view';
 import { DECOR_IDS } from '../core/decor';
 /**
  * What the world should contain for a game state: a flat list of placed models.
@@ -7,9 +6,7 @@ import { DECOR_IDS } from '../core/decor';
  */
 import { DESTS, boatOf, seeLight } from '../core/boat';
 import { townShown } from '../core/town';
-import { answeringLights } from '../core/answering';
 import type { Ship } from '../core/ships';
-import { T } from '../core/tuning';
 import { TOWN_HOMES, TOWN_SLOTS, townWalkers } from './town';
 import { FLOAT_LIFETIME_MS, type BuildingId, type DestId } from '../core/data';
 import type { FloatingItem } from '../core/flotsam';
@@ -18,7 +15,8 @@ import type { GameState } from '../core/state';
 import { MODELS, type ModelId } from './assets';
 import { DEST_HEX, hexToWorld, litRadius, hexDist } from './hex';
 import { DEST_SHAPES, heightAt, homeShape, outline, ringPoint, type Shape } from './terrain';
-import { CHEST_LOOKS, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
+import { DECOR_RING, SPOTS, decorAngle } from './homeplan';
+import { CHEST_LOOKS, CRANE_WASH, DECOR_LOOKS, ISLAND_DECOR, LIGHT_LOOKS, boatModel, buildingParts, netParts, type Part } from './looks';
 
 /** Things on the island you can tap. house: the keeper's house (the book); town: the town's first place (building, and where its hint shows); ground: the rest of the town, decorations and the ground (building). */
 export type Tag = 'light' | 'net' | 'chest' | 'boat' | 'dock' | 'house' | 'town' | 'ground' | `island:${DestId}` | `bld:${BuildingId}`;
@@ -65,7 +63,7 @@ function pierStart(land: number): [number, number] {
   while (r < 20 && heightAt(home, PDX * r, PDZ * r) > 0) r += 0.05;
   return [PDX * (r - 0.6), PDZ * (r - 0.6)];
 }
-const PIER_PLANKS = 3;
+const PIER_PLANKS = 4;
 const PLANK = 1.6;
 
 function pierEnd(land: number): [number, number] {
@@ -85,7 +83,7 @@ function mooring(land: number, n: 0 | 1 = 0): [number, number] {
 function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az: number, ay: number, tag?: Tag) {
   parts.forEach((p, i) => {
     items.push({
-      key: `${prefix}:${p.part}:${p.model}:${p.size ?? ''}:${p.tint ?? ''}`,
+      key: `${prefix}:${p.part}:${p.model}:${p.size ?? ''}:${p.tint ?? ''}${p.wash ? `:${p.wash}` : ''}`,
       model: p.model,
       x: ax + p.dx,
       y: ay + (p.dy ?? 0),
@@ -93,6 +91,7 @@ function place(items: WorldItem[], prefix: string, parts: Part[], ax: number, az
       rotY: p.rotY ?? 0,
       size: p.size,
       tint: p.tint,
+      wash: p.wash,
       glow: p.glow,
       tag: i === 0 ? tag : undefined,
     });
@@ -104,14 +103,17 @@ export const GROUND: Record<GameState['sea'], [number, number] | undefined> = { 
 /** The town's buildings take a lighter touch of the sea's colour (grey stone in the fog, snow on the roofs). */
 const TOWN_WASH: Record<GameState['sea'], [number, number] | undefined> = { dusk: undefined, fog: [0x9aa49a, 0.22], aurora: [0xf4f8ff, 0.3] };
 
+/** Town houses stand a little smaller than the models' own size, so roads, gardens and grass show between them. */
+const TOWN_SCALE = 0.8;
+
 /** One sculpted island. Its key changes with its shape and colour, so the renderer rebuilds it then. */
 function ground(items: WorldItem[], key: string, shape: Shape, wash?: [number, number], tag?: Tag) {
-  items.push({ key: `ground:${key}:${shape.radius.toFixed(2)}:${wash ?? ''}`, model: 'ground', x: shape.cx, y: 0, z: shape.cz, rotY: 0, wash, ground: shape, tag });
+  items.push({ key: `ground:${key}:${shape.radius.toFixed(2)}:${shape.pads?.length ?? ''}:${wash ?? ''}`, model: 'ground', x: shape.cx, y: 0, z: shape.cz, rotY: 0, wash, ground: shape, tag });
 }
 
 /** Decorations stand round the island's shore, evenly spaced, leaving the pier side free. */
 export function decorSpot(i: number, land: number): [number, number] {
-  return ringPoint(homeShape(land), 0.84, ((78 + i * 28) * Math.PI) / 180);
+  return ringPoint(homeShape(land), DECOR_RING, decorAngle(i));
 }
 
 export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
@@ -119,32 +121,51 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   const items: WorldItem[] = [];
   const light = s.levels.light;
 
-  // Home island: one piece of sculpted ground that grows as you expand it.
-  const home = homeShape(s.land);
+  // Home island: one piece of sculpted ground that grows as you expand it, levelled where the town has built.
+  const shown = townShown(s, TOWN_SLOTS.length);
+  const home = homeShape(s.land, shown);
   ground(items, 'home', home, GROUND[s.sea], 'ground');
   // Places on the island by ring (share of the radius) and angle; the island's rings are tiers.
   const on = (frac: number, a: number): [number, number] => ringPoint(home, frac, a);
 
   place(items, `light:${light}`, LIGHT_LOOKS[light] ?? LIGHT_LOOKS[10], 0, 0, 0, 'light');
-  // The keeper's house on the peak, in front of the lighthouse (easy to tap); chest and net down at the harbour by the pier.
-  place(items, 'house', [{ part: 'house', model: 'lh/keeper_house', dx: 0, dz: 0, rotY: -0.7, glow: 'window' }], ...on(0.17, 0.7), 0, 'house');
-  place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...on(0.84, 0.72), 0, 'chest');
-  const [nx, nz] = on(0.85, 1.0);
+  // The keeper's house on the hilltop, in front of the lighthouse (easy to tap); chest and net down at the harbour by the pier.
+  // (Where each of the lighthouse's own things stands is on the island's plan, so the town keeps clear of them.)
+  place(items, 'house', [{ part: 'house', model: 'kk/building_home_A_yellow', dx: 0, dz: 0, rotY: 0.75, glow: 'window' }], ...on(...SPOTS.house), 0, 'house');
+  place(items, `chest:${s.levels.storage}`, CHEST_LOOKS[s.levels.storage] ?? CHEST_LOOKS[11], ...on(...SPOTS.chest), 0, 'chest');
+  const [nx, nz] = on(...SPOTS.net);
   place(items, `net:${Math.min(50, s.levels.net)}`, netParts(s.levels.net), nx, nz, 0, 'net');
 
-  // Greenery and things that come with a brighter light, on the peak and the town terrace.
+  // Greenery and things that come with a brighter light, on the hilltop and its slopes.
   const deco: [string, ModelId, number, number, Partial<Part>?][] = [
-    ['tree1', 'nature/round_tree', 0.2, 2.6],
-    ['tree2', 'nature/pine_tree', 0.21, -0.9],
+    ['tree1', 'nature/round_tree', ...SPOTS.tree1],
+    ['tree2', 'nature/pine_tree', ...SPOTS.tree2],
   ];
-  if (light >= 2) deco.push(['fire', 'viking/firepit', 0.6, 1.25, { glow: 'fire' }]);
-  if (light >= 3) deco.push(['flowers', 'nature/flower_yellow', 0.18, -2.0]);
-  if (light >= 4) deco.push(['bush', 'nature/bush_berries', 0.4, -0.5]);
-  if (light >= 6) deco.push(['mill', 'kk/building_windmill_blue', 0.55, -2.75, { tint: 0xfff0e0 }]);
-  if (light >= 8) deco.push(['hammock', 'huts/hammock', 0.62, 2.2, { rotY: 0.9 }]);
+  if (light >= 2) deco.push(['fire', 'viking/firepit', ...SPOTS.fire, { glow: 'fire' }]);
+  if (light >= 3) deco.push(['flowers', 'nature/flower_yellow', ...SPOTS.flowers]);
+  if (light >= 4) deco.push(['bush', 'nature/bush_berries', ...SPOTS.bush]);
+  if (light >= 6) deco.push(['mill', 'kk/building_windmill_blue', ...SPOTS.mill, { tint: 0xfff0e0 }]);
+  if (light >= 8) deco.push(['hammock', 'huts/hammock', ...SPOTS.hammock, { rotY: 0.9 }]);
   for (const [part, model, frac, a, extra] of deco) {
     const [px, pz] = on(frac, a);
     place(items, 'deco', [{ part, model, dx: 0, dz: 0, ...extra }], px, pz, 0);
+  }
+
+  // Rocks in the shallows under the back cliff and off the headlands, and boulders on the beach.
+  const ROCKS: [ModelId, number, number, number, number][] = [
+    ['lh/sea_stack', 1.2, -2.25, 2.6, 0.4],
+    ['lh/sea_rock_large', 1.13, -1.9, 1.5, 1.9],
+    ['lh/sea_rock_small', 1.1, -2.6, 0.8, 0.7],
+    ['kk/rock_single_C', 1.08, 2.9, 1.1, 2.2],
+    ['lh/sea_rock_small', 1.12, 3.25, 0.7, 1.1],
+    ['kk/rock_single_B', 0.965, 4.6, 0.75, 0.5],
+    ['kk/rock_single_D', 0.96, 1.9, 0.5, 2.6],
+    ['lh/sea_rock_large', 1.1, 0.95, 1.1, 0.2],
+  ];
+  for (const [model, frac, a, size, rotY] of ROCKS) {
+    const [rx, rz] = on(frac, a);
+    // Those out in the water stand on the sea bed, sunk a little.
+    items.push({ key: `rock:${frac}:${a}`, model, x: rx, y: frac > 1 ? -0.35 : -0.05, z: rz, rotY, size });
   }
 
   // The ground won by expanding: now and then a tuft of grass or flowers on it.
@@ -166,23 +187,17 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   }
 
   // The town: built place by place as the sea's work goes on; people stroll its street.
-  const shown = townShown(s, TOWN_SLOTS.length);
   const townWash = TOWN_WASH[s.sea];
   for (let i = 0; i < shown; i++) {
     const sl = TOWN_SLOTS[i];
     const [x, z] = sl.at(s.land);
     const model = sl.models[s.sea];
     // Only lived-in houses (in this sea's style) have lit windows.
-    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash: townWash, tag: i === 0 ? 'town' : 'ground' });
+    // The crane's red is toned down in every sea; the rest take a touch of the sea's colour.
+    const wash = model === 'harbor/harbor_crane' ? CRANE_WASH : townWash;
+    items.push({ key: `town:${i}:${model}`, model, x, y: 0, z, rotY: sl.rotY, size: model === 'harbor/harbor_crane' ? 1.7 : MODELS[model].size * TOWN_SCALE, glow: TOWN_HOMES.includes(model) ? sl.glow : undefined, wash, tag: i === 0 ? 'town' : 'ground' });
   }
   for (const w of townWalkers(s, nowMs, shown)) items.push({ key: `${w.key}:${w.model}`, model: w.model, x: w.x, y: 0, z: w.z, rotY: w.rotY, anim: 'walk' });
-
-  // The last climb: far lighthouses on the horizon answer, one per part mended.
-  const answering = answeringLights(s);
-  for (let i = 0; i < answering; i++) {
-    const [x, z] = answerSpot(i);
-    items.push({ key: `answer:${i}`, model: 'lh/lighthouse_small', x, y: -0.2, z, rotY: -Math.atan2(z, x), glow: 'beacon' });
-  }
 
   // Dock and boat.
   const hasDock = light >= 3 || s.boat.built;
@@ -213,14 +228,31 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
   }
 
   // Life: a few who live here, more as the light grows.
-  const [hx, hz] = on(0.1, 1.35);
+  const [hx, hz] = on(...SPOTS.keeper);
   if (light >= 2) items.push({ key: 'life:keeper', model: 'kc/character-male-a', x: hx, y: 0, z: hz, rotY: 0.3, anim: 'idle' });
-  const [cx, cz] = on(0.83, 0.6);
+  const [cx, cz] = on(...SPOTS.cat);
   items.push({ key: 'life:cat', model: 'kpet/animal-cat', x: cx, y: 0, z: cz, rotY: 1.2 });
   if (light >= 4) {
-    const [kx, kz] = on(0.58, 1.6);
+    const [kx, kz] = on(...SPOTS.chick);
     items.push({ key: 'life:chick', model: 'kpet/animal-chick', x: kx, y: 0, z: kz, rotY: -0.6 });
   }
+  // More company as the light grows: a dog by the harbour street, a rabbit on the hill, gulls resting on the rocks.
+  const plan = (u: number, v: number): [number, number] => [u * home.radius, v * home.radius];
+  if (light >= 3) {
+    const [dx, dz] = plan(0.5, 0.5);
+    items.push({ key: 'life:dog', model: 'kpet/animal-dog', x: dx, y: 0, z: dz, rotY: 2.2 });
+  }
+  if (light >= 5) {
+    const [bx, bz] = plan(-0.2, 0.2);
+    items.push({ key: 'life:bunny', model: 'kpet/animal-bunny', x: bx, y: 0, z: bz, rotY: 0.8 });
+    const [fx, fz] = plan(0.3, 0.6);
+    items.push({ key: 'life:fisher', model: 'kc/character-male-c', x: fx, y: 0, z: fz, rotY: 0.9, anim: 'idle' });
+  }
+  ([[1.13, -1.9, 1.45], [1.08, 2.9, 1.05], [1.1, 0.95, 1.05]] as const).forEach(([frac, a, up], k) => {
+    if (light < 2 + k * 2) return;
+    const [gx, gz] = on(frac, a);
+    items.push({ key: `life:gull:${k}`, model: 'lh/seagull', x: gx, y: up - 0.35, z: gz, rotY: k * 2.1, bob: false });
+  });
   if (light >= 7) items.push({ key: 'life:parrot', model: 'kpet/animal-parrot', x: 0.9, y: 1.35, z: 0.7, rotY: 0 });
   if (hasDock) {
     const [ex, ez] = pierEnd(s.land);
@@ -274,13 +306,27 @@ function shapesOf(items: WorldItem[]): Shape[] {
   return items.flatMap((i) => (i.ground ? [i.ground] : []));
 }
 
-/** Everything stands on the ground beneath it (things on the water keep their height). */
+/** Buildings stand on a hillside: these are wide enough to need digging in. */
+const WIDE = /building_(?!scaffolding|stage|grain)|stall|hut|shack|cabin|longhouse|storehouse|forge|watchtower/;
+
+/**
+ * Everything stands on the ground beneath it (things on the water keep their height). On a slope
+ * a building is dug in: it rests on the lowest ground under its walls, so no corner hangs in the air.
+ */
 function standOnGround(items: WorldItem[]) {
   const shapes = shapesOf(items);
+  const ground = (x: number, z: number) => {
+    let h = 0;
+    for (const sh of shapes) h = Math.max(h, heightAt(sh, x, z));
+    return h;
+  };
   for (const i of items) {
     if (i.ground || i.bob) continue;
-    let h = 0;
-    for (const sh of shapes) h = Math.max(h, heightAt(sh, i.x, i.z));
+    let h = ground(i.x, i.z);
+    if (WIDE.test(i.model)) {
+      const r = 0.45;
+      h = Math.min(h, ground(i.x + r, i.z), ground(i.x - r, i.z), ground(i.x, i.z + r), ground(i.x, i.z - r));
+    }
     i.y += h;
   }
 }
@@ -314,7 +360,7 @@ export function boatPosition(s: GameState, nowMs: number, n: 0 | 1 = 0): { x: nu
 function boatRoute(dest: DestId, land: number, n: 0 | 1 = 0): [number, number][] {
   const [mx, mz] = mooring(land, n);
   // Sailing room: just outside the island's widest lobe.
-  const SEA_RING = homeShape(land).radius * 1.17 + 2;
+  const SEA_RING = homeShape(land).radius * 1.27 + 2;
   const [ix, iz] = hexToWorld(...DEST_HEX[dest]);
   const a0 = Math.atan2(mz, mx);
   const a1 = Math.atan2(iz, ix);
@@ -355,25 +401,13 @@ function along(pts: [number, number][], k: number): { x: number; z: number; dx: 
  * A ship passing at night: right to left far out behind the island, beyond the islands the boat
  * sails to, where the camera sees it against the horizon.
  */
-/**
- * Where far lighthouse i stands: on the horizon the everyday camera looks at (across the island),
- * in two staggered rows so they fit a phone's narrow view, and beyond the night ships' lane.
- */
-export function answerSpot(i: number): [number, number] {
-  const n = T.LIGHT_PARTS;
-  const a = FAR_SIDE + ((i - (n - 1) / 2) / (n - 1)) * ANSWER_SPREAD;
-  const r = i % 2 === 0 ? 70 : 82;
-  return [Math.cos(a) * r, Math.sin(a) * r];
-}
-const ANSWER_SPREAD = (28 * Math.PI) / 180;
-
 export function shipPosition(ship: Ship, nowMs: number, land = 0): { x: number; z: number; rotY: number } {
   void land;
   const age = Math.min(1, Math.max(0, (nowMs - ship.spawnedAt) / shipLife(ship)));
   const lane = Math.min(1, Math.max(0, ship.lane));
   // A ship in distress in a storm crosses a shorter stretch, quickly.
-  const half = ship.storm ? 30 : 42;
-  return { x: half - 2 * half * age, z: -(37 + lane * 5), rotY: -Math.PI / 2 };
+  const half = ship.storm ? 40 : 56;
+  return { x: half - 2 * half * age, z: -(50 + lane * 6), rotY: -Math.PI / 2 };
 }
 
 /** Drifting finds cross the lit water in front of the island, far lane to near lane. */
@@ -381,6 +415,6 @@ export function flotsamPosition(item: FloatingItem, nowMs: number, land = 0): { 
   const age = Math.min(1, Math.max(0, (nowMs - item.spawnedAt) / FLOAT_LIFETIME_MS));
   const lane = Math.min(1, Math.max(0, item.lane));
   // Just off the island's front beach: further out as the island grows (the camera pulls back with it).
-  const near = Math.max(8.5, homeShape(land).radius * 1.17 + 2);
-  return { x: -16 + 32 * age, z: near + lane * 3 };
+  const near = Math.max(8.5, homeShape(land).radius * 1.13 + 1.2);
+  return { x: -21 + 42 * age, z: near + lane * 3 };
 }

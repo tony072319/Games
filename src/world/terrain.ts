@@ -1,12 +1,14 @@
 /**
- * Sculpted islands: one piece of ground per island instead of hex tiles. A shape is a wobbly circle
- * (a few sine lobes on the radius) with a height profile by kind: a low beach ring that meets the
- * water at the outline, rising to grass and hills inland, with cliffs on some sides. Heights are a
- * pure function so objects can stand on the ground; the mesh is built from the same function.
+ * Sculpted islands: one piece of ground per island instead of hex tiles. A shape is a wobbly
+ * outline (a few sine lobes on the radius) with ground inside it. The small islands the boat sails
+ * to have a simple build each (a reef, a stack, a cape, a grove). The home island is real terrain,
+ * drawn from its plan (homeplan.ts): hills, a ridge, a cove, levelled plots for houses.
+ * Heights are a pure function so objects can stand on the ground; the mesh is built from the same function.
  */
 import * as THREE from 'three';
 import type { DestId } from '../core/data';
 import { DEST_HEX, hexToWorld } from './hex';
+import { FIXED_PADS, HILLS, HOME_LOBES, PLOT_PADS, hillAt, nearestRoad } from './homeplan';
 
 export type ShapeKind = 'home' | 'reef' | 'rock' | 'cape' | 'grove';
 
@@ -22,6 +24,8 @@ export interface Shape {
   /** Where cliffs face (angle) and how wide (0..1 of a half turn). */
   cliff: [number, number];
   seed: number;
+  /** Ground levelled for things to stand on (the home island): [x, z, radius, height], in world units. */
+  pads?: [number, number, number, number][];
 }
 
 const BEACH = 0.84;
@@ -31,11 +35,6 @@ const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
-
-/** The home island's rings, as shares of its radius: harbour flats, the town terrace (and its street), the peak's edge. */
-export const HARBOUR_RING = 0.8;
-export const TOWN_RING = 0.5;
-export const PEAK_RING = 0.27;
 
 /** A point a share `frac` of the way out from the centre, at angle `a`. */
 export function ringPoint(s: Shape, frac: number, a: number): [number, number] {
@@ -63,7 +62,7 @@ export function heightAt(s: Shape, x: number, z: number): number {
   const a = Math.atan2(dz, dx);
   const t = Math.hypot(dx, dz) / radiusAt(s, a);
   if (t >= 1) return -0.2 - (t - 1) * 2;
-  if (s.kind === 'home') return withCliff(s, a, t, homeHeight(s, x, z, a, t));
+  if (s.kind === 'home') return homeHeight(s, x, z, t);
   // The beach: from the waterline up to BEACH_TOP.
   const beach = BEACH_TOP * Math.min(1, (1 - t) / (1 - BEACH));
   const inland = smooth(BEACH, BEACH - 0.32, t);
@@ -74,27 +73,65 @@ export function heightAt(s: Shape, x: number, z: number): number {
       h = beach + s.plateau * Math.pow(smooth(0.85, 0.2, t), 1.4);
       break;
     case 'grove':
-      h = beach + s.plateau * Math.pow(smooth(0.95, 0, t), 0.8) + 0.25 * hills(s, x, z) * inland;
+      h = beach + s.plateau * Math.pow(smooth(0.95, 0, t), 0.8) * (0.75 + 0.5 * hills(s, x * 1.9, z * 1.9)) + 0.25 * hills(s, x, z) * inland;
       break;
-    default:
-      h = beach + inland * (s.plateau + 0.45 * hills(s, x, z));
+    default: {
+      // Low ground that rolls, with a rise to one side rather than a dome in the middle.
+      const rise = Math.exp(-((dx - s.radius * 0.3) ** 2 + (dz + s.radius * 0.25) ** 2) / (s.radius * s.radius * 0.18));
+      h = beach + inland * (s.plateau + 0.55 * hills(s, x * 2.3, z * 2.3) + 0.5 * rise);
+    }
   }
   return withCliff(s, a, t, h);
 }
 
 /**
- * The home island in tiers, like a hill town: a narrow beach, the harbour flats, a rock wall up to
- * the town terrace, another up to the peak where the lighthouse stands. The walls wander a little.
+ * The home island's ground before anything is levelled on it. Not built in rings: the height at a
+ * point comes from the hills of the plan (a summit, a ridge, a knoll, a shoulder, a cove), on low
+ * land that rolls a little and tilts up toward the back. Only the last stretch before the water
+ * follows the coast: a beach where the land is low, a cliff where a hill runs out to sea.
  */
-function homeHeight(s: Shape, x: number, z: number, a: number, t: number): number {
-  const beach = BEACH_TOP * Math.min(1, (1 - t) / 0.07);
-  if (t > 0.93) return beach;
-  const w1 = 0.68 + 0.025 * Math.sin(3 * a + 0.7);
-  const w2 = PEAK_RING + 0.02 * Math.sin(4 * a + 2);
-  const harbour = BEACH_TOP + 0.27 * smooth(0.93, 0.88, t);
-  const town = 1.6 * smooth(w1 + 0.015, w1 - 0.015, t);
-  const peak = 1.9 * smooth(w2 + 0.02, w2 - 0.02, t) + 0.5 * smooth(w2, 0, t);
-  return harbour + town + peak + 0.12 * hills(s, x, z) * smooth(0.93, 0.85, t);
+function rawHome(s: Shape, x: number, z: number, t: number): number {
+  const u = (x - s.cx) / s.radius;
+  const v = (z - s.cz) / s.radius;
+  let land = 0.38 + 0.22 * (hills(s, x, z) - 0.5) + 0.2 * smooth(0.35, -0.7, v);
+  for (const h of HILLS) land += hillAt(h, u, v);
+  // The shore: the land comes down to the beach over the last stretch (steeply, where it is high).
+  // The shore is not the same all round: wide sand in the coves, a short step up from the water on the headlands.
+  const a = Math.atan2(z - s.cz, x - s.cx);
+  const cove = 0.5 + 0.5 * Math.sin(3 * a + 2.0) * Math.cos(a - 0.6);
+  const beach = BEACH_TOP * Math.min(1, (1 - t) / (0.045 + 0.05 * cove));
+  return beach + Math.max(0, land) * smooth(0.985, 0.9 - 0.13 * cove, t);
+}
+
+/** The home island's ground: its terrain, levelled where something stands (each house on its own plot, cut into the slope). */
+function homeHeight(s: Shape, x: number, z: number, t: number): number {
+  let h = rawHome(s, x, z, t);
+  if (!s.pads) return h;
+  // Each plot is level across its own width and eases into the hill round it. Where two plots'
+  // banks meet, the nearer plot wins, so neither is tilted by its neighbour.
+  let target = 0;
+  let weight = 0;
+  let most = 0;
+  for (const [px, pz, r, ph] of s.pads) {
+    const d2 = (x - px) ** 2 + (z - pz) ** 2;
+    // The cut eases back into the hill over more than a plot's width, so it is a bank, not a wall.
+    const reach = r * 2.5;
+    if (d2 >= reach * reach) continue;
+    const w = smooth(reach, r, Math.sqrt(d2));
+    const w4 = w * w * w * w;
+    target += w4 * ph;
+    weight += w4;
+    if (w > most) most = w;
+  }
+  if (weight > 0) h += (target / weight - h) * most;
+  return h;
+}
+
+/** How much of a road lies at a point of the home island (0..1): the roads of the plan, a cart's width across. */
+export function roadAt(s: Shape, x: number, z: number): number {
+  if (s.kind !== 'home') return 0;
+  const d = nearestRoad((x - s.cx) / s.radius, (z - s.cz) / s.radius).d * s.radius;
+  return smooth(0.62, 0.3, d);
 }
 
 /** Cliffs: on one side the high ground runs right to the edge and drops into the sea. */
@@ -123,23 +160,27 @@ export function outline(s: Shape, n: number): [number, number, number][] {
   return out;
 }
 
-/** The home island: grows smoothly as you expand it (land 0..28). */
-export function homeShape(land: number): Shape {
-  return {
-    kind: 'home',
-    cx: 0,
-    cz: 0,
-    radius: 13 + Math.max(0, land) * 0.1,
-    lobes: [
-      [0.08, 3, 0.4],
-      [0.05, 5, 2.1],
-      [0.03, 7, 4.0],
-    ],
-    // The town terrace's height: the back cliff rises to it.
-    plateau: 2.1,
-    cliff: [-2.2, 0.22],
-    seed: 1.3,
-  };
+const homes = new Map<string, Shape>();
+
+/**
+ * The home island: grows smoothly as you expand it (land 0..28). `built` is how many of the
+ * town's plots have a house on them: the ground is levelled under those (all of them, if not
+ * said). The same island is handed back each time it is asked for.
+ */
+export function homeShape(land: number, built = PLOT_PADS.length): Shape {
+  const n = Math.min(PLOT_PADS.length, Math.max(0, built));
+  const id = `${land}:${n}`;
+  const known = homes.get(id);
+  if (known) return known;
+  const s: Shape = { kind: 'home', cx: 0, cz: 0, radius: 17 + Math.max(0, land) * 0.13, lobes: HOME_LOBES, plateau: 0, cliff: [0, 0], seed: 1.3 };
+  // Each plot is levelled at the height the hill has there.
+  s.pads = [...FIXED_PADS, ...PLOT_PADS.slice(0, n)].map(([u, v, r]) => {
+    const x = u * s.radius;
+    const z = v * s.radius;
+    return [x, z, r, rawHome(s, x, z, Math.hypot(x, z) / radiusAt(s, Math.atan2(z, x)))];
+  });
+  homes.set(id, s);
+  return s;
 }
 
 function destShape(d: DestId, kind: ShapeKind, radius: number, plateau: number, lobes: Shape['lobes'], cliff: Shape['cliff'], seed: number): Shape {
@@ -149,10 +190,10 @@ function destShape(d: DestId, kind: ShapeKind, radius: number, plateau: number, 
 
 /** The four islands the boat sails to, each with its own build. */
 export const DEST_SHAPES: Record<DestId, Shape> = {
-  wreck: destShape('wreck', 'reef', 2.6, 0.12, [[0.18, 2, 0.5], [0.1, 5, 1.2]], [0, 0], 2.2),
-  gullrock: destShape('gullrock', 'rock', 2.4, 3.4, [[0.12, 3, 1.0], [0.08, 6, 0.2]], [1.2, 0.3], 3.7),
-  oldlight: destShape('oldlight', 'cape', 3.0, 0.7, [[0.35, 2, 0.9], [0.06, 5, 2.5]], [-0.6, 0.25], 4.4),
-  firefly: destShape('firefly', 'grove', 2.8, 1.2, [[0.1, 3, 2.0], [0.06, 4, 0.7]], [0, 0], 5.9),
+  wreck: destShape('wreck', 'reef', 3.6, 0.12, [[0.18, 2, 0.5], [0.1, 5, 1.2]], [0, 0], 2.2),
+  gullrock: destShape('gullrock', 'rock', 3.2, 3.4, [[0.12, 3, 1.0], [0.08, 6, 0.2]], [1.2, 0.3], 3.7),
+  oldlight: destShape('oldlight', 'cape', 4.2, 0.7, [[0.35, 2, 0.9], [0.06, 5, 2.5]], [-0.6, 0.25], 4.4),
+  firefly: destShape('firefly', 'grove', 3.9, 1.2, [[0.1, 3, 2.0], [0.06, 4, 0.7]], [0, 0], 5.9),
 };
 
 export interface GroundColours {
@@ -166,19 +207,13 @@ export interface GroundColours {
 }
 
 /**
- * The island's ground as a low-poly mesh with one colour per face: sand near the water, grass
- * inland, rock where it is steep. Polar grid out a little past the waterline (that part is under water).
+ * The island's ground as one smooth mesh: a polar grid out a little past the waterline (that part
+ * is under water). Each point carries its plain colour (sand near the water, grass inland, rock
+ * where it is steep, packed earth on the roads) and how much road lies there; the ground's
+ * material paints the detail from those (see ground.ts).
  */
-export function terrainGeometry(s: Shape, c: GroundColours, rings = s.kind === 'home' ? 64 : 22, spokes = s.kind === 'home' ? 108 : 72): THREE.BufferGeometry {
+export function terrainGeometry(s: Shape, c: GroundColours, rings = s.kind === 'home' ? 84 : 26, spokes = s.kind === 'home' ? 144 : 72): THREE.BufferGeometry {
   const tMax = 1.08;
-  const pt = (i: number, j: number): [number, number, number] => {
-    const t = (i / rings) * tMax;
-    const a = (j / spokes) * Math.PI * 2;
-    const r = radiusAt(s, a) * t;
-    const x = s.cx + Math.cos(a) * r;
-    const z = s.cz + Math.sin(a) * r;
-    return [x, heightAt(s, x, z), z];
-  };
   const wash = c.wash ? new THREE.Color(c.wash[0]) : null;
   const tone = (hex: number) => {
     const col = new THREE.Color(hex);
@@ -191,46 +226,42 @@ export function terrainGeometry(s: Shape, c: GroundColours, rings = s.kind === '
   const path = tone(c.path ?? c.sand);
   const pos: number[] = [];
   const col: number[] = [];
-  const tri = (p: [number, number, number][]) => {
-    const ys = p.map((q) => q[1]);
-    const top = Math.max(...ys);
-    const span = top - Math.min(...ys);
-    const run = Math.max(0.05, Math.hypot(p[0][0] - p[1][0], p[0][2] - p[1][2]), Math.hypot(p[1][0] - p[2][0], p[1][2] - p[2][2]));
-    const steep = span / run;
-    let base = steep > 0.75 || (s.kind === 'rock' && top > 1) ? rock : top < BEACH_TOP + 0.06 ? sand : grass;
-    // The town's street: a ring of packed earth round the terrace.
-    if (s.kind === 'home' && c.path !== undefined && base === grass) {
-      const mx = (p[0][0] + p[1][0] + p[2][0]) / 3 - s.cx;
-      const mz = (p[0][2] + p[1][2] + p[2][2]) / 3 - s.cz;
-      const tt = Math.hypot(mx, mz) / radiusAt(s, Math.atan2(mz, mx));
-      if (Math.abs(tt - TOWN_RING) < 0.035) base = path;
-    }
-    // A little per-face variation so the ground does not look flat-printed.
-    const k = 0.94 + 0.06 * Math.sin(p[0][0] * 3.1 + p[0][2] * 1.7);
-    for (const q of p) {
-      pos.push(q[0], q[1], q[2]);
-      col.push(base.r * k, base.g * k, base.b * k);
-    }
+  const road: number[] = [];
+  const index: number[] = [];
+  // The middle point, then ring after ring.
+  const add = (x: number, z: number, t: number) => {
+    const y = heightAt(s, x, z);
+    pos.push(x, y, z);
+    // How steep the ground is here, from the heights a small step away.
+    const e = 0.12;
+    const steep = Math.hypot(heightAt(s, x + e, z) - heightAt(s, x - e, z), heightAt(s, x, z + e) - heightAt(s, x, z - e)) / (2 * e);
+    const k = c.path !== undefined ? roadAt(s, x, z) : 0;
+    let base = steep > 0.75 || (s.kind === 'rock' && y > 1) ? rock : y < BEACH_TOP + 0.06 ? sand : grass;
+    if (k > 0.5 && base === grass) base = path;
+    col.push(base.r, base.g, base.b);
+    road.push(t < 1 ? k : 0);
   };
-  // Every grid point once (heights are the costly part), then the faces.
-  const grid: [number, number, number][][] = [];
-  for (let i = 0; i <= rings; i++) {
-    grid.push([]);
-    for (let j = 0; j <= spokes; j++) grid[i].push(pt(i, j));
+  add(s.cx, s.cz, 0);
+  for (let i = 1; i <= rings; i++) {
+    const t = (i / rings) * tMax;
+    for (let j = 0; j < spokes; j++) {
+      const a = (j / spokes) * Math.PI * 2;
+      const r = radiusAt(s, a) * t;
+      add(s.cx + Math.cos(a) * r, s.cz + Math.sin(a) * r, t);
+    }
   }
+  const at = (i: number, j: number) => (i === 0 ? 0 : 1 + (i - 1) * spokes + (j % spokes));
   for (let i = 0; i < rings; i++)
     for (let j = 0; j < spokes; j++) {
-      const a = grid[i][j];
-      const b = grid[i + 1][j];
-      const d = grid[i + 1][j + 1];
-      const e = grid[i][j + 1];
       // Counter-clockwise seen from above, so the faces point up.
-      if (i > 0) tri([a, e, d]);
-      tri([a, d, b]);
+      if (i === 0) index.push(0, at(1, j + 1), at(1, j));
+      else index.push(at(i, j), at(i, j + 1), at(i + 1, j + 1), at(i, j), at(i + 1, j + 1), at(i + 1, j));
     }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('aRoad', new THREE.Float32BufferAttribute(road, 1));
+  g.setIndex(index);
   g.computeVertexNormals();
   return g;
 }

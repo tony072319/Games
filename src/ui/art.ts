@@ -6,3 +6,4 @@ export * from './art/tower';
 export * from './art/boat';
 export * from './art/island';
 export * from './art/curios';
+export * from './art/thumbs';

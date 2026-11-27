@@ -24,12 +24,18 @@ window.__ready = false;
 const onLost = () => { window.__lostCalls = (window.__lostCalls || 0) + 1; window.__world.dispose(); window.__world = window.__make(); };
 const w = createWorld(host, { calm: false, onReady: () => (window.__ready = true), onError: (m) => console.error(m), onLost });
 window.__world = w;
-const sky = { ...skyAt(0), sun: q.has('night') ? 0 : 1, moon: q.has('night') ? 1 : 0 };
+// ?night = deep night; ?sun=0..1&moon=0..1 for any moment between (sun=0&moon=0.3 is the evening).
+const num = (k, d) => (q.has(k) ? +q.get(k) : d);
+const sky = { ...skyAt(0), sun: num('sun', q.has('night') ? 0 : 1), moon: num('moon', q.has('night') ? 1 : 0) };
 w.setSky(sky, s.sea); w.setLight(L);
+// ?event=storm|meteors|whales shows the sea event's weather.
+if (q.get('event')) w.setEvent(q.get('event'));
 const items = worldLayout(s, Date.now());
 if (q.has('bad')) items.push({ key: 'bad', model: 'test/missing', x: 0, y: 0, z: 3, rotY: 0 });
 window.__bump = () => { s.levels.light = Math.min(10, s.levels.light + 1); s.levels.storage = Math.min(11, s.levels.storage + 1); w.update(worldLayout(s, Date.now()), { boats: [], flotsam: [] }); };
-window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => {}, onError: () => {}, onLost }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boats: [], flotsam: [] }); return w2; };
+window.__make = () => { const w2 = createWorld(host, { calm: false, onReady: () => (window.__remade = (window.__remade || 0) + 1), onError: () => {}, onLost }); w2.setSky(sky, s.sea); w2.setLight(L); w2.update(worldLayout(s, Date.now()), { boats: [], flotsam: [] }); return w2; };
 w.update(items, { boats: [], flotsam: [{ id: 1, x: -3, z: 18, curio: false, material: 'wood' }, { id: 2, x: 3, z: 20, curio: true, material: 'wood' }] });
-if (q.get('focus')) setTimeout(() => w.focus(q.get('focus')), 100);
+if (q.get('focus')) { const go = () => (window.__ready ? setTimeout(() => w.focus(q.get('focus')), 300) : setTimeout(go, 200)); go(); }
+// ?tilt=0..1 lowers the camera toward the horizon (to look at the sky); ?zoom=k moves it nearer (<1) or farther (>1); ?turn=degrees walks it round the island.
+if (q.has('tilt') || q.has('zoom') || q.has('turn')) setTimeout(() => w.testView(num('tilt', 0), num('zoom', 1), num('turn', 0)), 200);
 </script></body></html>

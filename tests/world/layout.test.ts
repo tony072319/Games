@@ -152,7 +152,8 @@ describe('a real island', () => {
     for (const i of items.filter((x) => x.key.startsWith('house') || x.key.startsWith('decor:') || x.key.startsWith('chest:'))) {
       const h = heightAt(home, i.x, i.z);
       expect(h, i.key).toBeGreaterThan(0);
-      expect(i.y, i.key).toBeGreaterThanOrEqual(h - 1e-9);
+      // On the ground, or (a building on a slope) dug in a little: never deep.
+      expect(i.y, i.key).toBeGreaterThanOrEqual(h - 0.3);
     }
   });
   test('the water foams along the outlines, within the shader limit', () => {
@@ -176,8 +177,8 @@ describe('a lucky boat', () => {
 describe('flotsam drift', () => {
   const item = { id: 1, material: 'wood' as const, spawnedAt: NOW, lane: 0 };
   test('crosses the sea from left to right over its life', () => {
-    expect(flotsamPosition(item, NOW).x).toBeCloseTo(-16);
-    expect(flotsamPosition(item, NOW + FLOAT_LIFETIME_MS).x).toBeCloseTo(16);
+    expect(flotsamPosition(item, NOW).x).toBeCloseTo(-21);
+    expect(flotsamPosition(item, NOW + FLOAT_LIFETIME_MS).x).toBeCloseTo(21);
   });
   test('near lane is closer to the camera, and nothing is NaN', () => {
     const far = flotsamPosition({ ...item, lane: 0 }, NOW + 1000);

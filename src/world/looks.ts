@@ -15,6 +15,8 @@ export interface Part {
   rotY?: number;
   size?: number;
   tint?: number;
+  /** Blend the colours toward this colour by this much (to quieten a loud model). */
+  wash?: [number, number];
   glow?: 'lamp' | 'window' | 'pane' | 'lantern' | 'fire' | 'beacon';
 }
 
@@ -84,14 +86,17 @@ export const LIGHT_LOOKS: Part[][] = [
   ],
 ];
 
+/** The harbour crane's red is toned down to weathered iron. */
+export const CRANE_WASH: [number, number] = [0x5d6b74, 0.72];
+
 /** The net pile grows a little every level; each milestone adds something to the harbour. */
 export function netParts(level: number): Part[] {
   const parts: Part[] = [{ part: 'pile', model: 'lh/fishing_net_pile', dx: 0, dz: 0, size: 0.35 + 0.01 * level }];
   if (level >= 10) parts.push({ part: 'm10', model: 'harbor/fishing_rod_rack', dx: -0.7, dz: -0.2 });
   if (level >= 20) parts.push({ part: 'm20', model: 'viking/fish_drying_rack', dx: 0.2, dz: -0.8, rotY: 0.3 });
-  if (level >= 30) parts.push({ part: 'm30', model: 'harbor/harbor_crane', dx: 2.6, dz: 3.0, rotY: -0.6 });
+  if (level >= 30) parts.push({ part: 'm30', model: 'harbor/harbor_crane', dx: 2.6, dz: 3.0, rotY: -0.6, size: 1.9, wash: CRANE_WASH });
   if (level >= 40) parts.push({ part: 'm40', model: 'harbor/fish_market_stall', dx: -1.1, dz: 0.7, rotY: -1.2 });
-  if (level >= 50) parts.push({ part: 'm50', model: 'lh/fishing_boat', dx: 4.2, dz: 2.0, dy: -0.25, rotY: 0.9 });
+  if (level >= 50) parts.push({ part: 'm50', model: 'kp/boat-row-large', dx: 4.2, dz: 2.0, dy: -0.25, rotY: 0.9 });
   return parts;
 }
 
@@ -126,62 +131,71 @@ export const CHEST_LOOKS: Part[][] = [
     { part: 'barrels', model: 'harbor/fish_barrel_stack', dx: 0.75, dz: 0.1 },
     { part: 'crate', model: 'kk/crate_B_big', dx: -0.6, dz: -0.1, size: 0.7 },
   ],
-  [{ part: 'a', model: 'viking/storehouse', dx: 0, dz: -0.2, size: 1.3 }],
+  [{ part: 'a', model: 'kk/building_market_blue', dx: 0, dz: -0.2, size: 1.15 }],
   [
-    { part: 'a', model: 'viking/storehouse', dx: 0, dz: -0.2, size: 1.4 },
+    { part: 'a', model: 'kk/building_market_blue', dx: 0, dz: -0.2, size: 1.25 },
     { part: 'cargo', model: 'harbor/cargo_crate', dx: 0.9, dz: 0.4, size: 0.6 },
   ],
   [
-    { part: 'a', model: 'viking/storehouse', dx: 0, dz: -0.2, size: 1.5 },
+    { part: 'a', model: 'kk/building_market_blue', dx: 0, dz: -0.2, size: 1.35 },
     { part: 'cargo', model: 'harbor/cargo_crate', dx: 0.9, dz: 0.4, size: 0.6 },
     { part: 'lumber', model: 'kk/resource_lumber', dx: -0.9, dz: 0.4 },
   ],
   [
-    { part: 'a', model: 'viking/storehouse', dx: 0, dz: -0.2, size: 1.6 },
+    { part: 'a', model: 'kk/building_market_blue', dx: 0, dz: -0.2, size: 1.45 },
     { part: 'cargo', model: 'harbor/cargo_crate', dx: 0.9, dz: 0.4, size: 0.6 },
     { part: 'cargo2', model: 'harbor/cargo_crate', dx: 0.95, dz: 0.4, dy: 0.6, rotY: 0.3, size: 0.55 },
     { part: 'cart', model: 'kk/wheelbarrow', dx: -0.9, dz: 0.4 },
   ],
 ];
 
-/** The boat grows with its upgrades: rowing boat, then a sail, then a small ship. */
+/** The boat grows with its upgrades: a rowing boat, a bigger one, then a small ship under sail. */
 export function boatModel(speed: number, cargo: number): ModelId {
   if (speed + cargo >= 12) return 'kp/ship-small';
-  if (speed >= 4) return 'harbor/sailboat';
+  if (speed >= 4) return 'kp/boat-row-large';
   return 'kp/boat-row-small';
 }
 
 /** Each island's own look once found; the same main model, darkened, before. */
 export const ISLAND_DECOR: Record<DestId, Part[]> = {
+  // A wooden wreck high on the reef, its anchor and a few crates washed up beside it.
   wreck: [
-    { part: 'hull', model: 'under/shipwreck_hull', dx: -1.2, dz: -0.9, dy: -0.25, rotY: 0.7 },
-    { part: 'rock', model: 'under/sea_rock_big', dx: 1.4, dz: -1.4, dy: -0.2 },
+    { part: 'hull', model: 'kp/ship-wreck', dx: -1.0, dz: -0.8, dy: -0.1, rotY: 0.7, size: 2.6 },
+    { part: 'rock', model: 'kk/rock_single_C', dx: 1.4, dz: -1.3, dy: -0.1, size: 1.1 },
+    { part: 'anchor', model: 'under/ship_anchor', dx: 0.9, dz: 0.9, rotY: 0.5, size: 0.7 },
+    { part: 'crate', model: 'kp/crate', dx: -0.2, dz: 1.2, rotY: 0.4, size: 0.4 },
   ],
   gullrock: [
     { part: 'stack', model: 'lh/sea_stack', dx: -0.4, dz: -1.6, dy: -0.2, size: 4 },
-    { part: 'rock', model: 'lh/sea_rock_large', dx: 1.6, dz: -1.2, dy: -0.2 },
+    { part: 'rock', model: 'kk/rock_single_B', dx: 1.6, dz: -1.1, dy: -0.15, size: 1.0 },
+    { part: 'rock2', model: 'kk/rock_single_D', dx: -1.7, dz: 0.6, dy: -0.1, size: 0.7 },
   ],
   oldlight: [
     { part: 'tower', model: 'lh/lighthouse_small', dx: -0.6, dz: -1.2, size: 3.6, tint: 0x9a96a8 },
-    { part: 'rock', model: 'nature/rock_cluster', dx: 1.4, dz: -1.0 },
+    { part: 'rock', model: 'kk/rock_single_C', dx: 1.5, dz: -1.0, size: 0.9 },
+    { part: 'fir', model: 'kk/tree_single_A', dx: -1.7, dz: 0.3, size: 1.5 },
+    { part: 'fir2', model: 'kk/tree_single_B', dx: 0.6, dz: 1.5, size: 1.2 },
   ],
   firefly: [
     { part: 'palm', model: 'volcano/palm_tree', dx: -0.8, dz: -1.3 },
     { part: 'banana', model: 'huts/banana_plant', dx: 1.3, dz: -1.0 },
+    { part: 'tree', model: 'nature/round_tree', dx: 0.2, dz: -1.6, size: 1.7 },
+    { part: 'tree2', model: 'nature/round_tree', dx: -1.6, dz: 0.2, size: 1.4 },
+    { part: 'palm2', model: 'huts/palm_small', dx: 1.5, dz: 0.8 },
   ],
 };
 
 /** The building each island building becomes from level 3 on. */
 export const BUILDING_MODEL: Record<BuildingId, ModelId> = {
-  dismantler: 'viking/forge',
+  dismantler: 'kk/building_blacksmith_blue',
   rack: 'viking/fish_drying_rack',
-  boatshed: 'huts/fish_shack',
+  boatshed: 'kk/building_home_B_blue',
   nest: 'huts/stilt_hut',
   kelp: 'harbor/fishing_rod_rack',
-  lookout: 'viking/watchtower',
-  depot: 'viking/storehouse',
+  lookout: 'kk/building_tower_B_blue',
+  depot: 'kk/building_tavern_blue',
   workshop: 'kk/building_lumbermill_blue',
-  desk: 'lh/keeper_house',
+  desk: 'kk/building_home_A_blue',
   jars: 'winter/lantern_xmas',
   orchard: 'nature/round_tree',
   path: 'tiki/tiki_torch',
@@ -234,7 +248,7 @@ export const DECOR_LOOKS: Record<DecorId, Part[][]> = {
   ],
   hut: [
     [p('a', 'kk/tent')],
-    [p('a', 'viking/small_hut')],
+    [p('a', 'kk/building_home_A_blue', 0, 0, { size: 1.3 })],
     [p('a', 'volcano/thatch_hut', 0, 0, { glow: 'window' })],
   ],
   torches: [
@@ -250,6 +264,6 @@ export const DECOR_LOOKS: Record<DecorId, Part[][]> = {
   tower: [
     [p('a', 'kk/building_stage_A')],
     [p('a', 'kk/building_tower_A_blue')],
-    [p('a', 'viking/watchtower')],
+    [p('a', 'kk/building_tower_B_blue')],
   ],
 };

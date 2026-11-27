@@ -6,7 +6,8 @@ const BASE = process.env.WORLD_URL || 'http://localhost:5199/tools/world-check.h
 const fail = (m) => { console.error('FAIL:', m); process.exitCode = 1; };
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = async (q) => { const p = await b.newPage({ viewport: { width: 390, height: 844 } }); await p.goto(`${BASE}?${q}`); return p; };
-const pixel = async (p) => { const png = (await p.screenshot()).toString('base64'); return p.evaluate(async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode(); const g = document.createElement('canvas'); g.width = img.width; g.height = img.height; const x = g.getContext('2d'); x.drawImage(img, 0, 0); const d = x.getImageData(Math.floor(img.width / 2), Math.floor(img.height * 0.45), 1, 1).data; return [d[0], d[1], d[2]]; }, png); };
+const pixel = async (p) => { const png = (await p.screenshot()).toString('base64'); return p.evaluate(async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode(); const g = document.createElement('canvas'); g.width = img.width; g.height = img.height; const x = g.getContext('2d'); x.drawImage(img, 0, 0); // The colour of a small patch, not one dot: the grass sways, so a single dot can land on a blade one moment and not the next.
+  const n = 15; const d = x.getImageData(Math.floor(img.width / 2) - 7, Math.floor(img.height * 0.45) - 7, n, n).data; const sum = [0, 0, 0]; for (let i = 0; i < d.length; i += 4) { sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; } return sum.map((v) => Math.round(v / (n * n))); }, png); };
 
 // A model that fails to load: the world still becomes ready within 10 s.
 { const p = await page('light=5&bad');
@@ -37,7 +38,9 @@ const pixel = async (p) => { const png = (await p.screenshot()).toString('base64
   await p.waitForTimeout(1500);
   const before = await pixel(p);
   await p.evaluate(() => document.querySelector('canvas.world').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext());
-  await p.waitForTimeout(6000);
+  // The new world has every model to load again: wait until it says it is ready, then a moment for things to settle into place.
+  await p.waitForFunction(() => window.__remade, null, { timeout: 40000 }).catch(() => fail('the rebuilt world never became ready'));
+  await p.waitForTimeout(2500);
   const after = await pixel(p);
   const calls = await p.evaluate(() => window.__lostCalls || 0);
   console.log('never restored: rebuilds', calls, 'pixel', after);

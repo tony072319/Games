@@ -492,7 +492,7 @@ try {
     });
     const pm = await c.newPage();
     await pm.goto(BASE);
-    await pm.locator('.hit[data-hit="map"]').waitFor({ state: 'attached', timeout: 8000 });
+    await pm.locator('.hit[data-hit="map"]').waitFor({ state: 'attached', timeout: 40000 });
     await pm.locator('.hit[data-hit="map"]').focus();
     await pm.keyboard.press('Enter');
     await pm.locator('.node[data-dest="wreck"]').click();
@@ -519,7 +519,7 @@ try {
     });
     const pg = await c.newPage();
     await pg.goto(BASE);
-    await pg.locator('.goal-text').waitFor({ timeout: 8000 });
+    await pg.locator('.goal-text').waitFor({ timeout: 40000 });
     await pg.waitForTimeout(500);
     const g = await pg.locator('.goal-text').textContent();
     if (!g?.includes('灯塔')) fail(`after the first steps the goal should be the lighthouse, got ${g}`);

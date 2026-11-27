@@ -6,7 +6,8 @@ import { TOWN_FULL, townPoints, townShown } from '../../src/core/town';
 import { MODELS } from '../../src/world/assets';
 import { TOWN_SLOTS, townWalkers } from '../../src/world/town';
 import { decorSpot, worldLayout } from '../../src/world/layout';
-import { TOWN_RING, heightAt, homeShape, radiusAt } from '../../src/world/terrain';
+import { nearestRoad } from '../../src/world/homeplan';
+import { heightAt, homeShape, roadAt } from '../../src/world/terrain';
 
 const NOW = 1_000_000;
 const grown = (f: (s: GameState) => void = () => {}) => {
@@ -71,13 +72,33 @@ describe('where the town stands', () => {
       }
     }
   });
-  test('walkers keep to the street, on land', () => {
+  test('walkers keep to the roads, on land', () => {
     const s = grown((g) => (g.levels.light = 10));
     const home = homeShape(s.land);
-    for (const w of townWalkers(s, NOW)) {
-      const a = Math.atan2(w.z, w.x);
-      expect(Math.abs(Math.hypot(w.x, w.z) / radiusAt(home, a) - TOWN_RING)).toBeLessThan(0.03);
-      expect(heightAt(home, w.x, w.z)).toBeGreaterThan(1);
+    const walkers = townWalkers(s, NOW);
+    expect(walkers.length).toBeGreaterThan(3);
+    for (const w of walkers) {
+      expect(roadAt(home, w.x, w.z), w.key).toBeGreaterThan(0.9);
+      expect(heightAt(home, w.x, w.z), w.key).toBeGreaterThan(0.3);
+    }
+    // They go somewhere: a minute later they have moved, still on a road.
+    const later = townWalkers(s, NOW + 60_000);
+    expect(Math.hypot(later[0].x - walkers[0].x, later[0].z - walkers[0].z)).toBeGreaterThan(0.3);
+    for (const w of later) expect(roadAt(home, w.x, w.z), w.key).toBeGreaterThan(0.9);
+  });
+  test('the town is not laid out in rings: its houses stand at every distance from the lighthouse', () => {
+    const home = homeShape(0);
+    const far = TOWN_SLOTS.map((sl) => Math.hypot(...sl.at(0)) / home.radius);
+    const bands = new Set(far.map((f) => Math.round(f * 10)));
+    expect(bands.size).toBeGreaterThanOrEqual(5);
+  });
+  test('every house has its door to a road nearby', () => {
+    const home = homeShape(0);
+    for (const [i, sl] of TOWN_SLOTS.slice(0, -2).entries()) {
+      const [x, z] = sl.at(0);
+      // A few steps out of the door, in the direction it faces, is nearer the road than the house is.
+      const ahead = (d: number) => nearestRoad((x + Math.sin(sl.rotY) * d) / home.radius, (z + Math.cos(sl.rotY) * d) / home.radius).d;
+      expect(ahead(0.8), `slot ${i}`).toBeLessThan(ahead(0));
     }
   });
 });

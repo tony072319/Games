@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!-- Every curio on one page, as the book shows them (found, and as the dark shape of one not yet found). -->
+<html><head><meta charset="utf-8"><base href="/">
+<style>body{margin:0;background:#1d1934;color:#cfc8e8;font:11px system-ui;padding:10px}
+.g{display:grid;grid-template-columns:repeat(12,88px);gap:8px}
+.c{background:#2a2548;border-radius:12px;padding:6px;text-align:center}.c svg{width:72px;height:72px;display:block;margin:auto}
+.s svg{width:44px;height:44px}</style></head><body>
+<div class="g" id="big"></div><p></p><div class="g s" id="small"></div><p></p><div class="g s" id="dark"></div>
+<script type="module">
+import { curioIcon } from '/src/ui/art/curios.ts';
+const ids = ['dusk', 'fog', 'aurora'].flatMap((s) => Array.from({ length: 12 }, (_, i) => `${s}:${i}`));
+for (const [host, sil] of [['big', false], ['small', false], ['dark', true]])
+  for (const id of ids) { const d = document.createElement('div'); d.className = 'c'; d.innerHTML = curioIcon(id, sil) + (host === 'big' ? id : ''); document.getElementById(host).append(d); }
+window.__ready = true;
+</script></body></html>

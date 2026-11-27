@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, test } from 'vitest';
-import { DEST_SHAPES, HARBOUR_RING, PEAK_RING, TOWN_RING, heightAt, homeShape, outline, ringPoint, terrainGeometry, type Shape } from '../../src/world/terrain';
+import { ROADS } from '../../src/world/homeplan';
+import { DEST_SHAPES, heightAt, homeShape, outline, radiusAt, ringPoint, terrainGeometry, type Shape } from '../../src/world/terrain';
 
 const shapes: Shape[] = [homeShape(0), homeShape(28), ...Object.values(DEST_SHAPES)];
 
@@ -49,26 +50,76 @@ describe('sculpted islands', () => {
   });
 });
 
-describe('the town island has tiers', () => {
+describe('the home island is real ground, not rings', () => {
   const s = homeShape(0);
-  const at = (frac: number, a = 0.4) => {
+  const at = (frac: number, a: number) => {
     const [x, z] = ringPoint(s, frac, a);
     return heightAt(s, x, z);
   };
-  test('harbour below town below peak, all on land', () => {
-    const harbour = at(HARBOUR_RING);
-    const town = at(TOWN_RING);
-    const peak = at(PEAK_RING * 0.5);
-    expect(harbour).toBeGreaterThan(0.3);
-    expect(town).toBeGreaterThan(harbour + 1);
-    expect(peak).toBeGreaterThan(town + 1);
+  const angles = Array.from({ length: 36 }, (_, i) => (i / 36) * Math.PI * 2);
+  test('the lighthouse stands on the highest ground', () => {
+    const top = heightAt(s, 0, 0);
+    expect(top).toBeGreaterThan(3);
+    for (let x = -16; x <= 16; x += 0.5) for (let z = -16; z <= 16; z += 0.5) expect(heightAt(s, x, z), `${x},${z}`).toBeLessThanOrEqual(top + 0.05);
   });
-  test('walls between tiers are steep: a big rise over a short step', () => {
-    let steepest = 0;
-    for (let f = 0.2; f < 0.9; f += 0.005) steepest = Math.max(steepest, (at(f) - at(f + 0.005)) / (s.radius * 0.005));
-    expect(steepest).toBeGreaterThan(1.5);
+  test('the same distance from the middle is high in one direction and low in another', () => {
+    for (const frac of [0.35, 0.5, 0.65]) {
+      const hs = angles.map((a) => at(frac, a));
+      expect(Math.max(...hs) - Math.min(...hs), `at ${frac}`).toBeGreaterThan(1);
+    }
   });
-  test('a street runs round the town tier', () => {
+  test('no terraces: the way up from the shore is one slope, not a bank, a flat and another bank', () => {
+    // The hill itself, before any house plot is cut into it.
+    const bare = homeShape(0, 0);
+    const up = (f: number, a: number) => {
+      const [x, z] = ringPoint(bare, f, a);
+      return heightAt(bare, x, z);
+    };
+    // Walking in from the shore: how many separate steep climbs, with level ground between them?
+    const climbs = (a: number) => {
+      let n = 0;
+      let rise = 0;
+      let level = 1;
+      for (let f = 0.86; f > 0.1; f -= 0.01) {
+        const step = (up(f - 0.01, a) - up(f, a)) / (radiusAt(bare, a) * 0.01);
+        if (step > 0.4) {
+          // A new climb only counts after a good stretch of level ground.
+          if (level > 0.08 && rise > 0.5) n++;
+          if (level > 0.08) rise = 0;
+          rise += step * radiusAt(bare, a) * 0.01;
+          level = 0;
+        } else level += 0.01;
+      }
+      return n + (rise > 0.5 ? 1 : 0);
+    };
+    const stepped = angles.filter((a) => climbs(a) >= 2).length;
+    expect(stepped).toBeLessThan(angles.length / 4);
+  });
+  test('most of the coast is a low shore; where the ridge meets the sea there is a cliff', () => {
+    const shore = angles.map((a) => at(0.9, a));
+    expect(shore.filter((h) => h < 1).length).toBeGreaterThan(24);
+    expect(Math.max(...shore)).toBeGreaterThan(1.4);
+  });
+  test('the road from the pier climbs to the lighthouse without a wall in its way', () => {
+    const line = ROADS[0];
+    let last = -1;
+    let climbed = 0;
+    for (let k = 0; k + 1 < line.length; k++)
+      for (let f = 0; f < 1; f += 0.1) {
+        const x = (line[k][0] + (line[k + 1][0] - line[k][0]) * f) * s.radius;
+        const z = (line[k][1] + (line[k + 1][1] - line[k][1]) * f) * s.radius;
+        const h = heightAt(s, x, z);
+        expect(h, `on the road at ${x.toFixed(1)},${z.toFixed(1)}`).toBeGreaterThan(0.2);
+        if (last >= 0) {
+          // No step up or down that a cart could not manage.
+          expect(Math.abs(h - last), `step at ${x.toFixed(1)},${z.toFixed(1)}`).toBeLessThan(0.75);
+          climbed += Math.max(0, h - last);
+        }
+        last = h;
+      }
+    expect(climbed).toBeGreaterThan(2.5);
+  });
+  test('roads run through it', () => {
     const g = terrainGeometry(s, { sand: 0xf0d9a0, grass: 0x8fbf5a, rock: 0x9a9088, path: 0xc9b48a });
     const col = g.getAttribute('color');
     const want = new THREE.Color(0xc9b48a);
