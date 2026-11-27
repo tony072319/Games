@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { woodsAt } from './homeplan';
 import { heightAt, roadAt, type Shape } from './terrain';
 import { toonRamp } from './toon';
 
@@ -62,9 +63,11 @@ export function scatterOn(s: Shape, avoid: readonly (readonly [number, number, n
   const grassy = (x: number, z: number, h: number) => h > 0.44 && steepness(s, x, z) < 0.3 && roadAt(s, x, z) < 0.12;
 
   // Trees: in loose clumps on open grass, well clear of buildings and roads.
-  walk(1.9, 6, (x, z, h, i, j) => {
+  walk(1.6, 6, (x, z, h, i, j) => {
     // On the flats and up the banks alike (a wooded slope reads as a hill), but not on bare rock.
-    if (h < 0.44 || steepness(s, x, z) > 0.8 || roadAt(s, x, z) > 0.01 || hash(i, j, 14) > 0.25 + 0.6 * patch(x, z, 0.27, s.seed + 4) || !clear(x, z, 0.75)) return;
+    // The home island has its woods on the ridge and the knoll, and open ground round the village.
+    const woods = s.kind === 'home' ? woodsAt((x - s.cx) / s.radius, (z - s.cz) / s.radius) : 0.5;
+    if (h < 0.44 || steepness(s, x, z) > 0.8 || roadAt(s, x, z) > 0.01 || hash(i, j, 14) > woods * (0.5 + 0.7 * patch(x, z, 0.27, s.seed + 4)) || !clear(x, z, 0.75)) return;
     out.trees.push(sprig(x, z, h, i, j, 60, 1));
   });
   const nearTree = (x: number, z: number) => out.trees.some((t) => (t.x - x) ** 2 + (t.z - z) ** 2 < 0.2);
