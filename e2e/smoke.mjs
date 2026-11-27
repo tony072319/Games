@@ -363,6 +363,19 @@ try {
     await page.waitForTimeout(7000);
     await page.screenshot({ path: `${SHOTS}/desktop-en.png` });
   }
+  // At night a passing ship can be guided from the keyboard too (its button sits over the ship).
+  { const C = 20 * 60 * 1000;
+    const night = Math.floor(Date.now() / C) * C + C / 2;
+    const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
+    const p2 = await ctx2.newPage();
+    await p2.clock.install({ time: night });
+    await p2.goto(BASE);
+    const ship = p2.locator('.hit[data-hit="ship"]:not(.offscreen)').first();
+    await ship.waitFor({ state: 'attached', timeout: 60000 }).catch(() => fail('a ship should pass at night, with a button to guide it'));
+    await ship.focus();
+    await p2.keyboard.press('Enter');
+    await p2.waitForFunction(() => JSON.parse(localStorage.getItem('lightkeeper.save') || '{}').stats?.guided === 1, null, { timeout: 4000 }).catch(() => fail('Enter on the ship button should guide the ship'));
+    await ctx2.close(); }
   if (errors.length) fail('page errors: ' + errors.join('; '));
   await browser.close();
   console.log('e2e smoke: PASS');

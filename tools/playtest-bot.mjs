@@ -84,6 +84,7 @@ async function play(minutes, label) {
     taps += await page.evaluate(() => { const it = [...document.querySelectorAll('.item:not(.offscreen)')]; it.forEach((e) => e.click()); return it.length; }).catch(() => 0);
     await click('.chest');
     if (await click('.boat.laden')) log('UNLOAD');
+    if (await page.locator('.hit[data-hit="ship"]:not(.offscreen)').count()) { await hit('ship'); log('GUIDE'); }
     await hit('light'); await buyAll();
     await hit('net'); await buyAll();
     if (await page.locator('.hit[data-hit="build"]').count()) { await hit('build'); await buyAll(); await click('.map-close'); }

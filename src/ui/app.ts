@@ -86,6 +86,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   let world: World | null = null;
   let viewBtns!: HTMLElement;
   const itemEls = new Map<number, HTMLElement>();
+  /** Invisible buttons over passing ships (keyboards, screen readers, and the list without the 3D picture). */
+  const shipEls = new Map<number, HTMLElement>();
   /** Test build: materials are topped up every frame so nothing ever runs out. */
   let infinite = opts.debug;
   const INFINITE_AMOUNT = 1e12;
@@ -797,6 +799,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     root.replaceChildren(game);
     itemEls.clear();
+    shipEls.clear();
     refresh(); // renders the panel, which decides how tall the stage is
     world?.resize();
     resizeObserver.disconnect();
@@ -831,6 +834,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (chestBubble.style.display !== 'none') put(chestBubble, 'chest', -48);
     if (boatBubble.style.display !== 'none') put(boatBubble, 'boat', -52);
     for (const [id, e] of itemEls) put(e, `flotsam:${id}`);
+    for (const [id, e] of shipEls) put(e, `ship:${id}`);
   }
 
   /** A tap on the picture: whatever is under the finger, unless the finger dragged the view. */
@@ -930,6 +934,27 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       b.addEventListener('click', () => tapThing(`flotsam:${item.id}`));
       itemEls.set(item.id, b);
       flotsamLayer.append(b);
+    }
+  }
+
+  function syncShips() {
+    const open = new Set(shipField.ships.filter((sh) => sh.guidedAt === undefined).map((sh) => sh.id));
+    for (const [id, e] of shipEls)
+      if (!open.has(id)) {
+        e.remove();
+        shipEls.delete(id);
+      }
+    for (const id of open) {
+      if (shipEls.has(id)) continue;
+      const b = el('button', 'hit');
+      b.type = 'button';
+      b.dataset.hit = 'ship';
+      const label = t(state.settings.lang, 'guide.label');
+      b.setAttribute('aria-label', label);
+      b.textContent = label;
+      b.addEventListener('click', () => tapThing(`ship:${id}`));
+      shipEls.set(id, b);
+      stage.insertBefore(b, flotsamLayer);
     }
   }
 
@@ -1091,6 +1116,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     updateField(field, now, Math.random, state);
     updateShips(shipField, now, Math.random);
     syncFlotsam();
+    syncShips();
     if (world) {
       if (now >= nextSkyAt) {
         world.setSky(currentSky(), state.sea);
