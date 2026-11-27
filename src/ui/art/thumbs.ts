@@ -27,7 +27,9 @@ export function allThumbs(): Thumb[] {
   const out: Thumb[] = [];
   for (let l = 1; l < LIGHT_LOOKS.length; l++) out.push({ name: `light-${l}`, parts: LIGHT_LOOKS[l] });
   for (let l = 1; l < CHEST_LOOKS.length; l++) out.push({ name: `chest-${l}`, parts: CHEST_LOOKS[l] });
-  for (let tier = 0; tier <= 5; tier++) out.push({ name: `net-${tier}`, parts: near(netParts(Math.max(1, tier * 10))) });
+  // A net pile alone is a green lump: a buoy and a coil of rope beside it say what it is.
+  const gear: Part[] = [{ part: 'buoy', model: 'lh/buoy', dx: 0.45, dz: 0.25, size: 0.55 }, { part: 'rope', model: 'harbor/rope_coil', dx: -0.35, dz: 0.4, size: 0.22 }];
+  for (let tier = 0; tier <= 5; tier++) out.push({ name: `net-${tier}`, parts: [...near(netParts(Math.max(1, tier * 10))), ...gear] });
   for (const model of BOATS) out.push({ name: boatThumbName(model), parts: [{ part: 'boat', model, dx: 0, dz: 0, rotY: 0.5 }] });
   for (const id of DECOR_IDS) for (let tier = 1; tier <= DECOR_TIERS; tier++) out.push({ name: `decor-${id}-${tier}`, parts: DECOR_LOOKS[id][tier - 1] });
   for (const b of Object.values(ISLAND_BUILDINGS).flat() as BuildingId[]) out.push({ name: `bld-${b}`, parts: buildingParts(b, 5) });

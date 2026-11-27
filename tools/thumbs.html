@@ -12,13 +12,13 @@ import { MODELS } from '/src/world/assets.ts';
 import { toonMaterial } from '/src/world/toon.ts';
 import { allThumbs } from '/src/ui/art/thumbs.ts';
 
-const SIZE = 104;
+const SIZE = 128;
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setSize(SIZE, SIZE);
 renderer.setPixelRatio(2);
 renderer.setClearColor(0x000000, 0);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.2;
 const gltf = new GLTFLoader();
 const cache = new Map();
 const load = (id) => {

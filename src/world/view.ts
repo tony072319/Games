@@ -1,7 +1,8 @@
 /** The camera's standing views (pure: no renderer), shared by the scene and the layout's horizon. */
 import * as THREE from 'three';
 
-export const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 1.6);
+// A little in front of the lighthouse, so the sea where finds drift past is in the picture.
+export const DEFAULT_TARGET = new THREE.Vector3(0.8, 1.8, 4.2);
 // Near enough that the island fills the picture, with a rim of sea round it.
 export const DEFAULT_CAM = DEFAULT_TARGET.clone().add(new THREE.Vector3(13, 11, 27).sub(DEFAULT_TARGET).multiplyScalar(0.92));
 /** Which way the everyday camera looks across the sea (angle in the ground plane, radians): the far horizon. */

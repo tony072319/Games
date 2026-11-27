@@ -63,7 +63,7 @@ function pierStart(land: number): [number, number] {
   while (r < 20 && heightAt(home, PDX * r, PDZ * r) > 0) r += 0.05;
   return [PDX * (r - 0.6), PDZ * (r - 0.6)];
 }
-const PIER_PLANKS = 5;
+const PIER_PLANKS = 4;
 const PLANK = 1.6;
 
 function pierEnd(land: number): [number, number] {
@@ -415,6 +415,6 @@ export function flotsamPosition(item: FloatingItem, nowMs: number, land = 0): { 
   const age = Math.min(1, Math.max(0, (nowMs - item.spawnedAt) / FLOAT_LIFETIME_MS));
   const lane = Math.min(1, Math.max(0, item.lane));
   // Just off the island's front beach: further out as the island grows (the camera pulls back with it).
-  const near = Math.max(8.5, homeShape(land).radius * 1.17 + 2);
+  const near = Math.max(8.5, homeShape(land).radius * 1.13 + 1.2);
   return { x: -21 + 42 * age, z: near + lane * 3 };
 }

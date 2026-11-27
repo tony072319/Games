@@ -618,6 +618,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
         const hitBall = new THREE.Mesh(hitGeo, hitMat);
         hitBall.position.y = 0.2;
         g.add(hitBall);
+        g.userData.hitBall = hitBall;
         o = g;
         drift.set(f.id, g);
         scene.add(g);
@@ -654,6 +655,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   /** The home island's ground (for the life around it). */
   let homeGround: Shape | undefined;
   const homeScale = () => Math.max(1, islandReach / HOME_REACH) ** 0.6;
+  /** A tall narrow picture (a phone) stands further back, so the island's whole width and the sea in front of it are in view. */
+  const standBack = () => homeScale() * (host.clientWidth < host.clientHeight * 0.9 ? 1.36 : 1);
   let focusTo: { target: THREE.Vector3; dist: number; dir?: THREE.Vector3 } | null = null;
   let lastInput = performance.now();
   controls.addEventListener('start', () => {
@@ -905,6 +908,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     for (const o of drift.values()) {
       o.position.y = -0.2 + Math.sin(t * 2 + o.position.x) * 0.06;
       o.rotation.y += dt * 0.4;
+      // A finger-sized target however far off the camera stands (a find is a speck from far back).
+      (o.userData.hitBall as THREE.Object3D | undefined)?.scale.setScalar(Math.max(1, cam.position.distanceTo(o.position) / 20));
     }
     for (const vb of voyageBoats.values()) vb.obj.position.y = -0.22 + Math.sin(t * 1.3) * 0.05;
     for (const l of lights) {
@@ -1044,7 +1049,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       if (islandReach === 0 && reach > 0) {
         islandReach = reach;
         if (reach > HOME_REACH) {
-          cam.position.copy(DEFAULT_TARGET).add(DEFAULT_CAM.clone().sub(DEFAULT_TARGET).multiplyScalar(homeScale()));
+          cam.position.copy(DEFAULT_TARGET).add(DEFAULT_CAM.clone().sub(DEFAULT_TARGET).multiplyScalar(standBack()));
           controls.update();
         }
       }
@@ -1120,7 +1125,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       pending.push({ tag, at: performance.now(), updated: false });
     },
     focus(where) {
-      if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * homeScale(), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
+      if (where === 'home') focusTo = { target: DEFAULT_TARGET.clone(), dist: DEFAULT_CAM.distanceTo(DEFAULT_TARGET) * standBack(), dir: DEFAULT_CAM.clone().sub(DEFAULT_TARGET).normalize() };
       else if (where === 'sea') {
         const v = seaView(light);
         focusTo = { target: v.target, dist: v.dist, dir: v.dir };

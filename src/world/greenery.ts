@@ -48,7 +48,11 @@ export function scatterOn(s: Shape, avoid: readonly (readonly [number, number, n
   const out: Scatter = { trees: [], tufts: [], flowers: [], bushes: [], pebbles: [] };
   const clear = (x: number, z: number, pad: number) => avoid.every(([ax, az, ar]) => (x - ax) ** 2 + (z - az) ** 2 > (ar + pad) ** 2);
   const R = s.radius * 1.25;
-  const walk = (step: number, k: number, each: (x: number, z: number, h: number, i: number, j: number) => void) => {
+  // A bigger island gets the same number of small plants, spread wider (they are what costs most to draw).
+  const wide = s.kind === 'home' ? Math.max(1, s.radius / 13) : 1;
+  const walk = (step0: number, k: number, each: (x: number, z: number, h: number, i: number, j: number) => void) => {
+    // Trees (the widest spacing) keep theirs: woods should stay woods.
+    const step = step0 >= 1.5 ? step0 : step0 * wide;
     const n = Math.ceil(R / step);
     for (let i = -n; i <= n; i++)
       for (let j = -n; j <= n; j++) {

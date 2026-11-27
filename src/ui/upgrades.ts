@@ -7,7 +7,7 @@ import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
 import { affordState, etaSeconds, nextEffect } from '../core/advice';
 import { NET_MILESTONES, nextNetMilestone } from '../core/milestones';
-import { boatThumb, chestThumb, lightThumb, netThumb } from './art';
+import { UI_ICONS, boatThumb, chestThumb, lightThumb, netThumb } from './art';
 import { boatModel } from '../world/looks';
 import { upgradeCard } from './card';
 import { el } from './dom';
@@ -63,7 +63,7 @@ export function upgradeThumb(id: UpgradeId, state: GameState): string {
   if (id === 'net') return netThumb(L);
   if (id === 'storage') return chestThumb(L);
   if (id === 'light') return lightThumb(L);
-  if (id === 'recycle') return `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5l5 8h-3v5h-4v-5h-3z M7 25l3-9 3 5-2 1 3 4z M25 25l-3-9-3 5 2 1-3 4z" fill="#8fd0b0"/></svg>`;
+  if (id === 'recycle') return UI_ICONS.recycle.replace('<svg ', '<svg style="color:#8fd0b0;padding:22%;box-sizing:border-box" ');
   return boatThumb(boatModel(state.levels.speed, state.levels.cargo));
 }
 
