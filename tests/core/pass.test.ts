@@ -16,15 +16,17 @@ const ready = () => {
 };
 
 describe('passing the light starts the next sea fresh', () => {
-  test('materials do not come along; they turn into starlight', () => {
+  test('materials do not come along: they stay in the old sea (there when you go back), and they count toward starlight', () => {
     const s = ready();
     expect(canPassLight(s)).toBe(true);
-    const base = starlightFor(s);
-    const extra = materialStars(s);
-    expect(extra).toBeGreaterThan(0);
-    passLight(s, 1000);
+    const before = s.starlight;
+    const mats = { ...s.materials };
+    const fromMats = materialStars(s);
+    expect(fromMats).toBeGreaterThan(0);
+    passLight(s, 0);
+    expect(s.starlight - before).toBe(starlightFor(s) + fromMats);
     for (const m of MATERIALS) expect(s.materials[m]).toBe(0);
-    expect(s.starlight).toBe(base + extra);
+    expect(s.seas.dusk!.materials).toEqual(mats);
   });
   test('even a mountain of materials gives a capped, finite number of stars', () => {
     const s = ready();

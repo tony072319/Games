@@ -341,7 +341,7 @@
   "upg.recycle.desc": "Turns whatever piles up into what the lighthouse is shortest of.",
   "upg.recycle.next.build": "Once built: spare materials slowly become what the lighthouse needs most.",
   "upg.recycle.next.faster": "Next level: converts faster.",
-  "pass.mats": "The materials you carry do not come along; they become {m} of those stars.",
+  "pass.mats": "The materials you carry stay in this sea (they are there when you come back), and they also earn {m} of these stars.",
   "decor.title": "Island decorations",
   "decor.desc": "Only makes the island prettier; it changes no numbers.",
   "decor.done": "As fine as it gets",

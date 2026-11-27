@@ -341,7 +341,7 @@
   "upg.recycle.desc": "把堆着用不掉的材料，换成修灯塔最缺的那种。",
   "upg.recycle.next.build": "建好后：多出来的材料会慢慢换成修灯塔最缺的那种。",
   "upg.recycle.next.faster": "下一级：换得更快。",
-  "pass.mats": "身上的材料带不走，它们会化作其中 {m} 颗星光。",
+  "pass.mats": "身上的材料留在这片海里（回来还能用），同时会多换来其中 {m} 颗星光。",
   "decor.title": "岛上装饰",
   "decor.desc": "只让小岛更好看，不影响产出。",
   "decor.done": "已经是最好看的样子了",

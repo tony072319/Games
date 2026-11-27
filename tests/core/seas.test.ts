@@ -134,12 +134,13 @@ describe('each sea keeps its own materials', () => {
   test('going back to an old sea and returning brings nothing across', () => {
     const s = lit();
     s.levels.net = 40;
+    const left = s.materials.wood; // what was carried when passing stays in dusk
     passLight(s, 0);
     tick(s, 1000);
     s.materials.wood = 7;
     // Go back to dusk: its chest has filled while away; collect everything there.
     expect(switchSea(s, 'dusk', 3 * H)).toBe(true);
-    expect(s.materials.wood).toBe(0); // the fog sea's 7 stay in fog
+    expect(s.materials.wood).toBe(left); // the fog sea's 7 stay in fog
     s.materials.wood = 1e7; // a rich old sea
     expect(switchSea(s, 'fog', 4 * H)).toBe(true);
     expect(s.materials.wood).toBe(7);

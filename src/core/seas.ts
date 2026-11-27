@@ -135,8 +135,8 @@ export function passLight(s: GameState, nowMs: number): boolean {
   const next = nextSea(s)!;
   accrueIslands(s, nowMs);
   s.starlight += starlightFor(s) + materialStars(s);
-  // Nothing comes along but the boat, the starlight and the book: the new sea starts fresh.
-  for (const m of MATERIALS) s.materials[m] = 0;
+  // Nothing comes along but the boats, the starlight, the talents and the book: the new sea starts fresh.
+  // What you carry stays in this sea (there when you come back), and has also counted toward starlight.
   s.seas[s.sea] = snapshot(s, nowMs);
   restore(s, next, freshSea(nowMs));
   // The star branch's last talent: the new lighthouse is already mended to the dock.
