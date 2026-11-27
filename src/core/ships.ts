@@ -3,6 +3,7 @@
  * the ship sounds its horn and leaves a thank-you (about half a minute of income, sometimes a
  * glowshard). Kept on screen only, like drifting finds: not saved; only the count of guided ships is.
  */
+import { focusOn } from './focus';
 import { MATERIALS, MATERIAL_WEIGHTS, type Materials } from './data';
 import { nightness } from './daycycle';
 import { addMaterials, netRate } from './economy';
@@ -33,7 +34,7 @@ export function newShipField(nowMs: number): ShipField {
 
 const isNight = (ms: number) => nightness(ms) > 0.5;
 
-export function updateShips(f: ShipField, nowMs: number, rng: () => number): void {
+export function updateShips(f: ShipField, nowMs: number, rng: () => number, s?: GameState): void {
   f.ships = f.ships.filter((s) => nowMs - s.spawnedAt < T.SHIP_LIFE_MS && (s.guidedAt === undefined || nowMs - s.guidedAt < THANKS_MS));
   if (!isNight(nowMs)) {
     // No ships by day, and no backlog building up for the night.
@@ -43,7 +44,7 @@ export function updateShips(f: ShipField, nowMs: number, rng: () => number): voi
   if (nowMs < f.nextAt || f.ships.length >= 2) return;
   f.ships.push({ id: f.nextId++, spawnedAt: nowMs, lane: rng() });
   // One at a time: after a long absence this is the only one, the next comes later.
-  f.nextAt = nowMs + T.SHIP_EVERY_MS * (0.7 + 0.6 * rng());
+  f.nextAt = nowMs + (T.SHIP_EVERY_MS * (0.7 + 0.6 * rng())) / (s && focusOn(s) === 'sea' ? 1 + T.FOCUS_SEA : 1);
 }
 
 /** Guide a passing ship: its thank-you is added to your materials and returned (null if it can't be guided). */

@@ -187,6 +187,13 @@ try {
   // Lighthouse to 3 → build boat → sail to the wreck → bring it home → unload → discovery.
   for (let i = 0; i < 2; i++) await page.locator('[data-upgrade="light"] .buy').click();
   await page.locator('.stage[data-world-has~="dock"]').waitFor({ state: 'attached', timeout: 3000 }).catch(() => fail('lighthouse 3 should show the dock'));
+  // With the dock, the lighthouse card offers where the light shines; the choice is saved.
+  { const route = page.locator('.focus-row .chip[data-focus="route"]');
+    await route.waitFor({ timeout: 3000 }).catch(() => fail('the lighthouse card should offer where the light shines'));
+    await route.click();
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('test:lightkeeper.save')).focus === 'route', null, { timeout: 3000 }).catch(() => fail('choosing the route should be saved'));
+    if (!(await page.locator('.focus-row .chip.on[data-focus="route"]').count())) fail('the chosen focus should be marked');
+    await page.locator('.focus-row .chip[data-focus="net"]').click(); }
   await tapHit('map'); // the dock opens the sea map
   await page.locator('.seamap').waitFor();
   await page.locator('.map-bottom .buy').click();

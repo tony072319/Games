@@ -1,3 +1,4 @@
+import { focusOn } from './focus';
 import {
   FLOAT_LIFETIME_MS,
   MATERIALS,
@@ -47,7 +48,8 @@ export function updateField(field: FlotsamField, nowMs: number, rng: () => numbe
   field.items = field.items.filter((i) => nowMs - i.spawnedAt <= FLOAT_LIFETIME_MS);
   // Finds drift by more often at night.
   const polished = state && isPolished(state, nowMs) ? T.POLISH_SPAWN_BONUS : 0;
-  const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished);
+  const open = state && focusOn(state) === 'sea' ? T.FOCUS_SEA : 0;
+  const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished) / (1 + open);
   if (nowMs - field.lastSpawnAt >= interval && field.items.length < MAX_FLOATING) {
     const item: FloatingItem = { id: field.nextId++, material: pickMaterial(rng()), spawnedAt: nowMs, lane: rng() };
     // Under the aurora at night, some of what drifts by is glow.

@@ -7,6 +7,7 @@ import { has } from './talents';
 /** Items per second the net collects automatically. */
 import { T } from './tuning';
 import { nightness } from './daycycle';
+import { focusOn } from './focus';
 
 export function autoRate(netLevel: number): number {
   return 0.1 * netLevel * Math.pow(1.1, netLevel - 1);
@@ -20,7 +21,7 @@ export function offlineCapSeconds(storageLevel: number): number {
 /** Amount gained from tapping one drifting item: worth about 10 seconds of the net (twice that with the drift talent). */
 /** What one tap on a drifting find pays: seconds of what you really earn now, more at night. */
 export function tapYield(state: GameState, nowMs: number): number {
-  const base = netRate(state) * T.TAP_SECONDS * (1 + T.NIGHT_TAP_BONUS * nightness(nowMs));
+  const base = catchRate(state) * T.TAP_SECONDS * (1 + T.NIGHT_TAP_BONUS * nightness(nowMs));
   return Math.max(1, Math.round(base)) * (has(state, 'drift3') ? 2 : 1);
 }
 
@@ -150,8 +151,13 @@ export function addMaterials(state: GameState, gained: Materials, factor = 1): v
 }
 
 /** Items the chest can hold: enough for offlineCapSeconds of the current net. */
+/** What the net brings into the chest: its rate, more with the light on the fishing grounds. */
+export function catchRate(state: GameState): number {
+  return netRate(state) * (focusOn(state) === 'net' ? 1 + T.FOCUS_NET : 1);
+}
+
 export function chestCapacity(state: GameState): number {
-  return netRate(state) * chestSeconds(state) * (1 + 0.1 * (state.buildings.path ?? 0));
+  return catchRate(state) * chestSeconds(state) * (1 + 0.1 * (state.buildings.path ?? 0));
 }
 
 export function chestTotal(chest: Materials): number {
@@ -172,7 +178,7 @@ export function expectedGain(rate: number, seconds: number): Materials {
  */
 export function fillChest(state: GameState, seconds: number, factor = 1): { creditedSeconds: number; gained: Materials } {
   const room = Math.max(0, chestCapacity(state) - chestTotal(state.chest));
-  const rate = netRate(state) * factor;
+  const rate = catchRate(state) * factor;
   const creditedSeconds = Math.max(0, Math.min(seconds, room / rate));
   const gained = expectedGain(rate, creditedSeconds);
   for (const m of MATERIALS) state.chest[m] += gained[m];

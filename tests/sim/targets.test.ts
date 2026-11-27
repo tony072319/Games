@@ -94,3 +94,13 @@ describe('a new sea starts quickly (passing the light is a fresh start, not a wa
       expect(reach[id]?.light3, 'lighthouse 3').toBeLessThanOrEqual(12);
     });
 });
+
+describe('where the light shines is a real choice', () => {
+  // A player who keeps the light on the shipping route finishes about as fast as one on the fishing grounds.
+  const route = simulate({ ...NORMAL, name: 'route', focus: 'route' }, { seas: 3, maxDays: 120 });
+  test('route and fishing grounds finish within 15% of each other', () => {
+    const days = (r: typeof normal) => r.seas.reduce((a, x) => a + x.days, 0);
+    expect(route.finished).toBe(true);
+    expect(Math.abs(days(route) / days(normal) - 1)).toBeLessThanOrEqual(0.15);
+  });
+});

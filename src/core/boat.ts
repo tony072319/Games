@@ -1,3 +1,4 @@
+import { focusOn } from './focus';
 import { MATERIALS, type DestId, type Materials } from './data';
 import { addMaterials, netRate } from './economy';
 import { takeIslandStore } from './islands';
@@ -114,7 +115,9 @@ export function voyageMs(s: GameState, d: DestId): number {
     (1 - 0.04 * (s.buildings.boatshed ?? 0)) *
     (has(s, 'voy1') ? 0.85 : 1) *
     // The brighter the lighthouse, the easier the way home.
-    (1 - T.LIGHT_RETURN * (s.levels.light - 1))
+    (1 - T.LIGHT_RETURN * (s.levels.light - 1)) *
+    // The light on the shipping route.
+    (focusOn(s) === 'route' ? 1 - T.FOCUS_ROUTE : 1)
   );
 }
 

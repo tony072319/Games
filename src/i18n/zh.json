@@ -478,5 +478,12 @@
   "story.aurora.firefly.2": "雪松的枝头挂着冰凌，里面冻着一点点萤光。",
   "story.aurora.firefly.3": "冰面下也有萤火，像有人在水底点了灯。",
   "story.aurora.firefly.4": "船员在雪地里堆了个小雪人，给它插上一根发光的冰凌。",
-  "story.aurora.firefly.5": "极光和萤火一起亮起来，大家都忘了说话。"
+  "story.aurora.firefly.5": "极光和萤火一起亮起来，大家都忘了说话。",
+  "focus.title": "灯光照向",
+  "focus.route": "航线",
+  "focus.net": "渔场",
+  "focus.sea": "海面",
+  "focus.route.hint": "船出海的时间短 20%",
+  "focus.net.hint": "渔网多捞 20%",
+  "focus.sea.hint": "漂流物和夜里的船多一倍（开着游戏时）"
 }

@@ -1,3 +1,4 @@
+import { setFocus } from '../core/focus';
 import { guideShip, newShipField, updateShips, type ShipField } from '../core/ships';
 import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
 import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
@@ -709,7 +710,12 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     exit.textContent = t(lang, 'ui.expand');
     exit.addEventListener('click', () => setMini(false));
     hud.el.append(exit);
-    panel = createPanel(lang, onBuy);
+    panel = createPanel(lang, onBuy, undefined, (f) => {
+      if (!setFocus(state, f)) return;
+      sound.play('tap');
+      save();
+      refresh();
+    });
     // On wide screens this column sits to the right of the scene.
     goalBar = el('button', 'goal');
     goalBar.type = 'button';
@@ -1114,7 +1120,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     }
     hadCargo = hasCargo;
     updateField(field, now, Math.random, state);
-    updateShips(shipField, now, Math.random);
+    updateShips(shipField, now, Math.random, state);
     syncFlotsam();
     syncShips();
     if (world) {

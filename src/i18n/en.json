@@ -478,5 +478,12 @@
   "story.aurora.firefly.2": "Icicles on the snowy pines hold tiny flecks of glow.",
   "story.aurora.firefly.3": "There are fireflies under the ice too, as if someone lit lamps on the seabed.",
   "story.aurora.firefly.4": "The crew built a little snowman and gave it a glowing icicle.",
-  "story.aurora.firefly.5": "The aurora and the fireflies lit up together and nobody spoke."
+  "story.aurora.firefly.5": "The aurora and the fireflies lit up together and nobody spoke.",
+  "focus.title": "Light on",
+  "focus.route": "Route",
+  "focus.net": "Fishing",
+  "focus.sea": "Open sea",
+  "focus.route.hint": "Voyages are 20% shorter",
+  "focus.net.hint": "The net catches 20% more",
+  "focus.sea.hint": "Twice the drifting finds and night ships (while you play)"
 }

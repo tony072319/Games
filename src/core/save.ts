@@ -2,6 +2,7 @@ import { BUILDING_MAX, DEST_IDS, MATERIALS, MAX_LEVEL, SEA_IDS, UPGRADES, type B
 import { T } from './tuning';
 import { readDecor } from './decor';
 import { readLand } from './land';
+import { readFocus } from './focus';
 import { readFriend } from './commission';
 import { readStory } from './voyageLog';
 import { BUILDINGS } from './islands';
@@ -195,6 +196,7 @@ export function loadGame(kv: KV, nowMs: number, lang: Lang): { state: GameState;
   state.decor = readDecor(data.decor);
   state.land = readLand(data.land);
   state.friend = readFriend(data.friend);
+  state.focus = readFocus(data.focus);
   if (typeof data.starlight === 'number' && Number.isInteger(data.starlight) && data.starlight >= 0) state.starlight = data.starlight;
   else if ('starlight' in data) dropped = true;
   if (isObj(data.seas)) {

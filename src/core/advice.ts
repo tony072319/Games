@@ -1,13 +1,13 @@
 import { DESTS, DOCK_LIGHT, canSail } from './boat';
 import { DEST_IDS, MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, PANEL_UPGRADES, type Materials, type UpgradeId } from './data';
-import { autoRate, canBuy, chestCapacity, chestTotal, isMaxLevel, netRate, priceOf, upgradeLocked } from './economy';
+import { autoRate, canBuy, catchRate, chestCapacity, chestTotal, isMaxLevel, priceOf, upgradeLocked } from './economy';
 import type { Ship } from './ships';
 import { emptyMaterials, type GameState } from './state';
 
 /** What the net brings in per second, by material (island production not counted). */
 export function incomePerSecond(s: GameState): Materials {
   const r = emptyMaterials();
-  const rate = netRate(s);
+  const rate = catchRate(s);
   for (const m of MATERIALS) r[m] = rate * MATERIAL_WEIGHTS[m];
   return r;
 }

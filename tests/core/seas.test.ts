@@ -98,7 +98,8 @@ describe('sea economy', () => {
     tick(s, 1000);
     applyOffline(s, 2 * H);
     const dusk = s.seas.dusk!;
-    const rate = autoRate(5) * 1.25 * (1 + T.STAR_BONUS * s.starlight); // gull rock found there
+    // Gull rock found there; its lighthouse is mended, so the light on the fishing grounds counts too.
+    const rate = autoRate(5) * 1.25 * (1 + T.STAR_BONUS * s.starlight) * (1 + T.FOCUS_NET);
     expect(chestTotal(dusk.chest)).toBeCloseTo(rate * 2 * 3600 * 0.5, 0);
   });
 

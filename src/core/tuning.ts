@@ -89,13 +89,17 @@ export const T = {
   AURORA_GLOW_AMOUNT: 1,
   /** Each sea's richness and the price of mending there, relative to the dusk sea. */
   FOG_RATE: 1.77,
-  FOG_COST: 21,
+  FOG_COST: 23,
   AURORA_RATE: 3.4,
   /** In a new sea (after the first) the net's first levels (below this) and the lighthouse up to the dock cost this share. */
+  /** Where the light shines: the net's extra catch, the voyage time saved, and the open sea's extra finds and ships. */
+  FOCUS_NET: 0.2,
+  FOCUS_ROUTE: 0.2,
+  FOCUS_SEA: 1,
   NEW_SEA_NET: 5,
   NEW_SEA_LIGHT: 3,
   NEW_SEA_EARLY: 0.1,
-  AURORA_COST: 110,
+  AURORA_COST: 125,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
   LIGHT_COST_MULT: 0.8,
   LIGHT_GROWTH: 2.75,

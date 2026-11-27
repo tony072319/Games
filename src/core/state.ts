@@ -92,6 +92,8 @@ export interface GameState {
   land: number;
   /** Friendship with each island's people in this sea (0..3). */
   friend: Partial<Record<import('./data').DestId, number>>;
+  /** Where the lighthouse shines (one setting for every sea). */
+  focus: import('./focus').Focus;
 }
 
 export function emptyMaterials(): Materials {
@@ -126,5 +128,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     decor: {},
     land: 0,
     friend: {},
+    focus: 'net',
   };
 }

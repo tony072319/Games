@@ -510,7 +510,14 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .sea-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); width: 100%; order: 3; }
 .sea-chips .chip { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-sm); border: 1px solid var(--c-surface-2); background: none; color: var(--c-ink-dim); font-size: var(--fs-body); cursor: pointer; }
 .sea-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
-.sea-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
+
+/* Where the light shines: a row under the lighthouse card, the same chips as the sea switch. */
+.focus-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--c-surface-1); }
+.focus-row .focus-label { color: var(--c-ink); font-size: var(--fs-body); }
+.focus-chips { display: flex; gap: var(--sp-1); }
+.focus-chips .chip { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-sm); border: 1px solid var(--c-surface-2); background: none; color: var(--c-ink-dim); font-size: var(--fs-body); cursor: pointer; min-height: var(--tap); }
+.focus-chips .chip.on { color: var(--c-gold); border-color: var(--c-gold); }
+.focus-row .focus-hint { flex: 1 1 100%; color: var(--c-ink-dim); font-size: var(--fs-caption); }
 
 /* Island buttons: invisible over the 3D picture; without it, a plain tappable list. */
 .hit { font-size: 0; color: transparent; }

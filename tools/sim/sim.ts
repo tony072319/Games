@@ -11,6 +11,7 @@ import { ISLAND_BUILDINGS, buildCost, canBuild, construct } from '../../src/core
 import { canPassLight, nextSea, passLight } from '../../src/core/seas';
 import { collectChest, tick } from '../../src/core/sim';
 import { newGame, type GameState } from '../../src/core/state';
+import { setFocus } from '../../src/core/focus';
 import { TALENTS, canLearn, learn } from '../../src/core/talents';
 import { incomePerSecond } from '../../src/core/advice';
 import { tapValue } from './taps';
@@ -33,6 +34,8 @@ export interface Profile {
   tapsPerCheck: number;
   /** Guides a passing ship on night-time visits (default true). */
   guide?: boolean;
+  /** Where the light shines once it can (default: the fishing grounds). */
+  focus?: import('../../src/core/focus').Focus;
 }
 
 export const IDEAL: Profile = { name: 'ideal', checks: Array.from({ length: 144 }, (_, i) => i * 10), visit: 2, tapsPerCheck: 3 };
@@ -244,6 +247,7 @@ function run(profile: Profile, opts: SimOpts): SimReport {
           s.materials[pickMaterial(rng())] += v;
           src.taps += v;
         }
+      if (profile.focus) setFocus(s, profile.focus);
       learnTalents(s);
       // The last sea has nowhere to pass the light to: it is done when its lighthouse is mended.
       if (s.levels.light >= 10 && nextSea(s) === null && seas.length === seasWanted - 1) {

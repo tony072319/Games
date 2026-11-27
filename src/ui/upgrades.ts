@@ -1,3 +1,4 @@
+import { canFocus, focusOn, FOCUSES, type Focus } from '../core/focus';
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
 import { canBuy, inParts, isMaxLevel, priceOf, upgradeLocked } from '../core/economy';
 import { T } from '../core/tuning';
@@ -65,6 +66,30 @@ export function upgradeThumb(id: UpgradeId, state: GameState): string {
 }
 
 /** Cheap fingerprint: the panel is rebuilt only when this changes. */
+/** Under the lighthouse card: where the light shines (three choices, free to change). */
+function focusRow(lang: Lang, state: GameState, onFocus: (f: Focus) => void): HTMLElement {
+  const row = el('div', 'focus-row');
+  const label = el('span', 'focus-label');
+  label.textContent = t(lang, 'focus.title');
+  const chips = el('div', 'focus-chips');
+  chips.setAttribute('role', 'radiogroup');
+  chips.setAttribute('aria-label', t(lang, 'focus.title'));
+  for (const f of FOCUSES) {
+    const b = el('button', state.focus === f ? 'chip on' : 'chip');
+    b.type = 'button';
+    b.dataset.focus = f;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(state.focus === f));
+    b.textContent = t(lang, `focus.${f}`);
+    b.addEventListener('click', () => onFocus(f));
+    chips.append(b);
+  }
+  const hint = el('span', 'focus-hint');
+  hint.textContent = t(lang, `focus.${state.focus}.hint`);
+  row.append(label, chips, hint);
+  return row;
+}
+
 function signature(state: GameState, ids: readonly UpgradeId[]): string {
   return ids
     .map((id) => {
@@ -76,7 +101,7 @@ function signature(state: GameState, ids: readonly UpgradeId[]): string {
     .join('|');
 }
 
-export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: readonly UpgradeId[] = PANEL_UPGRADES): Panel {
+export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: readonly UpgradeId[] = PANEL_UPGRADES, onFocus?: (f: Focus) => void): Panel {
   const root = el('div', 'panel');
   let last = '';
   let flashing: UpgradeId | null = null;
@@ -118,12 +143,13 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
           flash: id === flashing,
         }),
       );
+      if (id === 'light' && onFocus && canFocus(state)) root.append(focusRow(lang, state, onFocus));
     }
   }
 
   function update(state: GameState) {
     current = state;
-    const sig = signature(state, ids) + '|' + [...open].join();
+    const sig = signature(state, ids) + '|' + [...open].join() + '|' + focusOn(state);
     if (sig !== last) {
       last = sig;
       render(state);
