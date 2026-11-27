@@ -203,6 +203,12 @@ ${path}
       land.addEventListener('click', () => act.land(d));
       row.append(land);
     }
+    // While no boat can go (both out, or cargo waiting) the status above says why: no trip time or sail button here.
+    const canGo = canSail(s, d, 0) || canSail(s, d, 1);
+    if (!canGo) {
+      if (row.childElementCount) info.append(row);
+      return;
+    }
     const time = el('span');
     time.textContent = t(lang, 'map.time', { time: formatDuration(voyageMs(s, d) / 1000, lang) });
     row.append(time);
@@ -220,7 +226,6 @@ ${path}
     }
     const go = el('button', 'buy sail');
     go.textContent = t(lang, 'map.sail');
-    go.disabled = !(canSail(s, d, 0) || canSail(s, d, 1));
     go.addEventListener('click', () => act.sail(d));
     row.append(go);
     info.append(row);

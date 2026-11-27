@@ -198,6 +198,14 @@ try {
   await dbg('跳到下一个海上事件');
   await page.locator('.sea-event .event-title').waitFor({ timeout: 4000 }).catch(() => fail('an event at sea should show under the goal'));
   if (!(await page.locator('.sea-event .event-title').textContent())?.includes('还剩')) fail('the event should say how long it lasts');
+  // The jump is time away: close the arrival report first, then tapping the banner goes where the event is.
+  await page.waitForTimeout(600);
+  if (await page.locator('.popup').count()) await page.locator('.popup .btn-primary, .popup button').first().click();
+  if ((await page.locator('.sea-event').textContent())?.includes('鲸群')) {
+    await page.locator('.sea-event').click();
+    await page.locator('.seamap').waitFor({ timeout: 3000 }).catch(() => fail('tapping the whales banner should open the sea map'));
+    await page.locator('.map-close').click();
+  }
   // The jump is time away: close the arrival report if it shows.
   await page.waitForTimeout(600);
   if (await page.locator('.popup').count()) await page.locator('.popup .btn-primary, .popup button').first().click();

@@ -754,8 +754,16 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     });
     polishKey = '';
     const side = el('div', 'side');
-    eventBar = el('div', 'sea-event');
-    eventBar.setAttribute('role', 'status');
+    // Tapping it goes where the event is: the sea map for the whales, the sea for the rest.
+    eventBar = el('button', 'sea-event');
+    (eventBar as HTMLButtonElement).type = 'button';
+    eventBar.setAttribute('aria-live', 'polite');
+    eventBar.addEventListener('click', () => {
+      const e = eventFor(state, opts.now());
+      if (!e) return;
+      if (e.id === 'whales') openMap();
+      else world?.focus('sea');
+    });
     eventBar.style.display = 'none';
     eventKey = '';
     side.append(goalBar, eventBar, polishBtn, panel.el);
@@ -867,6 +875,14 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     for (const g of glints) put(g.el, g.tag, -46, top);
     if (chestBubble.style.display !== 'none') put(chestBubble, 'chest', -48);
     if (boatBubble.style.display !== 'none') put(boatBubble, 'boat', -52);
+    // Bubbles are wider than the thing they point at: keep them inside the picture.
+    const w = stage.clientWidth;
+    for (const b of [chestBubble, boatBubble]) {
+      if (b.style.display === 'none' || b.classList.contains('offscreen')) continue;
+      const half = b.offsetWidth / 2 + 4;
+      const x = parseFloat(b.style.left);
+      if (Number.isFinite(x)) b.style.left = `${Math.min(w - half, Math.max(half, x))}px`;
+    }
     for (const [id, e] of itemEls) put(e, `flotsam:${id}`);
     for (const [id, e] of shipEls) put(e, `ship:${id}`);
   }
@@ -880,9 +896,30 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       down = null;
       if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8 || e.timeStamp - d.at > 300) return;
       const r = w.canvas.getBoundingClientRect();
-      const hit = w.pick(e.clientX - r.left, e.clientY - r.top);
-      if (hit) tapThing(hit, e.clientX, e.clientY);
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      const hit = w.pick(x, y);
+      // Drifting finds and passing ships are small and moving: a tap near one counts when it hit only the sea or the ground.
+      const target = !hit || hit === 'ground' ? (nearMover(w, x, y) ?? hit) : hit;
+      if (target) tapThing(target, e.clientX, e.clientY);
     });
+  }
+
+  /** The drifting find or passing ship nearest a tap on the picture, within a finger's reach. */
+  function nearMover(w: World, x: number, y: number): AnchorTag | null {
+    let best: AnchorTag | null = null;
+    let bestD = 36;
+    const tags: AnchorTag[] = [...[...itemEls.keys()].map((id) => `flotsam:${id}` as const), ...[...shipEls.keys()].map((id) => `ship:${id}` as const)];
+    for (const tag of tags) {
+      const a = w.anchor(tag);
+      if (!a?.visible) continue;
+      const d = Math.hypot(a.x - x, a.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = tag;
+      }
+    }
+    return best;
   }
 
   /** What tapping each thing does, from the picture or from its button. */

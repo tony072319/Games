@@ -418,7 +418,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 
 /* ---------- next goal ---------- */
 /* The event at sea right now: under the goal, quiet, with how long it lasts and what it gives. */
-.sea-event { display: flex; flex-wrap: wrap; gap: 0 var(--sp-2); margin: var(--sp-2) var(--sp-3) 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--c-surface-1); font-size: var(--fs-body); line-height: var(--lh-tight); }
+.sea-event { display: flex; flex-wrap: wrap; gap: 0 var(--sp-2); margin: var(--sp-2) var(--sp-3) 0; padding: var(--sp-2) var(--sp-3); min-height: var(--tap); border: 0; border-radius: var(--r-md); background: var(--c-surface-1); font: inherit; font-size: var(--fs-body); line-height: var(--lh-tight); text-align: left; cursor: pointer; }
 .sea-event .event-title { color: var(--c-gold); }
 .sea-event .event-hint { color: var(--c-ink-dim); }
 
