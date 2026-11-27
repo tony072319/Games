@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { collect, newField, pickMaterial, updateField } from '../../src/core/flotsam';
 import { newGame } from '../../src/core/state';
+import { FLOAT_LIFETIME_MS } from '../../src/core/data';
 
 describe('pickMaterial', () => {
   test('maps random numbers onto weights', () => {
@@ -29,7 +30,7 @@ describe('updateField', () => {
     const f = newField(0);
     updateField(f, 3000, () => 0);
     const id = f.items[0].id;
-    updateField(f, 3000 + 8001, () => 0);
+    updateField(f, 3000 + FLOAT_LIFETIME_MS + 1, () => 0);
     expect(f.items.find((i) => i.id === id)).toBeUndefined();
   });
 });

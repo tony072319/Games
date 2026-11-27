@@ -18,7 +18,8 @@ export const DEST_IDS: readonly DestId[] = ['wreck', 'gullrock', 'oldlight', 'fi
 
 export const SPAWN_INTERVAL_MS = 2000;
 export const MAX_FLOATING = 6;
-export const FLOAT_LIFETIME_MS = 8000;
+/** How long a find drifts across (slow enough to tap on a narrow phone, where the bigger island's lane is long). */
+export const FLOAT_LIFETIME_MS = 12000;
 
 /** A short break (under five minutes) gets no arrival report: the chest simply has a little more. */
 export const OFFLINE_MIN_REPORT_SECONDS = 300;
