@@ -117,3 +117,17 @@ describe('the route counts only while the light is on it', () => {
     expect(s.boat.voyage!.returnAt).toBeCloseTo(full / 2 + (full / 2) * (1 - T.FOCUS_ROUTE));
   });
 });
+
+import { eventFor, seaEventAt } from '../../src/core/seaEvents';
+describe('a veteran in a new sea', () => {
+  test('keeps the light focus and the events from the first level (the boats are already here)', () => {
+    const s = newGame(0, 'zh');
+    s.sea = 'fog';
+    s.reached = ['dusk', 'fog'];
+    s.boat.built = true;
+    expect(canFocus(s)).toBe(true);
+    let t = 0;
+    while (!seaEventAt(t)) t += 60e3;
+    expect(eventFor(s, t)).not.toBeNull();
+  });
+});

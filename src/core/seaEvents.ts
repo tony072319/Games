@@ -77,7 +77,7 @@ export function nextSeaEvent(nowMs: number): SeaEvent | null {
 
 /** The event on for this player (none before the dock). */
 export function eventFor(s: GameState, nowMs: number): SeaEvent | null {
-  return s.levels.light >= EVENT_LIGHT ? seaEventAt(nowMs) : null;
+  return s.levels.light >= EVENT_LIGHT || s.boat.built ? seaEventAt(nowMs) : null;
 }
 
 export function eventIs(s: GameState | undefined, nowMs: number, id: SeaEventId): boolean {

@@ -96,11 +96,17 @@ describe('a new sea starts quickly (passing the light is a fresh start, not a wa
 });
 
 describe('where the light shines is a real choice', () => {
-  // A player who keeps the light on the shipping route finishes about as fast as one on the fishing grounds.
-  const route = simulate({ ...NORMAL, name: 'route', focus: 'route' }, { seas: 3, maxDays: 120 });
-  test('route and fishing grounds finish within 15% of each other', () => {
-    const days = (r: typeof normal) => r.seas.reduce((a, x) => a + x.days, 0);
-    expect(route.finished).toBe(true);
-    expect(Math.abs(days(route) / days(normal) - 1)).toBeLessThanOrEqual(0.15);
+  // The route pays for players who send the boats often; the fishing grounds for those who look in a few times a day.
+  const days = (r: typeof normal) => r.seas.reduce((a, x) => a + x.days, 0);
+  const keenRoute = simulate({ ...KEEN, name: 'keen-route', focus: 'route' }, { seas: 3, maxDays: 120 });
+  const keenNet = simulate({ ...KEEN, name: 'keen-net', focus: 'net' }, { seas: 3, maxDays: 120 });
+  const normalRoute = simulate({ ...NORMAL, name: 'route', focus: 'route' }, { seas: 3, maxDays: 120 });
+  test('for a keen player the route is as good as the fishing grounds (within 5%)', () => {
+    expect(Math.abs(days(keenRoute) / days(keenNet) - 1)).toBeLessThanOrEqual(0.05);
+  });
+  test('for a player who looks in three times a day the fishing grounds are better, but the route still finishes in time', () => {
+    expect(days(normal)).toBeLessThan(days(normalRoute));
+    expect(normalRoute.finished).toBe(true);
+    expect(normalRoute.seas[2].days).toBeLessThanOrEqual(42);
   });
 });

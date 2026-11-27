@@ -22,7 +22,7 @@ export const T = {
   /** Each level of an island producer makes this share of the net's own catch (before the sea's richness). */
   BUILDING_PCT: 0.0724,
   /** Net upgrade cost grows by this each level (was 1.6; the net now reaches 40+ every sea). */
-  NET_COST_GROWTH: 1.37,
+  NET_COST_GROWTH: 1.36,
   /** Share of the net's price (from level 2) paid in plastic instead of wood. */
   NET_PLASTIC: 0.35,
   /** Lighthouse levels 7–10 cost this much more per level past 6. */
@@ -89,11 +89,11 @@ export const T = {
   AURORA_GLOW_AMOUNT: 1,
   /** Each sea's richness and the price of mending there, relative to the dusk sea. */
   FOG_RATE: 1.77,
-  FOG_COST: 23,
+  FOG_COST: 25,
   AURORA_RATE: 3.4,
   /** Where the light shines: the net's extra catch, the voyage time saved, and the open sea's extra finds and ships. */
   FOCUS_NET: 0.2,
-  FOCUS_ROUTE: 0.2,
+  FOCUS_ROUTE: 0.25,
   FOCUS_SEA: 1,
   /** Sea events: a voyage sailed with the whales, a find's chance of a glow shard in a meteor shower, the driftwood tide's extra finds. */
   WHALE_HAUL: 0.3,
@@ -112,7 +112,7 @@ export const T = {
   NEW_SEA_NET: 5,
   NEW_SEA_LIGHT: 3,
   NEW_SEA_EARLY: 0.1,
-  AURORA_COST: 125,
+  AURORA_COST: 135,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
   LIGHT_COST_MULT: 0.8,
   LIGHT_GROWTH: 2.75,

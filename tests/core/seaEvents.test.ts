@@ -131,3 +131,18 @@ describe('events reward being there, not time away', () => {
     expect(s.boat.voyage?.whales).toBeUndefined();
   });
 });
+
+import { MAX_FLOATING } from '../../src/core/data';
+describe('more finds really show', () => {
+  test('in a driftwood tide more finds float at once than on a quiet day', () => {
+    const d = findEvent('driftwood')!;
+    const s = docked();
+    const f = newField(d.e.startAt);
+    let most = 0;
+    for (let t = d.e.startAt; t < d.e.startAt + 30 * 60e3; t += 500) {
+      updateField(f, t, () => 0.5, s);
+      most = Math.max(most, f.items.length);
+    }
+    expect(most).toBeGreaterThan(MAX_FLOATING);
+  });
+});

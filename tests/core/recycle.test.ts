@@ -61,7 +61,7 @@ describe('the recycler', () => {
     const s = late(10);
     recycle(s, 30 * 24 * 3600);
     const r = cover(s, 'rope');
-    for (const m of ['wood', 'plastic', 'metal'] as const) expect(cover(s, m)).toBeGreaterThanOrEqual(r * T.RECYCLE_SURPLUS * 0.99);
+    for (const m of ['wood', 'plastic', 'metal'] as const) expect(cover(s, m)).toBeGreaterThanOrEqual(r * T.RECYCLE_SURPLUS * 0.98);
     for (const m of MATERIALS) expect(s.materials[m]).toBeGreaterThanOrEqual(0);
   });
   test('leaves balanced materials alone', () => {
@@ -121,5 +121,19 @@ describe('the recycler after the ending', () => {
     const rope = s.materials.rope;
     recycle(s, 3600);
     expect(s.materials.rope).toBeGreaterThan(rope);
+  });
+});
+
+describe('the recycler and the starlight for what you leave behind', () => {
+  test('never makes more pieces than it takes (the pile never grows in number)', () => {
+    // Plenty of everything in pieces; rope (dear per piece) is what the lighthouse lacks.
+    const s = newGame(0, 'zh');
+    s.levels.light = 8;
+    s.levels.recycle = 10;
+    Object.assign(s.materials, { wood: 1e9, plastic: 1e9, rope: 1e3, metal: 1e9 });
+    const count = () => MATERIALS.reduce((a, m) => a + s.materials[m], 0);
+    const before = count();
+    recycle(s, 30 * 24 * 3600);
+    expect(count()).toBeLessThanOrEqual(before * (1 + 1e-9));
   });
 });

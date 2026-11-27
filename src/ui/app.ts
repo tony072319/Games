@@ -10,7 +10,7 @@ import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } fro
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { islandIcon, itemIcon } from './art';
-import { boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo } from '../core/boat';
+import { boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo, lightReach } from '../core/boat';
 import { createWorld, type AnchorTag, type World } from '../world/scene';
 import { boatPosition, flotsamPosition, shipPosition, worldLayout, type Tag } from '../world/layout';
 import { boatModel } from '../world/looks';
@@ -588,7 +588,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
         onLost: () => build(),
       });
       world.setSky(currentSky(), state.sea);
-      world.setLight(state.levels.light);
+      world.setLight(state.levels.light, lightReach(state));
       lightShown = state.levels.light;
     } catch {
       const note = el('div', 'note');
@@ -1012,7 +1012,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
   function renderLight() {
     if (lightShown === state.levels.light) return;
     lightShown = state.levels.light;
-    world?.setLight(state.levels.light);
+    world?.setLight(state.levels.light, lightReach(state));
   }
 
   function renderGlints() {

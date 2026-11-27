@@ -52,7 +52,9 @@ export function updateField(field: FlotsamField, nowMs: number, rng: () => numbe
   const open = state && focusOn(state) === 'sea' ? T.FOCUS_SEA : 0;
   const tide = eventIs(state, nowMs, 'driftwood') ? T.DRIFT_TIDE : 0;
   const interval = SPAWN_INTERVAL_MS / (1 + T.NIGHT_SPAWN_BONUS * nightness(nowMs)) / (1 + polished) / (1 + open) / (1 + tide);
-  if (nowMs - field.lastSpawnAt >= interval && field.items.length < MAX_FLOATING) {
+  // With more drifting by (the tide, the light on the open sea) more can float at once.
+  const cap = MAX_FLOATING + (tide ? 6 : 0) + (open ? 3 : 0);
+  if (nowMs - field.lastSpawnAt >= interval && field.items.length < cap) {
     const item: FloatingItem = { id: field.nextId++, material: pickMaterial(rng()), spawnedAt: nowMs, lane: rng() };
     // Under the aurora at night, some of what drifts by is glow.
     if (state?.sea === 'aurora' && rng() < T.AURORA_GLOW_CHANCE * nightness(nowMs)) item.material = 'glow';

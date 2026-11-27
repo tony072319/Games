@@ -54,7 +54,8 @@ export interface ScreenPoint {
 export interface World {
   update(items: WorldItem[], extra: WorldExtra): void;
   setSky(sky: Sky, sea: SeaId): void;
-  setLight(level: number): void;
+  /** The lighthouse level, and how far the water looks lit (as a level; defaults to the same). */
+  setLight(level: number, reach?: number): void;
   setCalm(on: boolean): void;
   anchor(tag: AnchorTag): ScreenPoint | null;
   /** The tag under a point in the canvas (CSS px from its top-left), if any. */
@@ -794,9 +795,9 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       fog.far = (sea === 'fog' ? 55 : 220) * k;
       sky.setAurora(sea === 'aurora' ? 1 : 0);
     },
-    setLight(level) {
+    setLight(level, reach = level) {
       light = level;
-      water.setLit(litRadiusWorld(level));
+      water.setLit(litRadiusWorld(Math.max(level, reach)));
     },
     setCalm(on) {
       calm = on;

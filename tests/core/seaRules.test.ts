@@ -86,3 +86,14 @@ describe('the lighthouse card in a new sea', () => {
     expect(nextEffect(d, 'light')).toEqual({ kind: 'unlock', key: 'upg.light.next.dock' });
   });
 });
+
+import { lightReach } from '../../src/core/boat';
+describe('the lit water reaches every island in sight', () => {
+  test('in a new sea the wreck (in sight from the first level) stands in lit water', () => {
+    const f = at('fog', 1);
+    f.boat.built = true;
+    expect(lightReach(f)).toBe(3);
+    expect(lightReach(at('dusk', 1))).toBe(1);
+    expect(lightReach(at('fog', 5))).toBe(5);
+  });
+});

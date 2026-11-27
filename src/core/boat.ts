@@ -62,6 +62,13 @@ export function seeLight(s: GameState, d: DestId): number {
   return d === 'wreck' && s.sea !== 'dusk' ? 1 : DESTS[d].needLight;
 }
 
+/** How far the water should look lit, as a lighthouse level: at least to every island in sight. */
+export function lightReach(s: GameState): number {
+  let r = s.levels.light;
+  for (const d of Object.keys(DESTS) as DestId[]) if (s.levels.light >= seeLight(s, d)) r = Math.max(r, DESTS[d].needLight);
+  return r;
+}
+
 /** Light the boat needs to find an island here: in the fog, one level more than elsewhere (not the nearest). */
 export function needLightHere(s: GameState, d: DestId): number {
   const see = seeLight(s, d);

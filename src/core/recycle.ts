@@ -26,12 +26,15 @@ function step(s: GameState, seconds: number): boolean {
   for (const m of used) {
     if (m === short) continue;
     // Room to take while the source still covers SURPLUS times the shortest after this step (which grows by what comes out).
-    const room = ((cover(m) - T.RECYCLE_SURPLUS * cover(short)) / (1 + T.RECYCLE_SURPLUS * T.RECYCLE_EFFICIENCY)) * p[m];
+    // Share of a step that comes out per share put in: EFFICIENCY, but never more pieces than went in.
+    const eff = Math.min(T.RECYCLE_EFFICIENCY, p[m] / p[short]);
+    const room = ((cover(m) - T.RECYCLE_SURPLUS * cover(short)) / (1 + T.RECYCLE_SURPLUS * eff)) * p[m];
     const take = Math.min(room, s.materials[m] * share);
     if (!(take > s.materials[m] * 1e-9)) continue;
     moved = true;
     s.materials[m] -= take;
-    s.materials[short] += (take / p[m]) * p[short] * T.RECYCLE_EFFICIENCY;
+    // Never more pieces out than in (what you leave behind turns into starlight by its count).
+    s.materials[short] += (take / p[m]) * p[short] * eff;
   }
   return moved;
 }

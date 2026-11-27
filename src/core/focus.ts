@@ -10,8 +10,9 @@ export type Focus = 'route' | 'net' | 'sea';
 export const FOCUSES: readonly Focus[] = ['route', 'net', 'sea'];
 const FOCUS_LIGHT = 3;
 
+/** From the dock on; in a later sea the boats (and the keeper's know-how) are already there. */
 export function canFocus(s: GameState): boolean {
-  return s.levels.light >= FOCUS_LIGHT;
+  return s.levels.light >= FOCUS_LIGHT || s.boat.built;
 }
 
 /** The focus in effect (none before the dock). */
