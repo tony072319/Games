@@ -390,6 +390,30 @@ try {
     await p2.keyboard.press('Enter');
     await p2.waitForFunction(() => JSON.parse(localStorage.getItem('lightkeeper.save') || '{}').stats?.guided === 1, null, { timeout: 4000 }).catch(() => fail('Enter on the ship button should guide the ship'));
     await ctx2.close(); }
+  // After the ending (the last sea lit), the lighthouse card offers rings of halo.
+  { const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
+    // A first visit makes a save; the next page turns it into a finished game before the game reads it.
+    const p0 = await ctx3.newPage();
+    await p0.goto(BASE);
+    await p0.waitForTimeout(1500);
+    await p0.close();
+    await ctx3.addInitScript(() => {
+      if (localStorage.getItem('__ended')) return;
+      const s = JSON.parse(localStorage.getItem('lightkeeper.save'));
+      Object.assign(s, { sea: 'aurora', reached: ['dusk', 'fog', 'aurora'] });
+      s.levels.light = 10;
+      for (const m of Object.keys(s.materials)) s.materials[m] = 1e15;
+      s.stats.tutorial = 3;
+      localStorage.setItem('lightkeeper.save', JSON.stringify(s));
+      localStorage.setItem('__ended', '1');
+    });
+    const p3 = await ctx3.newPage();
+    await p3.goto(BASE);
+    const buy = p3.locator('[data-halo="halo"] .buy');
+    await buy.waitFor({ timeout: 8000 }).catch(() => fail('after the ending the lighthouse card should offer a halo'));
+    await buy.click();
+    await p3.waitForFunction(() => JSON.parse(localStorage.getItem('lightkeeper.save')).halo === 1, null, { timeout: 4000 }).catch(() => fail('buying a ring of halo should be saved'));
+    await ctx3.close(); }
   if (errors.length) fail('page errors: ' + errors.join('; '));
   await browser.close();
   console.log('e2e smoke: PASS');

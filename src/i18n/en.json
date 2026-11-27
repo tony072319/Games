@@ -499,5 +499,10 @@
   "event.storm": "Storm · {time} left",
   "event.storm.hint": "At night ships in distress: guide them home for double thanks",
   "event.storm.start": "A storm! At night ships will be in distress: guide them home with the light.",
-  "storm.over": "The storm has passed. You guided {n} of {total} ships in distress home."
+  "storm.over": "The storm has passed. You guided {n} of {total} ships in distress home.",
+  "halo.name": "Halo",
+  "halo.desc": "All three seas are lit, and the light can still grow. Each ring of halo adds 5% to every sea's income, without end.",
+  "halo.next": "Next ring: every sea earns 5% more (now +{n}%)",
+  "halo.bought": "The lighthouse has a new ring of halo (ring {n}); the whole sea is brighter.",
+  "goal.halo": "Add a ring of halo to the lighthouse"
 }

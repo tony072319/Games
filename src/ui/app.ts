@@ -1,5 +1,6 @@
 import { eventFor, nextSeaEvent } from '../core/seaEvents';
 import { setFocus } from '../core/focus';
+import { buyHalo } from '../core/halo';
 import { guideShip, newShipField, stormSummary, updateShips, type ShipField } from '../core/ships';
 import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
 import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
@@ -715,11 +716,21 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     exit.textContent = t(lang, 'ui.expand');
     exit.addEventListener('click', () => setMini(false));
     hud.el.append(exit);
-    panel = createPanel(lang, onBuy, undefined, (f) => {
-      if (!setFocus(state, f)) return;
-      sound.play('tap');
-      save();
-      refresh();
+    panel = createPanel(lang, onBuy, undefined, {
+      onFocus: (f) => {
+        if (!setFocus(state, f)) return;
+        sound.play('tap');
+        save();
+        refresh();
+      },
+      onHalo: () => {
+        if (!buyHalo(state)) return;
+        sound.play('upgrade');
+        toast(t(state.settings.lang, 'halo.bought', { n: state.halo }), 'rare');
+        world?.pulse('light');
+        save();
+        refresh();
+      },
     });
     // On wide screens this column sits to the right of the scene.
     goalBar = el('button', 'goal');

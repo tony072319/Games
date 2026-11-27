@@ -1,3 +1,4 @@
+import { canBuyHalo } from './halo';
 import { DESTS, DOCK_LIGHT, canSail } from './boat';
 import { DEST_IDS, MATERIALS, MATERIAL_WEIGHTS, MAX_LEVEL, PANEL_UPGRADES, type Materials, type UpgradeId } from './data';
 import { autoRate, canBuy, catchRate, chestCapacity, chestTotal, isMaxLevel, priceOf, upgradeLocked } from './economy';
@@ -92,6 +93,7 @@ export function nextGoal(s: GameState): Goal {
   if (!s.boat.built) return { key: 'goal.buildBoat', target: 'map' };
   if (DEST_IDS.some((d) => (canSail(s, d, 0) || canSail(s, d, 1)) && DESTS[d])) return { key: 'goal.sail', target: 'map' };
   if (canBuy(s, 'light')) return { key: 'goal.mend', params: { name: 'light' }, target: 'light' };
+  if (canBuyHalo(s)) return { key: 'goal.halo', target: 'light' };
   // Otherwise: the panel upgrade that will be affordable soonest.
   let best: UpgradeId | null = null;
   let bestEta = Infinity;

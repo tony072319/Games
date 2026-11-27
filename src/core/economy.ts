@@ -44,7 +44,7 @@ export function netRate(state: GameState): number {
 
 /** The current sea's richness times the starlight bonus. */
 export function seaBoost(state: GameState): number {
-  return SEA_DEF[state.sea].rate * (1 + T.STAR_BONUS * state.starlight) * curioBonus(state) * (has(state, 'prod3') ? 1.2 : 1);
+  return SEA_DEF[state.sea].rate * (1 + T.STAR_BONUS * state.starlight) * curioBonus(state) * (has(state, 'prod3') ? 1.2 : 1) * (1 + T.HALO_BONUS * (state.halo ?? 0));
 }
 
 /**

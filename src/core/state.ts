@@ -96,6 +96,8 @@ export interface GameState {
   friend: Partial<Record<import('./data').DestId, number>>;
   /** Where the lighthouse shines (one setting for every sea). */
   focus: import('./focus').Focus;
+  /** Rings of halo bought after the ending (each adds to every sea's income). */
+  halo: number;
 }
 
 export function emptyMaterials(): Materials {
@@ -131,5 +133,6 @@ export function newGame(nowMs: number, lang: Lang): GameState {
     land: 0,
     friend: {},
     focus: 'net',
+    halo: 0,
   };
 }

@@ -104,6 +104,11 @@ export const T = {
   STORM_SHIP_EVERY_MS: 6000,
   STORM_SHIP_LIFE_MS: 14000,
   STORM_THANKS: 2,
+  /** After the ending: each ring of halo adds this to every sea's income; the first costs HALO_BASE of the last lighthouse step, each next HALO_GROWTH times more. */
+  HALO_BONUS: 0.05,
+  HALO_BASE: 0.15,
+  HALO_GROWTH: 1.35,
+  HALO_GLOW: 10,
   NEW_SEA_NET: 5,
   NEW_SEA_LIGHT: 3,
   NEW_SEA_EARLY: 0.1,

@@ -1,4 +1,5 @@
 import { canFocus, focusOn, FOCUSES, type Focus } from '../core/focus';
+import { canBuyHalo, haloCost, haloOpen } from '../core/halo';
 import { MATERIALS, MAX_LEVEL, PANEL_UPGRADES, type UpgradeId } from '../core/data';
 import { canBuy, inParts, isMaxLevel, priceOf, upgradeLocked } from '../core/economy';
 import { T } from '../core/tuning';
@@ -66,6 +67,28 @@ export function upgradeThumb(id: UpgradeId, state: GameState): string {
 }
 
 /** Cheap fingerprint: the panel is rebuilt only when this changes. */
+/** After the ending: the next ring of halo, a card like the upgrades. */
+function haloCard(lang: Lang, state: GameState, onHalo: () => void): HTMLElement {
+  const cost = haloCost(state);
+  return upgradeCard(lang, {
+    data: ['halo', 'halo'],
+    thumb: upgradeThumb('light', state),
+    title: t(lang, 'halo.name'),
+    level: state.halo,
+    desc: t(lang, 'halo.desc'),
+    effect: t(lang, 'halo.next', { n: Math.round(T.HALO_BONUS * 100 * state.halo) }),
+    cost,
+    have: state.materials,
+    buyLabel: t(lang, 'ui.buy'),
+    canBuy: canBuyHalo(state),
+    state: affordState(state, cost),
+    eta: etaText(state, cost, lang),
+    onBuy: onHalo,
+    open: true,
+    alwaysOpen: true,
+  });
+}
+
 /** Under the lighthouse card: where the light shines (three choices, free to change). */
 function focusRow(lang: Lang, state: GameState, onFocus: (f: Focus) => void): HTMLElement {
   const row = el('div', 'focus-row');
@@ -101,7 +124,14 @@ function signature(state: GameState, ids: readonly UpgradeId[]): string {
     .join('|');
 }
 
-export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: readonly UpgradeId[] = PANEL_UPGRADES, onFocus?: (f: Focus) => void): Panel {
+/** Extras under the lighthouse card: where the light shines, and (after the ending) the halo. */
+export interface PanelExtras {
+  onFocus?: (f: Focus) => void;
+  onHalo?: () => void;
+}
+
+export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: readonly UpgradeId[] = PANEL_UPGRADES, extras: PanelExtras = {}): Panel {
+  const { onFocus, onHalo } = extras;
   const root = el('div', 'panel');
   let last = '';
   let flashing: UpgradeId | null = null;
@@ -143,13 +173,14 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
           flash: id === flashing,
         }),
       );
+      if (id === 'light' && onHalo && haloOpen(state)) root.append(haloCard(lang, state, onHalo));
       if (id === 'light' && onFocus && canFocus(state)) root.append(focusRow(lang, state, onFocus));
     }
   }
 
   function update(state: GameState) {
     current = state;
-    const sig = signature(state, ids) + '|' + [...open].join() + '|' + focusOn(state);
+    const sig = signature(state, ids) + '|' + [...open].join() + '|' + focusOn(state) + '|' + (haloOpen(state) ? `${state.halo}${canBuyHalo(state) ? 'y' : 'n'}` : '');
     if (sig !== last) {
       last = sig;
       render(state);
