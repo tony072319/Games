@@ -9,7 +9,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { MaterialId, SeaId } from '../core/data';
@@ -82,8 +81,8 @@ export interface World {
   readonly info: () => { geometries: number; textures: number };
   /** Test hook: the three.js scene. */
   readonly scene: THREE.Scene;
-  /** Test hook: lower the camera toward the horizon (tilt 0..1) and move it nearer or farther (zoom). */
-  testView(tilt: number, zoom: number): void;
+  /** Test hook: lower the camera toward the horizon (tilt 0..1), move it nearer or farther (zoom), walk it round the island (turn, degrees). */
+  testView(tilt: number, zoom: number, turn?: number): void;
 }
 export interface WorldOptions {
   calm: boolean;
@@ -214,7 +213,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
   composer.addPass(new RenderPass(scene, cam));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.6, 0.97);
   composer.addPass(bloom);
-  composer.addPass(new OutputPass());
+  // The last pass brings the light into range for the screen and grades the picture, in one go.
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
 
@@ -802,6 +801,7 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
     beaconMat.color.setHex(0xffe0a0).multiplyScalar(0.9 + 2.1 * lit);
     bloom.strength = pal.bloom;
     renderer.toneMappingExposure = pal.exposure;
+    grade.uniforms.exposure.value = pal.exposure;
     clouds.setPalette(pal);
     grade.uniforms.night.value = pal.night;
     updateAir();
@@ -1097,8 +1097,8 @@ export function createWorld(host: HTMLElement, opts: WorldOptions): World {
       while (o && !o.userData.tag) o = o.parent;
       return (o?.userData.tag as AnchorTag) ?? null;
     },
-    testView(tilt, zoom) {
-      const off = cam.position.clone().sub(controls.target);
+    testView(tilt, zoom, turn = 0) {
+      const off = cam.position.clone().sub(controls.target).applyAxisAngle(new THREE.Vector3(0, 1, 0), (turn * Math.PI) / 180);
       const dist = off.length() * zoom;
       const flat = Math.hypot(off.x, off.z);
       const pitch = Math.atan2(off.y, flat) * (1 - tilt) + 0.2 * tilt;

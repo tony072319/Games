@@ -62,10 +62,10 @@ export function createWater(): Water {
         float d=length(W.xz);
         vec3 toCam=cameraPosition-W;float camD=length(toCam);vec3 V=toCam/camD;
         // Deep water with a slow, broad swell of shade.
-        vec3 dp=deep*(.84+.12*n(W.xz*.05+T*.01));
+        float s2=n(W.xz*vec2(.085,.36)+vec2(-T*.02,-T*.06)+7.3);
+        vec3 dp=deep*(.84+.12*s2);
         // Long soft streaks lying across the swell: lighter crests, darker troughs (two layers, drifting apart).
         float s1=n(W.xz*vec2(.15,.62)+vec2(T*.03,T*.1));
-        float s2=n(W.xz*vec2(.085,.36)+vec2(-T*.02,-T*.06)+7.3);
         float crest=(smoothstep(.72-rough*.14,.86,s1)*.65+smoothstep(.74-rough*.14,.9,s2)*.35)*(1.+rough*.6);
         float trough=smoothstep(.36,.14,s1)*.5+smoothstep(.32,.1,s2)*.5;
         float open=smoothstep(2.2,5.,sd);
@@ -97,10 +97,11 @@ export function createWater(): Water {
         // Glitter under the sun, or under the moon when the night is deep.
         vec2 toP=normalize(W.xz-cameraPosition.xz+1e-4);
         float path=pow(max(0.,dot(toP,glint)),mix(70.,110.,deepNight));
-        float gl=n(W.xz*vec2(.7,2.6)+vec2(T*.3,T*.7));
-        float twinkle=smoothstep(.6,.82,gl);
-        float glK=(1.-night)*.8+deepNight*.3;
-        col+=sunC*path*(twinkle*.42+.12)*glK*smoothstep(10.,40.,camD)*smoothstep(1.5,4.,sd);
+        if(path>.004){
+          float twinkle=smoothstep(.6,.82,n(W.xz*vec2(.7,2.6)+vec2(T*.3,T*.7)));
+          float glK=(1.-night)*.8+deepNight*.3;
+          col+=sunC*path*(twinkle*.42+.12)*glK*smoothstep(10.,40.,camD)*smoothstep(1.5,4.,sd);
+        }
         // The lighthouse beam falls on the water as a long warm pool that sweeps round.
         if(beam.z>0.){
           float along=dot(W.xz,beam.xy);

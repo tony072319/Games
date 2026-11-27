@@ -289,21 +289,34 @@ export function createMist(): Mist {
 
 // ---------- the last touch on the picture ----------
 
-/** Runs after everything else, on the colours as they will be shown. */
+/**
+ * The one pass that turns the drawn scene into the picture on screen: it brings the light into
+ * range for a screen (the same filmic curve three.js uses), then gives the picture its last touch.
+ * One pass for both, so the touch costs nothing extra to draw.
+ */
 export const GradeShader = {
   name: 'GradeShader',
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     T: { value: 0 },
+    exposure: { value: 1 },
     /** How dark the corners go. */
     vignette: { value: 0.3 },
     night: { value: 0 },
   },
   vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-  fragmentShader: `uniform sampler2D tDiffuse;uniform float T,vignette,night;varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse;uniform float T,exposure,vignette,night;varying vec2 vUv;
     float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+    // The filmic curve (ACES, as fitted by Stephen Hill), then the screen's own curve.
+    vec3 fit(vec3 v){vec3 a=v*(v+.0245786)-.000090537;vec3 b=v*(.983729*v+.4329510)+.238081;return a/b;}
+    vec3 filmic(vec3 c){
+      const mat3 inM=mat3(vec3(.59719,.07600,.02840),vec3(.35458,.90834,.13383),vec3(.04823,.01566,.83777));
+      const mat3 outM=mat3(vec3(1.60475,-.10208,-.00327),vec3(-.53108,1.10813,-.07276),vec3(-.07367,-.00605,1.07602));
+      c*=exposure/.6;c=outM*fit(inM*c);return clamp(c,0.,1.);
+    }
+    vec3 toScreen(vec3 c){return mix(pow(c,vec3(.41666))*1.055-vec3(.055),c*12.92,vec3(lessThanEqual(c,vec3(.0031308))));}
     void main(){
-      vec3 c=texture2D(tDiffuse,vUv).rgb;
+      vec3 c=toScreen(filmic(texture2D(tDiffuse,vUv).rgb));
       float l=dot(c,vec3(.299,.587,.114));
       // A little more colour, a gentle curve, warm lights and cool shade.
       c=mix(vec3(l),c,1.08);

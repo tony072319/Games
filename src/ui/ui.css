@@ -198,7 +198,8 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
   overflow: hidden;
   display: block;
 }
-.thumb svg { width: 100%; height: 100%; display: block; }
+.thumb svg, .thumb img { width: 100%; height: 100%; display: block; }
+.thumb img { object-fit: contain; user-select: none; pointer-events: none; }
 .card-text { display: grid; gap: var(--sp-1); min-width: 0; }
 .card h3 { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
 .card h3 small { margin-left: var(--sp-2); color: var(--c-ink-dim); font-size: var(--fs-caption); font-weight: var(--fw-regular); }
@@ -388,7 +389,9 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 
 /* ---------- tapping the scene ---------- */
 .hit { position: absolute; z-index: 4; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-md); background: none; transform: translate(-50%, -50%); pointer-events: none; }
-.world-loading { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: var(--c-surface-0); color: var(--c-ink-dim); font-size: var(--fs-body); }
+.world-loading { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; place-content: center; gap: var(--sp-3); background: var(--c-surface-0); color: var(--c-ink-dim); font-size: var(--fs-body); }
+.loading-mark { width: calc(var(--thumb) * 1.5); height: calc(var(--thumb) * 1.5); border-radius: var(--r-lg); box-shadow: var(--glow-gold); animation: breathe var(--t-breathe) ease-in-out infinite; user-select: none; pointer-events: none; }
+.game.calm .loading-mark { animation: none; }
 .polish-btn { align-self: flex-start; }
 .polish-btn:disabled { color: var(--c-ink-faint); }
 .view-btns { position: absolute; right: var(--sp-3); bottom: var(--sp-3); z-index: 8; display: flex; gap: var(--sp-2); }

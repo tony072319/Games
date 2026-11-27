@@ -572,8 +572,11 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     world?.dispose();
     world = null;
     try {
-      const loading = el('div', 'world-loading');
-      loading.textContent = t(lang, 'world.loading', { n: 0 });
+      // The lighthouse's mark breathing over how far loading has got.
+      const loading = el('div', 'world-loading', '<img class="loading-mark" src="favicon.svg" alt="" draggable="false">');
+      const loadingText = el('span');
+      loadingText.textContent = t(lang, 'world.loading', { n: 0 });
+      loading.append(loadingText);
       stage.append(loading);
       world = createWorld(stage, {
         calm: state.settings.calm,
@@ -582,7 +585,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
           loading.remove();
         },
         onProgress: (done, all) => {
-          loading.textContent = t(lang, 'world.loading', { n: Math.round((100 * done) / Math.max(1, all)) });
+          loadingText.textContent = t(lang, 'world.loading', { n: Math.round((100 * done) / Math.max(1, all)) });
         },
         onError: (msg) => console.warn(msg),
         onLost: () => build(),

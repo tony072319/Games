@@ -62,11 +62,9 @@ export function scatterOn(s: Shape, avoid: readonly (readonly [number, number, n
   const grassy = (x: number, z: number, h: number) => h > 0.44 && steepness(s, x, z) < 0.3 && roadAt(s, x, z) < 0.12;
 
   // Trees: in loose clumps on open grass, well clear of buildings and roads.
-  walk(2.1, 6, (x, z, h, i, j) => {
-    if (!grassy(x, z, h) || roadAt(s, x, z) > 0.01 || hash(i, j, 14) > 0.25 + 0.6 * patch(x, z, 0.27, s.seed + 4) || !clear(x, z, 0.75)) return;
-    // Not right on a cliff's edge or against its foot.
-    const d = 0.7;
-    if (Math.max(steepness(s, x + d, z), steepness(s, x - d, z), steepness(s, x, z + d), steepness(s, x, z - d)) > 0.8) return;
+  walk(1.9, 6, (x, z, h, i, j) => {
+    // On the flats and up the banks alike (a wooded slope reads as a hill), but not on bare rock.
+    if (h < 0.44 || steepness(s, x, z) > 0.8 || roadAt(s, x, z) > 0.01 || hash(i, j, 14) > 0.25 + 0.6 * patch(x, z, 0.27, s.seed + 4) || !clear(x, z, 0.75)) return;
     out.trees.push(sprig(x, z, h, i, j, 60, 1));
   });
   const nearTree = (x: number, z: number) => out.trees.some((t) => (t.x - x) ** 2 + (t.z - z) ** 2 < 0.2);
@@ -85,12 +83,12 @@ export function scatterOn(s: Shape, avoid: readonly (readonly [number, number, n
     if (!grassy(x, z, h) || patch(x, z, 0.42, s.seed + 9) < 0.62 || hash(i, j, 9) > 0.75 || !clear(x, z, 0.15)) return;
     out.flowers.push(sprig(x, z, h, i, j, 30, 1));
   });
-  // Bushes where flat ground meets the foot or the top of a cliff.
+  // Bushes where flat ground meets the foot or the top of a bank.
   walk(1.5, 4, (x, z, h, i, j) => {
     if (!grassy(x, z, h) || hash(i, j, 11) > 0.55 || !clear(x, z, 0.5)) return;
     const d = 0.9;
     const wall = Math.max(steepness(s, x + d, z), steepness(s, x - d, z), steepness(s, x, z + d), steepness(s, x, z - d));
-    if (wall < 0.9) return;
+    if (wall < 0.55) return;
     out.bushes.push(sprig(x, z, h, i, j, 40, 1));
   });
   // Pebbles on the beach, and a few fallen under the cliffs.
@@ -133,7 +131,7 @@ function tuftGeometry(): THREE.BufferGeometry {
   return g;
 }
 
-/** A flower: a short stem and a round head (the head takes the flower's colour). */
+/** A flower: a short stem and a small head (the head takes the flower's colour). */
 function flowerGeometry(): THREE.BufferGeometry {
   const paint = (g: THREE.BufferGeometry, c: number) => {
     const col = new THREE.Color(c);
@@ -144,11 +142,11 @@ function flowerGeometry(): THREE.BufferGeometry {
     // The stem has shared corners and the heads do not: make them alike so they can be joined.
     return g.index ? g.toNonIndexed() : g;
   };
-  const stem = paint(new THREE.CylinderGeometry(0.008, 0.012, 0.16, 4).translate(0, 0.08, 0), 0x6aa84a);
-  const head = paint(new THREE.IcosahedronGeometry(0.05, 0).scale(1, 0.7, 1).translate(0, 0.18, 0), 0xffffff);
-  const heart = paint(new THREE.IcosahedronGeometry(0.022, 0).translate(0, 0.205, 0), 0xffd24a);
-  const g = mergeGeometries([stem, head, heart]);
-  [stem, head, heart].forEach((x) => x.dispose());
+  // Few faces: there are hundreds of these and each is a dot on the screen.
+  const stem = paint(new THREE.CylinderGeometry(0.008, 0.012, 0.16, 3, 1, true).translate(0, 0.08, 0), 0x6aa84a);
+  const head = paint(new THREE.OctahedronGeometry(0.055, 0).scale(1, 0.7, 1).translate(0, 0.18, 0), 0xffffff);
+  const g = mergeGeometries([stem, head]);
+  [stem, head].forEach((x) => x.dispose());
   return g;
 }
 
@@ -270,7 +268,7 @@ export function createGreenery(parts: PartsFn): Greenery {
       build(tuftGeo, tuftMat, look.snow ? tufts.filter((_, i) => i % 3 === 0) : tufts, (s) => (look.snow || s.tone > 1 ? c.setHex(0xe6d79a).clone() : c.setRGB(0.82 + s.tone * 0.3, 0.9 + s.tone * 0.16, 0.8 + s.tone * 0.2).clone()));
       build(flowerGeo, flowerMat, flowers, (s) => c.setHex(FLOWERS[Math.floor(s.tone * FLOWERS.length) % FLOWERS.length]).clone());
       build(bushGeo, bushMat, bushes, (s) => (look.snow ? c.setHex(0x7fa07a).lerp(white, 0.55).clone() : c.setHex(s.tone < 0.5 ? 0x5fa04a : 0x79b455).clone()), { cast: true });
-      build(pebbleGeo, pebbleMat, pebbles, (s) => c.setHex(s.tone < 0.5 ? 0xb9b2a6 : 0x9c958c).clone(), { tilt: true, cast: true });
+      build(pebbleGeo, pebbleMat, pebbles, (s) => c.setHex(s.tone < 0.5 ? 0xb9b2a6 : 0x9c958c).clone(), { tilt: true });
       // Trees are models: drawn once they have loaded, each kind in one go.
       const trees = all.flatMap((s) => s.trees);
       const kindOf = (t: Sprig) => (look.snow ? (t.tone < 0.5 ? 'fir' : 'spruce') : t.tone < (look.dull ? 0.3 : 0.55) ? 'round' : t.tone < 0.8 ? 'fir' : 'spruce');

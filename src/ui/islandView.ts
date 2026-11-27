@@ -2,7 +2,7 @@ import { BUILDING_MAX, MATERIALS, type BuildingId, type DestId } from '../core/d
 import { BUILDINGS, ISLAND_BUILDINGS, buildCost, buildingLevel, canBuild, productionPerHour } from '../core/islands';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
-import { PLOTS, buildingSvg, flourishSvg, islandSceneSvg, itemIcon } from './art';
+import { PLOTS, buildingSvg, buildingThumb, flourishSvg, islandSceneSvg, itemIcon } from './art';
 import { el } from './dom';
 import { progressBar, upgradeCard } from './card';
 import { islandTier } from '../core/milestones';
@@ -126,7 +126,7 @@ export function createIslandView(lang: Lang, state: GameState, d: DestId, act: I
         data: ['building', b],
         effect,
         // Not built yet: a faint preview of the first level.
-        thumb: `<svg viewBox="-48 -88 96 96" aria-hidden="true" style="${lvl === 0 ? 'opacity:.5' : ''}">${buildingSvg(b, Math.max(1, lvl))}</svg>`,
+        thumb: buildingThumb(b, lvl),
         title: t(lang, `bld.${b}.name`),
         level: lvl,
         desc: t(lang, `bld.${b}.desc`),

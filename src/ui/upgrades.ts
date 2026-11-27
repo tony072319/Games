@@ -7,7 +7,8 @@ import type { GameState, Lang } from '../core/state';
 import { formatEta, t } from '../i18n';
 import { affordState, etaSeconds, nextEffect } from '../core/advice';
 import { NET_MILESTONES, nextNetMilestone } from '../core/milestones';
-import { boatSvg, chestSvg, netSvg, towerSvg } from './art';
+import { boatThumb, chestThumb, lightThumb, netThumb } from './art';
+import { boatModel } from '../world/looks';
 import { upgradeCard } from './card';
 import { el } from './dom';
 
@@ -56,14 +57,14 @@ export function etaText(state: GameState, cost: Parameters<typeof etaSeconds>[1]
   return eta && eta > 0 ? t(lang, 'card.eta', { time: formatEta(eta, lang) }) : undefined;
 }
 
-/** A crop of what each upgrade looks like right now. */
+/** A picture of what each upgrade looks like right now: the same models the island shows. */
 export function upgradeThumb(id: UpgradeId, state: GameState): string {
   const L = state.levels[id];
-  if (id === 'net') return `<svg viewBox="14 336 134 160" aria-hidden="true">${netSvg(L)}</svg>`;
-  if (id === 'storage') return chestSvg(0, L);
-  if (id === 'light') return `<svg viewBox="128 218 104 104" aria-hidden="true">${towerSvg(L)}</svg>`;
+  if (id === 'net') return netThumb(L);
+  if (id === 'storage') return chestThumb(L);
+  if (id === 'light') return lightThumb(L);
   if (id === 'recycle') return `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5l5 8h-3v5h-4v-5h-3z M7 25l3-9 3 5-2 1 3 4z M25 25l-3-9-3 5 2 1-3 4z" fill="#8fd0b0"/></svg>`;
-  return boatSvg(id === 'cargo', state.levels.cargo);
+  return boatThumb(boatModel(state.levels.speed, state.levels.cargo));
 }
 
 /** The halo card redraws when a material crosses its price or the "about N minutes" label would change. */

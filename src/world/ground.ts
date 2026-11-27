@@ -67,28 +67,33 @@ export function groundMaterial(p: GroundPaint): THREE.MeshToonMaterial {
           vec3 W=vW;float hgt=W.y;
           vec3 fN=normalize(cross(dFdx(W),dFdy(W)));
           float slope=1.-abs(fN.y);
+          // Three grains of unevenness (broad, middling, fine) do for everything below.
           float n1=gn(W.xz*.33),n2=gn(W.xz*1.6+5.),n3=gn(W.xz*6.5);
           // Grass: deeper and sunnier patches, a few drier ones, darker dabs where it grows thick.
           vec3 g=mix(uGrass*vec3(.66,.86,.64),uGrass*vec3(1.12,1.08,.88),smoothstep(.25,.75,n1*.65+n2*.35));
-          g=mix(g,uGrass*vec3(1.22,1.08,.7),smoothstep(.6,.85,gn(W.xz*.17+3.))*.4);
+          g=mix(g,uGrass*vec3(1.22,1.08,.7),smoothstep(.62,.9,1.-n1+n2*.25)*.4);
           g*=.95+.1*n3;
-          g=mix(g,g*.84,smoothstep(.66,.8,gn(W.xz*vec2(4.2,7.6)+n1*3.))*.5);
+          g=mix(g,g*.84,smoothstep(.62,.8,n3*.6+n2*.4)*.5);
+          // Slopes are deeper and cooler than the flats; the hilltops catch a little more sun.
+          g=mix(g,g*vec3(.74,.84,.8),smoothstep(.03,.3,slope));
+          g*=1.+.07*smoothstep(1.5,4.,hgt);
           // Flowers: small round dabs, in drifts.
           vec2 fc=W.xz*6.;vec2 fi=floor(fc);
           float fr=length(fract(fc)-.5-(vec2(gh(fi),gh(fi+3.1))-.5)*.5);
-          float fl=step(.9,gh(fi+.7))*smoothstep(.2,.1,fr)*smoothstep(.5,.72,gn(W.xz*.42+9.))*(1.-uSnow);
+          float fl=step(.9,gh(fi+.7))*smoothstep(.2,.1,fr)*smoothstep(.5,.7,n2*.6+n1*.4)*(1.-uSnow);
           float pick=gh(fi+5.);
           g=mix(g,pick<.4?vec3(1.,.97,.88):pick<.75?vec3(1.,.82,.3):vec3(1.,.6,.72),fl);
           // Sand: darker where the sea wets it, faint ripples at the water's edge.
           vec3 s=mix(uSand*vec3(.76,.72,.66),uSand,smoothstep(-.02,.14,hgt+(n2-.5)*.05));
           s*=.96+.07*n3;
-          s=mix(s,s*.9,smoothstep(.72,.9,gn(W.xz*vec2(2.,9.)))*.35*smoothstep(.22,.04,hgt));
-          // Rock: layers lying one on another, an ochre one now and then, streaks down the face.
-          float lay=hgt*1.9+n1*.7+gn(W.xz*.9)*.25;
+          s=mix(s,s*.9,smoothstep(.55,.95,sin(hgt*70.+n2*5.))*.3*smoothstep(.22,.04,hgt));
+          // Rock: beds of stone lying at a tilt, bent and broken, never in neat rings; cracks between the blocks.
+          float lay=hgt*1.25+W.x*.21+W.z*.13+n1*1.5+n2*.35;
           float band=fract(lay);
-          vec3 r=mix(uRock*vec3(1.06,1.03,.98),uRock*vec3(.86,.84,.86),smoothstep(.35,.5,band)-smoothstep(.85,.97,band));
-          r=mix(r,uRock*vec3(1.02,.9,.74),step(.7,gh(vec2(floor(lay),3.)))*.5);
-          r*=.9+.14*gn(vec2(atan(W.z,W.x)*26.,hgt*3.));
+          vec3 r=mix(uRock*vec3(1.04,1.02,.98),uRock*vec3(.9,.88,.9),smoothstep(.3,.55,band)-smoothstep(.8,.98,band));
+          r=mix(r,uRock*vec3(1.02,.92,.78),step(.72,gh(vec2(floor(lay),3.)))*.4);
+          r*=.86+.2*n3;
+          r=mix(r,r*.7,smoothstep(.44,.5,abs(band-.5))*.5);
           // Roads: packed earth with a pebble here and there, darker at the edges.
           vec3 pth=uPath*(.94+.1*n3);
           pth=mix(pth,pth*.8,step(.88,gh(floor(W.xz*5.)))*smoothstep(.3,.14,length(fract(W.xz*5.)-.5))*.7);

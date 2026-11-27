@@ -151,6 +151,23 @@ export function worldLayout(s: GameState, nowMs: number): WorldItem[] {
     place(items, 'deco', [{ part, model, dx: 0, dz: 0, ...extra }], px, pz, 0);
   }
 
+  // Rocks in the shallows under the back cliff and off the headlands, and boulders on the beach.
+  const ROCKS: [ModelId, number, number, number, number][] = [
+    ['lh/sea_stack', 1.2, -2.25, 2.6, 0.4],
+    ['lh/sea_rock_large', 1.13, -1.9, 1.5, 1.9],
+    ['lh/sea_rock_small', 1.1, -2.6, 0.8, 0.7],
+    ['kk/rock_single_C', 1.08, 2.9, 1.1, 2.2],
+    ['lh/sea_rock_small', 1.12, 3.25, 0.7, 1.1],
+    ['kk/rock_single_B', 0.965, 4.6, 0.75, 0.5],
+    ['kk/rock_single_D', 0.96, 1.9, 0.5, 2.6],
+    ['lh/sea_rock_large', 1.1, 0.95, 1.1, 0.2],
+  ];
+  for (const [model, frac, a, size, rotY] of ROCKS) {
+    const [rx, rz] = on(frac, a);
+    // Those out in the water stand on the sea bed, sunk a little.
+    items.push({ key: `rock:${frac}:${a}`, model, x: rx, y: frac > 1 ? -0.35 : -0.05, z: rz, rotY, size });
+  }
+
   // The ground won by expanding: now and then a tuft of grass or flowers on it.
   const TUFTS: ModelId[] = ['nature/grass_tuft', 'nature/flower_yellow', 'lh/beach_grass', 'nature/flower_purple', 'nature/bush_round'];
   for (let i = 1; i <= s.land; i++) {
@@ -281,13 +298,27 @@ function shapesOf(items: WorldItem[]): Shape[] {
   return items.flatMap((i) => (i.ground ? [i.ground] : []));
 }
 
-/** Everything stands on the ground beneath it (things on the water keep their height). */
+/** Buildings stand on a hillside: these are wide enough to need digging in. */
+const WIDE = /building_(?!scaffolding|stage|grain)|stall|hut|shack|cabin|longhouse|storehouse|forge|watchtower/;
+
+/**
+ * Everything stands on the ground beneath it (things on the water keep their height). On a slope
+ * a building is dug in: it rests on the lowest ground under its walls, so no corner hangs in the air.
+ */
 function standOnGround(items: WorldItem[]) {
   const shapes = shapesOf(items);
+  const ground = (x: number, z: number) => {
+    let h = 0;
+    for (const sh of shapes) h = Math.max(h, heightAt(sh, x, z));
+    return h;
+  };
   for (const i of items) {
     if (i.ground || i.bob) continue;
-    let h = 0;
-    for (const sh of shapes) h = Math.max(h, heightAt(sh, i.x, i.z));
+    let h = ground(i.x, i.z);
+    if (WIDE.test(i.model)) {
+      const r = 0.45;
+      h = Math.min(h, ground(i.x + r, i.z), ground(i.x - r, i.z), ground(i.x, i.z + r), ground(i.x, i.z - r));
+    }
     i.y += h;
   }
 }

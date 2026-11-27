@@ -4,7 +4,7 @@ import { boatCost, canBuildBoat, canSail, reachable, voyageHaul, voyageMs, needL
 import { BOAT_UPGRADES, DEST_IDS, MATERIALS, SEA_IDS, type DestId, type SeaId, type UpgradeId } from '../core/data';
 import type { GameState, Lang } from '../core/state';
 import { formatNumber, t } from '../i18n';
-import { boatSvg, islandIcon, itemIcon } from './art';
+import { boatThumb, islandIcon, itemIcon } from './art';
 import { upgradeCard } from './card';
 import { affordState } from '../core/advice';
 import { etaText } from './upgrades';
@@ -100,20 +100,31 @@ export function createSeaMap(lang: Lang, state: GameState, act: SeaMapActions): 
       const k = f < 0.5 ? f * 2 : 2 - f * 2;
       const bx = C + (p.x - C) * k;
       const by = C + (p.y - C) * k;
-      path += `<line x1="${C}" y1="${C}" x2="${p.x}" y2="${p.y}" stroke="#ffd98a" stroke-opacity="0.5" stroke-width="1.5" stroke-dasharray="4 5"/>
-<g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)})"><circle r="10" fill="url(#mglow)"/><path d="M-6 2 L6 2 L4 5 L-4 5 Z" fill="#8a5a3a"/><line x1="0" y1="2" x2="0" y2="-7" stroke="#5a3a26" stroke-width="1.2"/><path d="M0 -7 L6 0 L0 0 Z" fill="#efe6d6"/></g>`;
+      // The course as a dotted line, and the boat on it with a lantern's glow.
+      path += `<line x1="${C}" y1="${C}" x2="${p.x}" y2="${p.y}" stroke="#ffd98a" stroke-opacity="0.55" stroke-width="1.6" stroke-dasharray="1 6" stroke-linecap="round"/>
+<g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)})"><circle r="13" fill="url(#mglow)"/><ellipse cx="0" cy="6.5" rx="9" ry="2" fill="#bff5f0" opacity=".45"/><path d="M-8 2 H8 L5.5 6.5 H-5.5 Z" fill="#a8744a" stroke="#5a341d" stroke-width="1" stroke-linejoin="round"/><line x1="0" y1="2" x2="0" y2="-9" stroke="#5a341d" stroke-width="1.4" stroke-linecap="round"/><path d="M1 -8 L7.5 1 H1 Z" fill="#fbf3df" stroke="#b8a37a" stroke-width=".8" stroke-linejoin="round"/></g>`;
     }
+    // A sea chart: deep water with small waves, rings of depth round the lighthouse, the lit sea
+    // glowing like the shallows in the world, and a compass rose in the corner.
+    const rose = `<g transform="translate(322 322)" opacity=".55"><circle r="17" fill="none" stroke="#ffd98a" stroke-width=".8"/><path d="M0 -21 L3.2 -3.2 L21 0 L3.2 3.2 L0 21 L-3.2 3.2 L-21 0 L-3.2 -3.2 Z" fill="#ffd98a"/><path d="M0 -21 L3.2 -3.2 L0 0 Z M21 0 L3.2 3.2 L0 0 Z M0 21 L-3.2 3.2 L0 0 Z M-21 0 L-3.2 -3.2 L0 0 Z" fill="#1b1838" opacity=".55"/></g>`;
     return `<svg viewBox="0 0 360 360" aria-hidden="true">
 <defs>
-  <radialGradient id="mlight"><stop offset="0" stop-color="#3a4a7a" stop-opacity="0.9"/><stop offset="0.85" stop-color="#26305e" stop-opacity="0.7"/><stop offset="1" stop-color="#26305e" stop-opacity="0"/></radialGradient>
-  <radialGradient id="mglow"><stop offset="0" stop-color="#ffd98a" stop-opacity="0.7"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+  <radialGradient id="msea"><stop offset="0" stop-color="#1c3564"/><stop offset="1" stop-color="#090d24"/></radialGradient>
+  <radialGradient id="mlight"><stop offset="0" stop-color="#4fc4cc" stop-opacity="0.6"/><stop offset="0.6" stop-color="#2f7fa8" stop-opacity="0.42"/><stop offset="0.9" stop-color="#2a5a8a" stop-opacity="0.3"/><stop offset="1" stop-color="#2a5a8a" stop-opacity="0"/></radialGradient>
+  <radialGradient id="mglow"><stop offset="0" stop-color="#ffd98a" stop-opacity="0.75"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+  <pattern id="mwaves" width="44" height="30" patternUnits="userSpaceOnUse"><path d="M4 9 q4 -4 8 0 t8 0 M26 24 q4 -4 8 0 t8 0" fill="none" stroke="#9cc8f0" stroke-opacity="0.16" stroke-width="1.1" stroke-linecap="round"/></pattern>
+  <clipPath id="mclip"><rect width="360" height="360" rx="14"/></clipPath>
 </defs>
-<rect width="360" height="360" rx="14" fill="#070a1a"/>
-<g stroke="#1b2244" stroke-width="0.6">${[60, 120, 180, 240, 300].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="360"/><line x1="0" y1="${x}" x2="360" y2="${x}"/>`).join('')}</g>
+<g clip-path="url(#mclip)">
+<rect width="360" height="360" fill="url(#msea)"/>
+<g fill="none" stroke="#9cc4ff" stroke-opacity="0.08">${[70, 125, 180, 235].map((q) => `<circle cx="${C}" cy="${C}" r="${q}"/>`).join('')}</g>
 <circle cx="${C}" cy="${C}" r="${r}" fill="url(#mlight)" class="map-light"/>
-<circle cx="${C}" cy="${C}" r="${r}" fill="none" stroke="#ffd98a" stroke-opacity="0.25" stroke-dasharray="2 6"/>
+<rect width="360" height="360" fill="url(#mwaves)"/>
+<circle cx="${C}" cy="${C}" r="${r}" fill="none" stroke="#ffd98a" stroke-opacity="0.3" stroke-dasharray="2 6" stroke-linecap="round"/>
+${rose}
 ${path}
-<g transform="translate(${C} ${C})"><circle r="14" fill="url(#mglow)"/><path d="M-3 8 L-2 -6 L2 -6 L3 8 Z" fill="#e6dbd0"/><rect x="-3" y="-10" width="6" height="4" fill="#ffd98a"/></g>
+<g transform="translate(${C} ${C})"><circle r="19" fill="url(#mglow)"/><ellipse cx="0" cy="10" rx="11" ry="3.4" fill="#7cbf5a" stroke="#4f8a3a" stroke-width=".8"/><path d="M-4 9.5 L-2.6 -5 H2.6 L4 9.5 Z" fill="#fbf3e6" stroke="#3a2a52" stroke-width="1" stroke-linejoin="round"/><path d="M-3.3 3 H3.3 L3.7 7 H-3.7 Z" fill="#e0483f"/><rect x="-3.4" y="-10" width="6.8" height="5" rx=".8" fill="#ffe7a8" stroke="#3a2a52" stroke-width="1"/><path d="M-4.4 -10 L0 -14.5 L4.4 -10 Z" fill="#e0483f" stroke="#3a2a52" stroke-width="1" stroke-linejoin="round"/></g>
+</g>
 </svg>`;
   }
 
@@ -261,7 +272,7 @@ ${path}
         const card2 = want2
           ? upgradeCard(lang, {
               data: ['card', 'build-boat2'],
-              thumb: boatSvg(true, 3),
+              thumb: boatThumb('kp/boat-row-large'),
               title: t(lang, 'map.build2'),
               desc: t(lang, 'map.build2Desc'),
               cost,
@@ -289,7 +300,7 @@ ${path}
     bottom.append(
       upgradeCard(lang, {
         data: ['card', 'build-boat'],
-        thumb: boatSvg(false, 1),
+        thumb: boatThumb('kp/boat-row-small'),
         title: t(lang, 'map.build'),
         desc: t(lang, 'map.buildDesc'),
         cost: boatCost(),
