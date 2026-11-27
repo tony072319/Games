@@ -18,6 +18,8 @@ export interface Panel {
   flash(id: UpgradeId): void;
   /** Open a card, bring it into view and highlight it (from tapping the scene). */
   show(id: UpgradeId): void;
+  /** Mark the card the next step points at (or none), so the goal and the cards agree. */
+  mark(id: UpgradeId | null): void;
 }
 
 /** The lighthouse needs glowshards from level 7: say where they come from. */
@@ -53,7 +55,8 @@ function netProgress(level: number, lang: Lang): { label: string; value: number 
 /** Time until affordable, as words; undefined when it will not come by waiting. */
 export function etaText(state: GameState, cost: Parameters<typeof etaSeconds>[1], lang: Lang): string | undefined {
   const eta = etaSeconds(state, cost);
-  return eta && eta > 0 ? t(lang, 'card.eta', { time: formatEta(eta, lang) }) : undefined;
+  if (!eta || eta <= 0) return undefined;
+  return eta < 60 ? t(lang, 'card.etaSoon') : t(lang, 'card.eta', { time: formatEta(eta, lang) });
 }
 
 /** A crop of what each upgrade looks like right now. */
@@ -141,6 +144,7 @@ export interface PanelExtras {
 export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: readonly UpgradeId[] = PANEL_UPGRADES, extras: PanelExtras = {}): Panel {
   // Keyboard focus goes back to the chip or button just used after the panel redraws.
   let refocusSel: string | null = null;
+  let marked: UpgradeId | null = null;
   const onFocus = extras.onFocus && ((f: Focus) => {
     refocusSel = `.focus-row [data-focus="${f}"]`;
     extras.onFocus!(f);
@@ -190,6 +194,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
           flash: id === flashing,
         }),
       );
+      if (id === marked) root.lastElementChild?.classList.add('is-goal');
       if (id === 'light' && onHalo && haloOpen(state)) root.append(haloCard(lang, state, onHalo));
       if (id === 'light' && onFocus && canFocus(state)) root.append(focusRow(lang, state, onFocus));
     }
@@ -197,7 +202,7 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
 
   function update(state: GameState) {
     current = state;
-    const sig = signature(state, ids) + '|' + [...open].join() + '|' + focusOn(state) + '|' + (haloOpen(state) ? haloSignature(state) : '');
+    const sig = signature(state, ids) + '|' + [...open].join() + '|' + marked + '|' + focusOn(state) + '|' + (haloOpen(state) ? haloSignature(state) : '');
     if (sig !== last) {
       last = sig;
       render(state);
@@ -227,6 +232,12 @@ export function createPanel(lang: Lang, onBuy: (id: UpgradeId) => void, ids: rea
       setTimeout(() => {
         if (flashing === id) flashing = null;
       }, 900);
+    },
+    mark(id) {
+      if (id === marked) return;
+      marked = id && ids.includes(id) ? id : null;
+      last = '';
+      if (current) update(current);
     },
     flash(id) {
       flashing = id;

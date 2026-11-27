@@ -184,6 +184,7 @@ try {
   const emptyPct = await page.$eval('.chest .bar i', (e) => parseFloat(e.style.width));
   if (emptyPct !== 0) fail(`chest should be empty after collecting, got ${emptyPct}%`);
 
+  // The card the next step is about wears a ring, so the goal and the cards agree.
   // Lighthouse to 3 → build boat → sail to the wreck → bring it home → unload → discovery.
   for (let i = 0; i < 2; i++) await page.locator('[data-upgrade="light"] .buy').click();
   await page.locator('.stage[data-world-has~="dock"]').waitFor({ state: 'attached', timeout: 3000 }).catch(() => fail('lighthouse 3 should show the dock'));
@@ -460,6 +461,28 @@ try {
     }
     await c.close();
   }
+  // The card the next step is about wears a gold ring, so the goal and the cards agree.
+  { const c = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
+    const p0 = await c.newPage();
+    await p0.goto(BASE);
+    await p0.waitForTimeout(1500);
+    await p0.close();
+    await c.addInitScript(() => {
+      if (localStorage.getItem('__seeded')) return;
+      const s = JSON.parse(localStorage.getItem('lightkeeper.save'));
+      s.stats.tutorial = 3;
+      localStorage.setItem('lightkeeper.save', JSON.stringify(s));
+      localStorage.setItem('__seeded', '1');
+    });
+    const pg = await c.newPage();
+    await pg.goto(BASE);
+    await pg.locator('.goal-text').waitFor({ timeout: 8000 });
+    await pg.waitForTimeout(500);
+    const g = await pg.locator('.goal-text').textContent();
+    if (!g?.includes('灯塔')) fail(`after the first steps the goal should be the lighthouse, got ${g}`);
+    if (!(await pg.locator('[data-upgrade="light"].is-goal').count())) fail('the lighthouse card should wear the goal ring');
+    if (await pg.locator('[data-upgrade="net"].is-goal').count()) fail('only the goal card wears the ring');
+    await c.close(); }
   if (errors.length) fail('page errors: ' + errors.join('; '));
   await browser.close();
   console.log('e2e smoke: PASS');

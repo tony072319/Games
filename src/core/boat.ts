@@ -1,6 +1,6 @@
 import { eventIs } from './seaEvents';
 import { focusOn } from './focus';
-import { MATERIALS, type DestId, type Materials } from './data';
+import { MATERIALS, type DestId, type Materials, SEA_DEF } from './data';
 import { addMaterials, netRate } from './economy';
 import { takeIslandStore } from './islands';
 import { curioChance, foundCurio, pickCurio } from './curios';
@@ -42,6 +42,13 @@ const DISCOVERY_FIND: Partial<Record<DestId, Partial<Materials>>> = {
   wreck: { metal: 200 },
   firefly: { glow: 5 },
 };
+
+/** The one-time find at an island, scaled to the sea's prices (glow stays as it is). */
+export function discoveryFind(s: GameState, d: DestId): Partial<Materials> {
+  const out: Partial<Materials> = {};
+  for (const [m, n] of Object.entries(DISCOVERY_FIND[d] ?? {}) as [keyof Materials, number][]) out[m] = m === 'glow' ? n : Math.round(n * SEA_DEF[s.sea].cost);
+  return out;
+}
 
 export function canBuildBoat(s: GameState): boolean {
   return !s.boat.built && s.levels.light >= DOCK_LIGHT && MATERIALS.every((m) => s.materials[m] >= boatCost()[m]);
@@ -182,7 +189,7 @@ export function settleVoyage(s: GameState, nowMs: number, rng: () => number = Ma
   const at = seaView(s, v.sea) ?? s;
   const discovery = !at.discovered.includes(v.dest);
   const haul = voyageHaul(at, v.dest);
-  if (discovery) for (const [m, n] of Object.entries(DISCOVERY_FIND[v.dest] ?? {})) haul[m as keyof Materials] += n ?? 0;
+  if (discovery) for (const [m, n] of Object.entries(discoveryFind(at, v.dest))) haul[m as keyof Materials] += n ?? 0;
   // Under the aurora the islands are iced in: the first trip only breaks the ice.
   const iceBreak = v.sea === 'aurora' && discovery;
   if (iceBreak) for (const m of MATERIALS) haul[m] = 0;

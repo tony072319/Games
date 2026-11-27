@@ -2,7 +2,7 @@ import { eventFor, nextSeaEvent } from '../core/seaEvents';
 import { setFocus } from '../core/focus';
 import { buyHalo } from '../core/halo';
 import { guideShip, newShipField, stormSummary, updateShips, type ShipField } from '../core/ships';
-import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, type DestId, type Materials, type UpgradeId } from '../core/data';
+import { AUTOSAVE_MS, MATERIALS, MAX_LEVEL, OFFLINE_MIN_REPORT_SECONDS, PANEL_UPGRADES, type DestId, type Materials, type UpgradeId } from '../core/data';
 import { buyUpgrade, chestCapacity, chestTotal } from '../core/economy';
 import { collect, newField, updateField, type FlotsamField } from '../core/flotsam';
 import { loadGame, saveGame, type KV } from '../core/save';
@@ -10,7 +10,7 @@ import { applyOffline, claimDouble, collectChest, tick, type OfflineReport } fro
 import { newGame, type GameState } from '../core/state';
 import { detectLang, formatNumber, t } from '../i18n';
 import { islandIcon, itemIcon } from './art';
-import { boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo, lightReach } from '../core/boat';
+import { boatOf, buildBoat, buildBoat2, freeBoat, startVoyage, unloadBoat, type BoatNo, lightReach, discoveryFind } from '../core/boat';
 import { createWorld, type AnchorTag, type World } from '../world/scene';
 import { boatPosition, flotsamPosition, shipPosition, worldLayout, type Tag } from '../world/layout';
 import { boatModel } from '../world/looks';
@@ -128,7 +128,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       if (r.seconds < OFFLINE_MIN_REPORT_SECONDS) return;
       pending = { seconds: r.seconds, creditedSeconds: r.creditedSeconds, gained: { ...r.gained } };
     }
-    const lines = arrivalLines(state, pending);
+    const lines = arrivalLines(state, pending, opts.now());
     if (lines.length === 0) {
       pending = null;
       return;
@@ -231,6 +231,32 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     box.append(h, p1, p2, p3, p4, actions);
     overlay.append(box);
     game.append(overlay);
+  }
+
+  /** All three seas lit: a closing note, and the halo as what comes next. */
+  function showEnding() {
+    const lang = state.settings.lang;
+    const overlay = el('div', 'overlay');
+    const box = el('div', 'popup pass ending');
+    box.setAttribute('role', 'dialog');
+    const h = el('h2');
+    h.textContent = t(lang, 'end.title');
+    const p1 = el('p');
+    p1.textContent = t(lang, 'end.text');
+    const p2 = el('p', 'perk');
+    p2.textContent = t(lang, 'end.halo', { p: Math.round(T.HALO_BONUS * 100) });
+    const actions = el('div', 'actions');
+    const ok = el('button', 'btn-primary');
+    ok.textContent = t(lang, 'end.ok');
+    ok.addEventListener('click', () => {
+      dismiss(overlay);
+      panel.show('light');
+    });
+    actions.append(ok);
+    box.append(h, p1, p2, actions);
+    overlay.append(box);
+    game.append(overlay);
+    ok.focus();
   }
 
   /** A quiet fade to black and back, sailing from one sea to the next. */
@@ -338,7 +364,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
       deliver: (d: DestId) => {
         if (!deliver(state, d)) return;
         sound.play('upgrade');
-        toast(t(lang, 'ask.thanks', { name: destName(lang, state.sea, d), n: friendOf(state, d), max: FRIEND_MAX }), 'rare');
+        toast(t(lang, 'ask.thanks', { name: destName(lang, state.sea, d), n: friendOf(state, d), max: FRIEND_MAX, glow: T.FRIEND_GLOW * friendOf(state, d) }), 'rare');
         save();
         refresh();
       },
@@ -449,7 +475,7 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     const desc = el('p');
     desc.textContent = destDesc(lang, sea, d);
     const perk = el('p', 'perk');
-    perk.textContent = t(lang, `dest.${d}.perk`);
+    perk.textContent = t(lang, `dest.${d}.perk`, { n: formatNumber(discoveryFind(state, d).metal ?? 0, lang) });
     const ok = el('button', 'btn-primary');
     ok.textContent = t(lang, 'discover.ok');
     ok.addEventListener('click', () => dismiss(overlay));
@@ -554,7 +580,9 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     refresh(); // draw the new look first, then celebrate it
     const target = id === 'net' ? hitEl('net') : id === 'storage' ? chestBtn : id === 'light' ? hitEl('light') : boatBtn;
     if (id === 'light' && state.levels.light >= MAX_LEVEL.light) {
-      setTimeout(() => toast(t(lang, state.sea === 'aurora' ? 'toast.allLit' : 'toast.lit'), 'rare'), 1200);
+      // The last sea lit: the ending, and what the light can still become.
+      if (state.sea === 'aurora') setTimeout(showEnding, 1600);
+      else setTimeout(() => toast(t(lang, 'toast.lit'), 'rare'), 1200);
       // Look out over the lit sea: every far lighthouse is answering now.
       if (!state.settings.calm) setTimeout(() => world?.focus('sea'), 600);
     }
@@ -1104,6 +1132,8 @@ export function startApp(root: HTMLElement, opts: AppOptions): void {
     if (typeof p.time === 'number') p.time = formatEta(p.time, lang);
     const text = t(lang, g.key, p);
     goal = g;
+    // The card the goal is about wears a gold ring; the others do not compete with it.
+    panel.mark((PANEL_UPGRADES as readonly string[]).includes(g.target) ? (g.target as UpgradeId) : null);
     if (text === goalKey) return;
     goalKey = text;
     goalBar.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l1.6 4.9H15l-4.2 3 1.6 5L8 11l-4.4 2.9 1.6-5L1 5.9h5.4z" fill="currentColor"/></svg>`;

@@ -91,7 +91,7 @@ export function createBook(lang: Lang, state: GameState, onClose: () => void): B
     }
 
     foot.textContent = t(lang, pageComplete(state, sea) ? 'book.pageDone' : 'book.pageGoal');
-    bonus.textContent = t(lang, 'book.bonus', { n: formatNumber(state.curios.length, lang) });
+    bonus.textContent = t(lang, 'book.bonus', { n: formatNumber(state.curios.length, lang) }) + ' ' + t(lang, 'book.where');
   }
 
   render();

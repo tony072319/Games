@@ -151,9 +151,12 @@ ${path}
   function renderInfo(s: GameState) {
     info.replaceChildren();
     if (!s.boat.built) {
-      const p = el('p');
-      p.textContent = t(lang, s.levels.light >= 3 ? 'map.buildDesc' : 'map.locked');
-      info.append(p);
+      // With the dock, the boat card below says it all.
+      if (s.levels.light < 3) {
+        const p = el('p');
+        p.textContent = t(lang, 'map.locked');
+        info.append(p);
+      }
       return;
     }
     // Each boat's whereabouts (named when there are two).
@@ -219,6 +222,9 @@ ${path}
       for (const m of MATERIALS) {
         if (haul[m] < 1) continue;
         const it = el('span', 'mat', itemIcon(m));
+        // The icon alone does not say what it is.
+        it.title = t(lang, `mat.${m}`);
+        it.setAttribute('aria-label', `${t(lang, `mat.${m}`)} ${formatNumber(haul[m], lang)}`);
         it.append(formatNumber(haul[m], lang));
         hs.append(it);
       }
@@ -243,6 +249,10 @@ ${path}
     text.textContent = c ? t(lang, `ask.${d}`, { n: formatNumber(c.amount, lang), mat: t(lang, `mat.${c.material}`) }) : t(lang, 'ask.done');
     row.append(hearts, text);
     if (c) {
+      // What bringing it gives, said before you pay.
+      const reward = el('span', 'ask-reward');
+      reward.textContent = t(lang, 'ask.reward', { n: f + 1, max: FRIEND_MAX, glow: T.FRIEND_GLOW * (f + 1), haul: Math.round(T.FRIEND_HAUL * 100) });
+      row.append(reward);
       const give = el('button', 'buy deliver');
       give.type = 'button';
       give.textContent = t(lang, 'ask.deliver');

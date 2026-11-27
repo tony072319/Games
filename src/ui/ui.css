@@ -210,6 +210,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .cost span.short { color: var(--c-ink-faint); }
 .cost span.short :is(svg, img) { opacity: 0.45; }
 .cost :is(svg, img) { width: var(--icon-sm); height: var(--icon-sm); }
+.card.is-goal { box-shadow: var(--ring-gold); }
 .card.flash { animation: cardflash var(--t-flash) var(--ease-out); }
 @keyframes cardflash { 0% { box-shadow: var(--ring-gold), var(--glow-gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
@@ -514,6 +515,7 @@ button { transition: scale var(--t-micro) var(--ease-out), background-color var(
 .ask-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--c-surface-1); }
 .ask-row .hearts { color: var(--c-gold); letter-spacing: 1px; }
 .ask-row .ask-text { flex: 1 1 12em; color: var(--c-ink-dim); font-size: var(--fs-body); }
+.ask-row .ask-reward { order: 3; flex: 1 1 100%; color: var(--c-gold); font-size: var(--fs-caption); }
 
 .decor-note { margin: 0; color: var(--c-ink-dim); font-size: var(--fs-caption); }
 .sea-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); width: 100%; order: 3; }

@@ -20,7 +20,8 @@ export const SPAWN_INTERVAL_MS = 2000;
 export const MAX_FLOATING = 6;
 export const FLOAT_LIFETIME_MS = 8000;
 
-export const OFFLINE_MIN_REPORT_SECONDS = 60;
+/** A short break (under five minutes) gets no arrival report: the chest simply has a little more. */
+export const OFFLINE_MIN_REPORT_SECONDS = 300;
 export const LIVE_DT_MAX_SECONDS = 5;
 export const AUTOSAVE_MS = 10000;
 

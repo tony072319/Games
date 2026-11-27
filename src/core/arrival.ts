@@ -1,10 +1,13 @@
 import { MATERIALS, PANEL_UPGRADES, type DestId, type Materials, type UpgradeId } from './data';
 import { canBuy, offlineCapSeconds } from './economy';
 import type { OfflineReport } from './sim';
+import { eventFor } from './seaEvents';
 import { emptyMaterials, type GameState } from './state';
 
 export interface ArrivalLine {
-  kind: 'away' | 'chest' | 'cap' | 'boat' | 'island' | 'tip';
+  kind: 'away' | 'chest' | 'cap' | 'boat' | 'island' | 'event' | 'tip';
+  /** An event at sea on as you arrive. */
+  event?: import('./seaEvents').SeaEventId;
   mats?: Materials;
   seconds?: number;
   hours?: number;
@@ -24,7 +27,7 @@ const some = (m: Materials) => MATERIALS.some((k) => m[k] >= 1);
  * What happened while you were away, one line per thing worth seeing.
  * Empty when nothing came in (then no dialog is shown).
  */
-export function arrivalLines(s: GameState, r: OfflineReport): ArrivalLine[] {
+export function arrivalLines(s: GameState, r: OfflineReport, nowMs?: number): ArrivalLine[] {
   const lines: ArrivalLine[] = [];
   if (some(s.chest)) lines.push({ kind: 'chest', mats: { ...s.chest } });
   if (r.seconds > r.creditedSeconds + 1 && r.creditedSeconds >= 0 && some(s.chest)) {
@@ -35,6 +38,9 @@ export function arrivalLines(s: GameState, r: OfflineReport): ArrivalLine[] {
   for (const st of Object.values(s.islandStore)) if (st) for (const m of MATERIALS) isl[m] += st[m];
   if (some(isl)) lines.push({ kind: 'island', mats: isl });
   if (lines.length === 0) return [];
+  // An event on right now (they reward being here, so this is the moment to hear of it).
+  const ev = nowMs === undefined ? null : eventFor(s, nowMs);
+  if (ev) lines.push({ kind: 'event', event: ev.id, seconds: (ev.endAt - nowMs!) / 1000 });
   const tip = PANEL_UPGRADES.find((id) => canBuy(s, id));
   if (tip) lines.push({ kind: 'tip', upgrade: tip });
   return [{ kind: 'away', seconds: r.seconds }, ...lines];
