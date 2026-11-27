@@ -153,7 +153,7 @@ function chooseDest(s: GameState, untilNext: number): DestId | null {
   return fit[0] ?? ok.sort((a, b) => voyageMs(s, a) - voyageMs(s, b))[0];
 }
 
-export function simulate(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: number } = {}): SimReport {
+export function simulate(profile: Profile, opts: SimOpts = {}): SimReport {
   // Core calls that default to Math.random (voyage rewards) must repeat too: seed it for the run.
   const realRandom = Math.random;
   Math.random = mulberry((opts.seed ?? 7) + 1);
@@ -164,7 +164,15 @@ export function simulate(profile: Profile, opts: { seas?: number; maxDays?: numb
   }
 }
 
-function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: number }): SimReport {
+/** `onVisit` sees the state at the end of each visit (e.g. to save a mid-game state for a playtest). */
+export interface SimOpts {
+  seas?: number;
+  maxDays?: number;
+  seed?: number;
+  onVisit?: (s: GameState, now: number) => void;
+}
+
+function run(profile: Profile, opts: SimOpts): SimReport {
   const seasWanted = opts.seas ?? 3;
   const maxDays = opts.maxDays ?? 200;
   const rng = mulberry(opts.seed ?? 7);
@@ -266,6 +274,7 @@ function run(profile: Profile, opts: { seas?: number; maxDays?: number; seed?: n
       if (MATERIALS.some((k) => !Number.isFinite(s.materials[k]) || s.materials[k] < -1e-6)) broken = true;
     }
     if (bought > 0) buyVisits++;
+    opts.onVisit?.(s, now + profile.visit * MIN);
   }
   const finished = seas.length >= seasWanted;
   const tree = TALENTS.reduce((a, x) => a + x.cost, 0);
