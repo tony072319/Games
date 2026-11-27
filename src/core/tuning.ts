@@ -68,10 +68,12 @@ export const T = {
   POLISH_SPAWN_BONUS: 0.6,
   /** The recycler: lighthouse level that unlocks it, source items per second per level, how much surplus it keeps. */
   RECYCLE_LIGHT: 4,
-  RECYCLE_RATE: 0.3,
-  RECYCLE_SURPLUS: 10,
-  PLASTIC_PER_ROPE: 3,
-  WOOD_PER_METAL: 5,
+  /** Share of each piled-up material the recycler works through per hour, per level. */
+  RECYCLE_RATE: 0.005,
+  /** It only takes from a material covering more than this many times the shortest one's share of the next lighthouse step. */
+  RECYCLE_SURPLUS: 3,
+  /** What comes out, as a share of what goes in (measured against the lighthouse's price). */
+  RECYCLE_EFFICIENCY: 0.5,
   /** Each star of starlight adds this to everything you make. */
   STAR_BONUS: 0.00395,
   /** Starlight for leaving a sea lit is the old formula times this. */
@@ -87,9 +89,9 @@ export const T = {
   AURORA_GLOW_AMOUNT: 1,
   /** Each sea's richness and the price of mending there, relative to the dusk sea. */
   FOG_RATE: 1.77,
-  FOG_COST: 17.5,
+  FOG_COST: 21,
   AURORA_RATE: 3.4,
-  AURORA_COST: 95,
+  AURORA_COST: 110,
   /** Lighthouse price: all of it scaled by this, growing by LIGHT_GROWTH a level. */
   LIGHT_COST_MULT: 0.8,
   LIGHT_GROWTH: 2.75,

@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { canBuy, buyUpgrade } from '../../src/core/economy';
+import { canBuy, buyUpgrade, priceOf } from '../../src/core/economy';
 import { recycle } from '../../src/core/recycle';
-import { newGame } from '../../src/core/state';
+import { newGame, type GameState } from '../../src/core/state';
 import { MATERIALS } from '../../src/core/data';
 import { loadGame, saveGame, type KV } from '../../src/core/save';
+import { T } from '../../src/core/tuning';
 
 const mem = (): KV => {
   const m = new Map<string, string>();
@@ -12,6 +13,17 @@ const mem = (): KV => {
 const rich = () => {
   const s = newGame(0, 'zh');
   for (const m of MATERIALS) s.materials[m] = 1e7;
+  return s;
+};
+/** How many next lighthouse steps a material covers. */
+const cover = (s: GameState, m: 'wood' | 'plastic' | 'rope' | 'metal') => s.materials[m] / priceOf(s, 'light')[m];
+/** A late lighthouse with rope short and the rest piled up (as in the playtest). */
+const late = (recycleLevel: number) => {
+  const s = newGame(0, 'zh');
+  s.levels.light = 8;
+  s.levels.recycle = recycleLevel;
+  const p = priceOf(s, 'light');
+  Object.assign(s.materials, { wood: p.wood * 20, plastic: p.plastic * 20, rope: p.rope * 0.1, metal: p.metal * 20 });
   return s;
 };
 
@@ -25,37 +37,56 @@ describe('the recycler', () => {
     expect(s.levels.recycle).toBe(1);
   });
   test('does nothing while not built', () => {
-    const s = rich();
-    s.materials.rope = 0;
+    const s = late(0);
+    const before = { ...s.materials };
     recycle(s, 3600);
-    expect(s.materials.rope).toBe(0);
+    expect(s.materials).toEqual(before);
   });
-  test('turns surplus bottles into rope and wood into metal', () => {
-    const s = newGame(0, 'zh');
-    s.levels.recycle = 3;
-    Object.assign(s.materials, { plastic: 1e6, rope: 10, wood: 1e6, metal: 10 });
-    recycle(s, 600);
-    expect(s.materials.rope).toBeGreaterThan(10);
-    expect(s.materials.metal).toBeGreaterThan(10);
-    expect(s.materials.plastic).toBeLessThan(1e6);
+  test('turns what piles up into what the lighthouse is shortest of, however big the numbers', () => {
+    const s = late(5);
+    const rope = cover(s, 'rope');
+    recycle(s, 3600);
+    // An hour at level 5 makes a real dent: rope covers clearly more of the next step.
+    expect(cover(s, 'rope')).toBeGreaterThan(rope + 0.5);
+    for (const m of ['wood', 'plastic', 'metal'] as const) expect(cover(s, m)).toBeLessThan(20);
   });
-  test('leaves a material alone when it is not in surplus, and never goes negative', () => {
-    const s = newGame(0, 'zh');
-    s.levels.recycle = 10;
-    Object.assign(s.materials, { plastic: 50, rope: 40, wood: 0, metal: 0 });
-    recycle(s, 1e6);
-    expect(s.materials.plastic).toBe(50);
-    expect(s.materials.rope).toBe(40);
+  test('more levels convert faster', () => {
+    const a = late(2);
+    const b = late(8);
+    recycle(a, 1800);
+    recycle(b, 1800);
+    expect(b.materials.rope).toBeGreaterThan(a.materials.rope);
+  });
+  test('never eats what you are short of, never takes a source below a few times the shortest, never negative', () => {
+    const s = late(10);
+    recycle(s, 30 * 24 * 3600);
+    const r = cover(s, 'rope');
+    for (const m of ['wood', 'plastic', 'metal'] as const) expect(cover(s, m)).toBeGreaterThanOrEqual(r * T.RECYCLE_SURPLUS * 0.99);
     for (const m of MATERIALS) expect(s.materials[m]).toBeGreaterThanOrEqual(0);
   });
-  test('eight hours at once converts the same as eight hours second by second', () => {
-    const a = newGame(0, 'zh');
-    a.levels.recycle = 2;
-    Object.assign(a.materials, { plastic: 1e8, rope: 0, wood: 1e8, metal: 0 });
+  test('leaves balanced materials alone', () => {
+    const s = newGame(0, 'zh');
+    s.levels.light = 6;
+    s.levels.recycle = 10;
+    const p = priceOf(s, 'light');
+    Object.assign(s.materials, { wood: p.wood * 2, plastic: p.plastic * 2, rope: p.rope * 2, metal: p.metal * 2 });
+    const before = { ...s.materials };
+    recycle(s, 3600);
+    expect(s.materials).toEqual(before);
+  });
+  test('nothing to work towards once the lighthouse is mended', () => {
+    const s = late(10);
+    s.levels.light = 10;
+    const before = { ...s.materials };
+    recycle(s, 3600);
+    expect(s.materials).toEqual(before);
+  });
+  test('eight hours at once converts the same as eight hours a minute at a time', () => {
+    const a = late(4);
     const b = structuredClone(a);
     recycle(a, 8 * 3600);
-    for (let i = 0; i < 8 * 3600; i++) recycle(b, 1);
-    expect(Math.abs(a.materials.rope / b.materials.rope - 1)).toBeLessThan(0.01);
+    for (let i = 0; i < 8 * 60; i++) recycle(b, 60);
+    expect(Math.abs(a.materials.rope / b.materials.rope - 1)).toBeLessThan(0.02);
   });
   test('a save without the recycler, or with it unbuilt, loads cleanly', () => {
     const kv = mem();

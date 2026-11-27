@@ -23,7 +23,7 @@ const KNOBS: Knob[] = [
   { key: 'BUILDING_PCT', lo: 0.005, hi: 0.15, log: true },
   { key: 'NET_COST_GROWTH', lo: 1.12, hi: 1.8 },
   { key: 'TALENT_COST_SCALE', lo: 0.5, hi: 4, log: true },
-  { key: 'RECYCLE_RATE', lo: 0.05, hi: 5, log: true },
+  { key: 'RECYCLE_RATE', lo: 0.001, hi: 0.1, log: true },
   { key: 'DECOR_BASE', lo: 20, hi: 5000, log: true },
   { key: 'DECOR_GROWTH', lo: 1.05, hi: 1.6 },
 ];
